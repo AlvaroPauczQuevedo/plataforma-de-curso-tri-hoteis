@@ -1,0 +1,255 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  EMPLOYEE
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CourseDifficulty {
+  INICIANTE
+  INTERMEDIARIO
+  AVANCADO
+}
+
+enum LessonType {
+  VIDEO
+  PDF
+  TEXT
+}
+
+enum VideoSource {
+  UPLOAD
+  EMBED
+}
+
+model Department {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  users     User[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(EMPLOYEE)
+  active       Boolean  @default(true)
+  position     String? // cargo
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  avatarUrl    String?
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  createdCourses    Course[]           @relation("CourseCreatedBy")
+  enrollments       Enrollment[]       @relation("EnrollmentUser")
+  assignedEnrollments Enrollment[]     @relation("EnrollmentAssignedBy")
+  lessonProgress    LessonProgress[]
+  courseProgress    CourseProgress[]
+  certificates      Certificate[]
+  passwordResets    PasswordResetToken[]
+  accessLogs        AccessLog[]
+  adminActivity     AdminActivityLog[]
+  uploadedFiles     FileAsset[]
+}
+
+model Category {
+  id      String   @id @default(cuid())
+  name    String   @unique
+  slug    String   @unique
+  courses Course[]
+}
+
+model FileAsset {
+  id           String   @id @default(cuid())
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  storagePath  String
+  kind         String // VIDEO | PDF | COVER | AVATAR
+  uploadedById String
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
+
+  coverForCourses Course[] @relation("CourseCover")
+  videoForLessons Lesson[] @relation("LessonVideo")
+  pdfForLessons   Lesson[] @relation("LessonPdf")
+}
+
+model Course {
+  id                 String           @id @default(cuid())
+  title              String
+  description        String
+  categoryId         String?
+  category           Category?        @relation(fields: [categoryId], references: [id])
+  instructor         String?
+  coverFileId        String?
+  coverFile          FileAsset?       @relation("CourseCover", fields: [coverFileId], references: [id])
+  durationMinutes    Int              @default(0)
+  difficulty         CourseDifficulty @default(INICIANTE)
+  status             CourseStatus     @default(DRAFT)
+  sequential         Boolean          @default(false)
+  allowDownload      Boolean          @default(true)
+  certificateEnabled Boolean          @default(true)
+  videoCompletionThreshold Int        @default(90)
+  createdById        String
+  createdBy          User             @relation("CourseCreatedBy", fields: [createdById], references: [id])
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  modules         Module[]
+  enrollments     Enrollment[]
+  courseProgress  CourseProgress[]
+  certificates    Certificate[]
+
+  @@index([status])
+}
+
+model Module {
+  id        String   @id @default(cuid())
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title     String
+  order     Int
+  createdAt DateTime @default(now())
+
+  lessons Lesson[]
+
+  @@index([courseId])
+}
+
+model Lesson {
+  id           String      @id @default(cuid())
+  moduleId     String
+  module       Module      @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  title        String
+  order        Int
+  type         LessonType
+  required     Boolean     @default(true)
+
+  videoSource  VideoSource?
+  videoFileId  String?
+  videoFile    FileAsset?  @relation("LessonVideo", fields: [videoFileId], references: [id])
+  videoEmbedUrl String?
+  videoDurationSeconds Int?
+
+  pdfFileId    String?
+  pdfFile      FileAsset?  @relation("LessonPdf", fields: [pdfFileId], references: [id])
+
+  textContent  String?
+
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  progress LessonProgress[]
+
+  @@index([moduleId])
+}
+
+model Enrollment {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation("EnrollmentUser", fields: [userId], references: [id], onDelete: Cascade)
+  courseId     String
+  course       Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  mandatory    Boolean   @default(false)
+  dueDate      DateTime?
+  assignedById String?
+  assignedBy   User?     @relation("EnrollmentAssignedBy", fields: [assignedById], references: [id])
+  assignedAt   DateTime  @default(now())
+
+  @@unique([userId, courseId])
+  @@index([courseId])
+}
+
+model LessonProgress {
+  id                 String    @id @default(cuid())
+  userId             String
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId           String
+  lesson             Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  completed          Boolean   @default(false)
+  completedAt        DateTime?
+  videoPositionSeconds Int?
+  videoWatchedPercent  Int?
+  updatedAt          DateTime  @updatedAt
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+}
+
+model CourseProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId    String
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  percent     Int       @default(0)
+  completedAt DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, courseId])
+  @@index([userId])
+}
+
+model Certificate {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId        String
+  course          Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  code            String   @unique
+  issuedAt        DateTime @default(now())
+
+  @@unique([userId, courseId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model AccessLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model AdminActivityLog {
+  id         String   @id @default(cuid())
+  adminId    String
+  admin      User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  action     String
+  targetType String
+  targetId   String?
+  details    String?
+  createdAt  DateTime @default(now())
+
+  @@index([adminId])
+}
