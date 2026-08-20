@@ -37,8 +37,8 @@ export default async function CursosPage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-navy-900">Cursos</h1>
-          <p className="text-sm text-navy-700/70">{courses.length} curso(s) cadastrado(s)</p>
+          <h1 className="text-2xl font-semibold text-ink-900">Cursos</h1>
+          <p className="text-sm text-ink-700/70">{courses.length} curso(s) cadastrado(s)</p>
         </div>
         <ButtonLink href="/admin/cursos/novo">
           <Plus className="h-4 w-4" />
@@ -76,7 +76,7 @@ export default async function CursosPage({
               href={`/admin/cursos/${course.id}`}
               className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
-              <div className="relative h-28 bg-gradient-to-br from-navy-900 to-accent-600">
+              <div className="relative h-28 bg-gradient-to-br from-ink-900 to-brand-700">
                 {course.coverFile && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -91,12 +91,12 @@ export default async function CursosPage({
               </div>
               <div className="flex flex-1 flex-col gap-2 p-4">
                 {course.category && (
-                  <p className="text-xs font-medium uppercase tracking-wide text-accent-600">
+                  <p className="text-xs font-medium uppercase tracking-wide text-brand-700">
                     {course.category.name}
                   </p>
                 )}
-                <h3 className="line-clamp-2 text-sm font-semibold text-navy-900">{course.title}</h3>
-                <div className="mt-auto flex flex-wrap items-center gap-3 pt-2 text-xs text-navy-700/60">
+                <h3 className="line-clamp-2 text-sm font-semibold text-ink-900">{course.title}</h3>
+                <div className="mt-auto flex flex-wrap items-center gap-3 pt-2 text-xs text-ink-700/60">
                   <span className="inline-flex items-center gap-1">
                     <Clock className="h-3.5 w-3.5" /> {formatDuration(course.durationMinutes)}
                   </span>

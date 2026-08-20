@@ -23,7 +23,7 @@ export function StatusPieChart({
 
   if (total === 0) {
     return (
-      <div className="flex h-56 items-center justify-center text-sm text-navy-700/50">
+      <div className="flex h-56 items-center justify-center text-sm text-ink-700/50">
         Sem matrículas registradas ainda.
       </div>
     );
@@ -47,11 +47,11 @@ export function StatusPieChart({
             <Cell key={entry.name} fill={entry.color} />
           ))}
         </Pie>
-        <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 13 }} />
+        <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e7e3df", fontSize: 13 }} />
         <Legend
           verticalAlign="bottom"
           iconType="circle"
-          formatter={(value) => <span className="text-xs text-navy-700">{value}</span>}
+          formatter={(value) => <span className="text-xs text-ink-700">{value}</span>}
         />
       </PieChart>
     </ResponsiveContainer>
@@ -61,7 +61,7 @@ export function StatusPieChart({
 export function DepartmentBarChart({ data }: { data: { name: string; total: number }[] }) {
   if (data.every((d) => d.total === 0)) {
     return (
-      <div className="flex h-56 items-center justify-center text-sm text-navy-700/50">
+      <div className="flex h-56 items-center justify-center text-sm text-ink-700/50">
         Nenhum funcionário cadastrado ainda.
       </div>
     );
@@ -70,11 +70,11 @@ export function DepartmentBarChart({ data }: { data: { name: string; total: numb
   return (
     <ResponsiveContainer width="100%" height={224}>
       <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16 }}>
-        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-        <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} stroke="#94a3b8" />
-        <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 12 }} stroke="#94a3b8" />
-        <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 13 }} />
-        <Bar dataKey="total" fill="#4f46e5" radius={[0, 6, 6, 0]} barSize={16} isAnimationActive={false} />
+        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e7e3df" />
+        <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} stroke="#a8a29e" />
+        <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 12 }} stroke="#a8a29e" />
+        <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e7e3df", fontSize: 13 }} />
+        <Bar dataKey="total" fill="#ff6a00" radius={[0, 6, 6, 0]} barSize={16} isAnimationActive={false} />
       </BarChart>
     </ResponsiveContainer>
   );

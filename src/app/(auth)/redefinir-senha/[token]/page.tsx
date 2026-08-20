@@ -36,8 +36,8 @@ export default function ResetPasswordPage({
       title="Definir nova senha"
       subtitle="Escolha uma nova senha para acessar sua conta."
       footer={
-        <p className="text-center text-xs text-navy-700/60">
-          <Link href="/login" className="font-medium text-accent-600 hover:underline">
+        <p className="text-center text-xs text-ink-700/60">
+          <Link href="/login" className="font-medium text-brand-700 hover:underline">
             Voltar para o login
           </Link>
         </p>
@@ -48,7 +48,7 @@ export default function ResetPasswordPage({
         {result && result.ok && <Alert tone="success">{result.message} Redirecionando...</Alert>}
 
         <div className="space-y-1.5">
-          <label htmlFor="password" className="text-sm font-medium text-navy-900">
+          <label htmlFor="password" className="text-sm font-medium text-ink-900">
             Nova senha
           </label>
           <input
@@ -57,12 +57,12 @@ export default function ResetPasswordPage({
             type="password"
             required
             minLength={6}
-            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none transition focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
           />
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="confirmPassword" className="text-sm font-medium text-navy-900">
+          <label htmlFor="confirmPassword" className="text-sm font-medium text-ink-900">
             Confirmar nova senha
           </label>
           <input
@@ -71,7 +71,7 @@ export default function ResetPasswordPage({
             type="password"
             required
             minLength={6}
-            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none transition focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
           />
         </div>
 

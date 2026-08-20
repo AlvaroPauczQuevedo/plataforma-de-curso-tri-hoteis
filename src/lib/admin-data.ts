@@ -68,9 +68,9 @@ export async function getDashboardStats() {
   });
 
   const statusBreakdown = [
-    { name: "Não iniciados", value: totalEnrollments - inProgress - completed, color: "#94a3b8" },
-    { name: "Em andamento", value: inProgress, color: "#6366f1" },
-    { name: "Concluídos", value: completed, color: "#16a34a" },
+    { name: "Não iniciados", value: totalEnrollments - inProgress - completed, color: "#d6d3d1" },
+    { name: "Em andamento", value: inProgress, color: "#ff6a00" },
+    { name: "Concluídos", value: completed, color: "#15803d" },
   ];
 
   return {

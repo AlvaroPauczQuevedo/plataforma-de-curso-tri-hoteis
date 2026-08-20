@@ -25,8 +25,8 @@ export default async function MeusCursosPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-navy-900">Meus cursos</h1>
-        <p className="text-sm text-navy-700/70">
+        <h1 className="text-2xl font-semibold text-ink-900">Meus cursos</h1>
+        <p className="text-sm text-ink-700/70">
           Todos os cursos liberados para você, organizados por status.
         </p>
       </div>

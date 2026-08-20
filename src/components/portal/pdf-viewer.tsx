@@ -15,7 +15,7 @@ export function PdfViewer({ src, allowDownload }: { src: string; allowDownload: 
           href={src}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-accent-600 hover:underline"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:underline"
         >
           <Download className="h-4 w-4" />
           Abrir / baixar PDF em nova aba

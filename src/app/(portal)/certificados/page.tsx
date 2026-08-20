@@ -17,8 +17,8 @@ export default async function CertificadosPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-navy-900">Certificados</h1>
-        <p className="text-sm text-navy-700/70">
+        <h1 className="text-2xl font-semibold text-ink-900">Certificados</h1>
+        <p className="text-sm text-ink-700/70">
           Certificados emitidos automaticamente ao concluir 100% de um curso com certificação habilitada.
         </p>
       </div>
@@ -36,12 +36,12 @@ export default async function CertificadosPage() {
               key={cert.id}
               className="flex flex-col gap-4 rounded-2xl border border-border bg-white p-5 shadow-sm"
             >
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-accent-600 to-electric-500">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-brand-700 to-brand-500">
                 <Award className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="font-semibold text-navy-900">{cert.course.title}</p>
-                <p className="text-xs text-navy-700/60">
+                <p className="font-semibold text-ink-900">{cert.course.title}</p>
+                <p className="text-xs text-ink-700/60">
                   Emitido em {formatDate(cert.issuedAt)} · Código {cert.code}
                 </p>
               </div>

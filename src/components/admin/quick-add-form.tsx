@@ -40,12 +40,12 @@ export function QuickAddForm({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder={placeholder}
-          className="flex-1 rounded-xl border border-border px-3.5 py-2 text-sm outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+          className="flex-1 rounded-xl border border-border px-3.5 py-2 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
         />
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex items-center gap-1 rounded-xl bg-accent-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-accent-500 disabled:opacity-50"
+          className="inline-flex items-center gap-1 rounded-xl bg-brand-700 px-3.5 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50"
         >
           <Plus className="h-4 w-4" />
         </button>

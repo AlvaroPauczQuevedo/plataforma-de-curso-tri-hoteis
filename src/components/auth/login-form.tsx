@@ -54,7 +54,7 @@ export function LoginForm({
       {error && <Alert tone="danger">{error}</Alert>}
 
       <div className="space-y-1.5">
-        <label htmlFor="email" className="text-sm font-medium text-navy-900">
+        <label htmlFor="email" className="text-sm font-medium text-ink-900">
           E-mail
         </label>
         <input
@@ -65,17 +65,17 @@ export function LoginForm({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="seunome@trihoteis.com.br"
-          className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none transition focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+          className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
         />
       </div>
 
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
-          <label htmlFor="password" className="text-sm font-medium text-navy-900">
+          <label htmlFor="password" className="text-sm font-medium text-ink-900">
             Senha
           </label>
           {variant === "employee" && (
-            <a href="/esqueci-senha" className="text-xs font-medium text-accent-600 hover:underline">
+            <a href="/esqueci-senha" className="text-xs font-medium text-brand-700 hover:underline">
               Esqueci minha senha
             </a>
           )}
@@ -88,7 +88,7 @@ export function LoginForm({
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
-          className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none transition focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+          className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
         />
       </div>
 

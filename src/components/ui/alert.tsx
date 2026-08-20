@@ -7,7 +7,7 @@ const config: Record<Tone, { classes: string; icon: typeof Info }> = {
   success: { classes: "bg-success-100 text-success-600 border-success-600/20", icon: CheckCircle2 },
   warning: { classes: "bg-warning-100 text-warning-600 border-warning-600/20", icon: AlertTriangle },
   danger: { classes: "bg-danger-100 text-danger-600 border-danger-600/20", icon: XCircle },
-  info: { classes: "bg-accent-600/10 text-accent-600 border-accent-600/20", icon: Info },
+  info: { classes: "bg-brand-700/10 text-brand-700 border-brand-700/20", icon: Info },
 };
 
 export function Alert({

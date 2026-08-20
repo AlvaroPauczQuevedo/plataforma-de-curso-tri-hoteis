@@ -12,10 +12,10 @@ import {
   History,
   Settings,
   LogOut,
-  GraduationCap,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LogoLockup } from "@/components/ui/logo";
 
 const links = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -37,16 +37,10 @@ export function AdminSidebar({
   const pathname = usePathname();
 
   const content = (
-    <div className="flex h-full flex-col bg-navy-950 text-white">
+    <div className="flex h-full flex-col bg-ink-950 text-white">
       <div className="flex items-center justify-between px-5 py-6">
-        <Link href="/admin" className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-accent-600 to-electric-500">
-            <GraduationCap className="h-5 w-5 text-white" />
-          </div>
-          <div className="leading-tight">
-            <p className="text-sm font-semibold">Academia Corporativa</p>
-            <p className="text-[11px] text-white/50">Painel Administrativo</p>
-          </div>
+        <Link href="/admin">
+          <LogoLockup subtitle="Painel Administrativo" tone="dark" />
         </Link>
         {onClose && (
           <button onClick={onClose} className="rounded-lg p-1.5 text-white/70 hover:bg-white/10 lg:hidden">
@@ -89,7 +83,10 @@ export function AdminSidebar({
 
   return (
     <>
-      <aside className="hidden w-64 shrink-0 lg:block">{content}</aside>
+      {/* sticky + h-screen mantém o menu fixo enquanto o conteúdo rola */}
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 lg:block">
+        {content}
+      </aside>
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={onClose} />

@@ -83,7 +83,7 @@ export default async function CourseDetailPage({
   return (
     <div className="space-y-6">
       <div className="overflow-hidden rounded-2xl border border-border bg-white">
-        <div className="relative h-44 bg-gradient-to-br from-navy-900 to-accent-600 sm:h-56">
+        <div className="relative h-44 bg-gradient-to-br from-ink-900 to-brand-700 sm:h-56">
           {course.coverFile && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -100,11 +100,11 @@ export default async function CourseDetailPage({
             {completed && <Badge tone="success">Concluído</Badge>}
           </div>
           <div>
-            <h1 className="text-2xl font-semibold text-navy-900">{course.title}</h1>
-            <p className="mt-1 text-navy-700/70">{course.description}</p>
+            <h1 className="text-2xl font-semibold text-ink-900">{course.title}</h1>
+            <p className="mt-1 text-ink-700/70">{course.description}</p>
           </div>
 
-          <div className="flex flex-wrap gap-4 text-sm text-navy-700/60">
+          <div className="flex flex-wrap gap-4 text-sm text-ink-700/60">
             <span className="inline-flex items-center gap-1.5">
               <Clock className="h-4 w-4" /> {formatDuration(course.durationMinutes)}
             </span>
@@ -120,10 +120,10 @@ export default async function CourseDetailPage({
           {enrollment && (
             <div className="space-y-2 rounded-xl bg-surface-muted p-4">
               <div className="flex items-center justify-between text-sm">
-                <span className="font-medium text-navy-900">
+                <span className="font-medium text-ink-900">
                   {completedRequired.length} de {requiredLessons.length} aulas concluídas
                 </span>
-                <span className="font-semibold text-navy-900">{percent}%</span>
+                <span className="font-semibold text-ink-900">{percent}%</span>
               </div>
               <ProgressBar percent={percent} />
             </div>
@@ -151,11 +151,11 @@ export default async function CourseDetailPage({
       </div>
 
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-navy-900">Conteúdo do curso</h2>
+        <h2 className="text-lg font-semibold text-ink-900">Conteúdo do curso</h2>
         {course.modules.map((module, moduleIdx) => (
           <div key={module.id} className="overflow-hidden rounded-2xl border border-border bg-white">
             <div className="border-b border-border bg-surface-muted/60 px-5 py-3">
-              <p className="text-sm font-semibold text-navy-900">
+              <p className="text-sm font-semibold text-ink-900">
                 Módulo {moduleIdx + 1}: {module.title}
               </p>
             </div>
@@ -174,8 +174,8 @@ export default async function CourseDetailPage({
                         isDone
                           ? "bg-success-100 text-success-600"
                           : isLocked
-                          ? "bg-surface-muted text-navy-700/40"
-                          : "bg-accent-600/10 text-accent-600"
+                          ? "bg-surface-muted text-ink-700/40"
+                          : "bg-brand-700/10 text-brand-700"
                       }`}
                     >
                       {isDone ? (
@@ -189,12 +189,12 @@ export default async function CourseDetailPage({
                     <div className="min-w-0 flex-1">
                       <p
                         className={`truncate text-sm font-medium ${
-                          isLocked ? "text-navy-700/40" : "text-navy-900"
+                          isLocked ? "text-ink-700/40" : "text-ink-900"
                         }`}
                       >
                         {lesson.title}
                       </p>
-                      <p className="text-xs text-navy-700/50">
+                      <p className="text-xs text-ink-700/50">
                         {lesson.type === "VIDEO"
                           ? "Videoaula"
                           : lesson.type === "PDF"

@@ -20,7 +20,7 @@ async function makePdf(title: string, lines: string[]) {
   const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-  page.drawRectangle({ x: 0, y: 792, width: 595, height: 50, color: rgb(0.06, 0.09, 0.16) });
+  page.drawRectangle({ x: 0, y: 792, width: 595, height: 50, color: rgb(0.11, 0.1, 0.09) });
   page.drawText("Academia Corporativa Tri Hotéis", {
     x: 40,
     y: 810,
@@ -29,11 +29,11 @@ async function makePdf(title: string, lines: string[]) {
     color: rgb(1, 1, 1),
   });
 
-  page.drawText(title, { x: 40, y: 750, size: 20, font: bold, color: rgb(0.06, 0.09, 0.16) });
+  page.drawText(title, { x: 40, y: 750, size: 20, font: bold, color: rgb(0.11, 0.1, 0.09) });
 
   let y = 710;
   for (const line of lines) {
-    page.drawText(line, { x: 40, y, size: 11, font: regular, color: rgb(0.2, 0.24, 0.29), maxWidth: 515 });
+    page.drawText(line, { x: 40, y, size: 11, font: regular, color: rgb(0.34, 0.32, 0.31), maxWidth: 515 });
     y -= 24;
   }
 

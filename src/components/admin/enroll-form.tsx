@@ -28,11 +28,11 @@ export function EnrollSingleForm({
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="space-y-1.5 sm:col-span-1">
-          <label className="text-sm font-medium text-navy-900">Curso</label>
+          <label className="text-sm font-medium text-ink-900">Curso</label>
           <select
             name="courseId"
             required
-            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
           >
             <option value="">Selecione um curso...</option>
             {courses.map((c) => (
@@ -43,15 +43,15 @@ export function EnrollSingleForm({
           </select>
         </div>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-navy-900">Prazo (opcional)</label>
+          <label className="text-sm font-medium text-ink-900">Prazo (opcional)</label>
           <input
             type="date"
             name="dueDate"
-            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
           />
         </div>
         <div className="flex items-end pb-2.5">
-          <label className="flex items-center gap-2 text-sm text-navy-700">
+          <label className="flex items-center gap-2 text-sm text-ink-700">
             <input type="checkbox" name="mandatory" className="h-4 w-4 rounded border-border" />
             Obrigatório
           </label>

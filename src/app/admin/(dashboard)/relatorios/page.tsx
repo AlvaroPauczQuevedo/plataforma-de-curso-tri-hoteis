@@ -58,19 +58,19 @@ export default async function RelatoriosPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-navy-900">Relatórios de progresso</h1>
-        <p className="text-sm text-navy-700/70">Visão consolidada de conclusão por curso e por departamento.</p>
+        <h1 className="text-2xl font-semibold text-ink-900">Relatórios de progresso</h1>
+        <p className="text-sm text-ink-700/70">Visão consolidada de conclusão por curso e por departamento.</p>
       </div>
 
       <section className="space-y-3">
-        <h2 className="font-semibold text-navy-900">Por curso</h2>
+        <h2 className="font-semibold text-ink-900">Por curso</h2>
         {courseReport.length === 0 ? (
           <EmptyState icon={BarChart3} title="Nenhum curso cadastrado" />
         ) : (
           <div className="overflow-hidden rounded-2xl border border-border bg-white">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="bg-surface-muted/60 text-xs uppercase tracking-wide text-navy-700/60">
+                <thead className="bg-surface-muted/60 text-xs uppercase tracking-wide text-ink-700/60">
                   <tr>
                     <th className="px-4 py-3 font-medium">Curso</th>
                     <th className="px-4 py-3 font-medium">Matrículas</th>
@@ -83,17 +83,17 @@ export default async function RelatoriosPage() {
                 <tbody className="divide-y divide-border">
                   {courseReport.map((r) => (
                     <tr key={r.course.id} className="hover:bg-surface-muted/40">
-                      <td className="px-4 py-3 font-medium text-navy-900">{r.course.title}</td>
-                      <td className="px-4 py-3 text-navy-700">{r.total}</td>
-                      <td className="px-4 py-3 text-navy-700">{r.inProgress}</td>
-                      <td className="px-4 py-3 text-navy-700">{r.completed}</td>
+                      <td className="px-4 py-3 font-medium text-ink-900">{r.course.title}</td>
+                      <td className="px-4 py-3 text-ink-700">{r.total}</td>
+                      <td className="px-4 py-3 text-ink-700">{r.inProgress}</td>
+                      <td className="px-4 py-3 text-ink-700">{r.completed}</td>
                       <td className="px-4 py-3">
-                        {r.overdue > 0 ? <Badge tone="danger">{r.overdue}</Badge> : <span className="text-navy-700/50">0</span>}
+                        {r.overdue > 0 ? <Badge tone="danger">{r.overdue}</Badge> : <span className="text-ink-700/50">0</span>}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <ProgressBar percent={r.avgPercent} size="sm" className="w-28" />
-                          <span className="text-xs text-navy-700/60">{r.avgPercent}%</span>
+                          <span className="text-xs text-ink-700/60">{r.avgPercent}%</span>
                         </div>
                       </td>
                     </tr>
@@ -106,14 +106,14 @@ export default async function RelatoriosPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="font-semibold text-navy-900">Por departamento</h2>
+        <h2 className="font-semibold text-ink-900">Por departamento</h2>
         {departmentReport.length === 0 ? (
           <EmptyState icon={BarChart3} title="Nenhum departamento cadastrado" />
         ) : (
           <div className="overflow-hidden rounded-2xl border border-border bg-white">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="bg-surface-muted/60 text-xs uppercase tracking-wide text-navy-700/60">
+                <thead className="bg-surface-muted/60 text-xs uppercase tracking-wide text-ink-700/60">
                   <tr>
                     <th className="px-4 py-3 font-medium">Departamento</th>
                     <th className="px-4 py-3 font-medium">Funcionários</th>
@@ -123,12 +123,12 @@ export default async function RelatoriosPage() {
                 <tbody className="divide-y divide-border">
                   {departmentReport.map((r) => (
                     <tr key={r.department.id} className="hover:bg-surface-muted/40">
-                      <td className="px-4 py-3 font-medium text-navy-900">{r.department.name}</td>
-                      <td className="px-4 py-3 text-navy-700">{r.totalEmployees}</td>
+                      <td className="px-4 py-3 font-medium text-ink-900">{r.department.name}</td>
+                      <td className="px-4 py-3 text-ink-700">{r.totalEmployees}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <ProgressBar percent={r.avgPercent} size="sm" className="w-28" />
-                          <span className="text-xs text-navy-700/60">{r.avgPercent}%</span>
+                          <span className="text-xs text-ink-700/60">{r.avgPercent}%</span>
                         </div>
                       </td>
                     </tr>

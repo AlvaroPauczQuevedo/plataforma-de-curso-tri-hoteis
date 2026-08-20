@@ -12,8 +12,8 @@ export default async function HistoricoPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-navy-900">Histórico de aprendizagem</h1>
-        <p className="text-sm text-navy-700/70">
+        <h1 className="text-2xl font-semibold text-ink-900">Histórico de aprendizagem</h1>
+        <p className="text-sm text-ink-700/70">
           {lastAccess
             ? `Seu último acesso foi em ${formatDateTime(lastAccess.createdAt)}.`
             : "Acompanhe aqui suas aulas concluídas."}
@@ -35,14 +35,14 @@ export default async function HistoricoPage() {
                   <CheckCircle2 className="h-4 w-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-navy-900">
+                  <p className="truncate text-sm font-medium text-ink-900">
                     {p.lesson.title}
                   </p>
-                  <p className="truncate text-xs text-navy-700/60">
+                  <p className="truncate text-xs text-ink-700/60">
                     {p.lesson.module.course.title}
                   </p>
                 </div>
-                <p className="shrink-0 text-xs text-navy-700/50">{formatDateTime(p.completedAt)}</p>
+                <p className="shrink-0 text-xs text-ink-700/50">{formatDateTime(p.completedAt)}</p>
               </li>
             ))}
           </ul>
@@ -51,7 +51,7 @@ export default async function HistoricoPage() {
 
       {accessLogs.length > 0 && (
         <div className="space-y-3">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-navy-900">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-ink-900">
             <LogIn className="h-5 w-5" />
             Últimos acessos
           </h2>
@@ -59,8 +59,8 @@ export default async function HistoricoPage() {
             <ul className="divide-y divide-border">
               {accessLogs.slice(0, 8).map((log) => (
                 <li key={log.id} className="flex items-center justify-between px-5 py-3 text-sm">
-                  <span className="text-navy-700">Login na plataforma</span>
-                  <span className="text-navy-700/50">{formatDateTime(log.createdAt)}</span>
+                  <span className="text-ink-700">Login na plataforma</span>
+                  <span className="text-ink-700/50">{formatDateTime(log.createdAt)}</span>
                 </li>
               ))}
             </ul>

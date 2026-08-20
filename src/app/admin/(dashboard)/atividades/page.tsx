@@ -36,8 +36,8 @@ export default async function AtividadesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-navy-900">Histórico de atividades</h1>
-        <p className="text-sm text-navy-700/70">Registro das principais ações administrativas na plataforma.</p>
+        <h1 className="text-2xl font-semibold text-ink-900">Histórico de atividades</h1>
+        <p className="text-sm text-ink-700/70">Registro das principais ações administrativas na plataforma.</p>
       </div>
 
       {logs.length === 0 ? (
@@ -48,11 +48,11 @@ export default async function AtividadesPage() {
             {logs.map((log) => (
               <li key={log.id} className="px-5 py-4">
                 <p className="text-sm">
-                  <span className="font-medium text-navy-900">{log.admin.name}</span>{" "}
-                  <span className="text-navy-700/70">{actionLabels[log.action] ?? log.action.toLowerCase()}</span>{" "}
-                  {log.details && <span className="text-navy-700">{log.details}</span>}
+                  <span className="font-medium text-ink-900">{log.admin.name}</span>{" "}
+                  <span className="text-ink-700/70">{actionLabels[log.action] ?? log.action.toLowerCase()}</span>{" "}
+                  {log.details && <span className="text-ink-700">{log.details}</span>}
                 </p>
-                <p className="text-xs text-navy-700/40">{formatDateTime(log.createdAt)}</p>
+                <p className="text-xs text-ink-700/40">{formatDateTime(log.createdAt)}</p>
               </li>
             ))}
           </ul>

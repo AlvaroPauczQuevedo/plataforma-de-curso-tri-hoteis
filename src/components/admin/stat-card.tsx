@@ -15,23 +15,23 @@ export function StatCard({
   hint?: string;
 }) {
   const toneClasses = {
-    accent: "bg-accent-600/10 text-accent-600",
+    accent: "bg-brand-700/10 text-brand-700",
     success: "bg-success-100 text-success-600",
     warning: "bg-warning-100 text-warning-600",
     danger: "bg-danger-100 text-danger-600",
-    navy: "bg-navy-900/10 text-navy-900",
+    navy: "bg-ink-900/10 text-ink-900",
   }[tone];
 
   return (
     <div className="rounded-2xl border border-border bg-white p-5">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-navy-700/70">{label}</p>
+        <p className="text-sm font-medium text-ink-700/70">{label}</p>
         <div className={cn("flex h-9 w-9 items-center justify-center rounded-xl", toneClasses)}>
           <Icon className="h-4 w-4" />
         </div>
       </div>
-      <p className="mt-3 text-2xl font-semibold text-navy-900">{value}</p>
-      {hint && <p className="mt-1 text-xs text-navy-700/50">{hint}</p>}
+      <p className="mt-3 text-2xl font-semibold text-ink-900">{value}</p>
+      {hint && <p className="mt-1 text-xs text-ink-700/50">{hint}</p>}
     </div>
   );
 }

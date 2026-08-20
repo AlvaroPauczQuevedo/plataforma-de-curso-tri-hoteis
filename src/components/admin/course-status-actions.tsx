@@ -51,7 +51,7 @@ export function CourseStatusActions({ courseId, status }: { courseId: string; st
           href={`/cursos/${courseId}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-navy-700 hover:bg-surface-muted"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-ink-700 hover:bg-surface-muted"
         >
           <Eye className="h-4 w-4" />
           Visualizar como funcionário

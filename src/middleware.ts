@@ -52,6 +52,11 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|storage).*)",
+    /*
+     * Ignora rotas de API, assets internos do Next e arquivos estáticos
+     * públicos (logo da marca, ícones, imagens). Sem essa exceção o
+     * middleware redireciona a própria logo para /login e ela não carrega.
+     */
+    "/((?!api|_next/static|_next/image|brand|favicon.ico|icon.png|apple-icon.png|storage|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico)$).*)",
   ],
 };

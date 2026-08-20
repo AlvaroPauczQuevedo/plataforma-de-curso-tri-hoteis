@@ -43,7 +43,7 @@ export default async function CourseEditorPage({
 
   return (
     <div className="max-w-4xl space-y-6">
-      <Link href="/admin/cursos" className="inline-flex items-center gap-1.5 text-sm font-medium text-navy-700 hover:text-accent-600">
+      <Link href="/admin/cursos" className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-700 hover:text-brand-700">
         <ChevronLeft className="h-4 w-4" />
         Voltar
       </Link>
@@ -51,24 +51,24 @@ export default async function CourseEditorPage({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold text-navy-900">{course.title}</h1>
+            <h1 className="text-2xl font-semibold text-ink-900">{course.title}</h1>
             <Badge tone={statusTone}>{statusLabel(course.status)}</Badge>
           </div>
-          <p className="text-sm text-navy-700/70">{course._count.enrollments} matrícula(s)</p>
+          <p className="text-sm text-ink-700/70">{course._count.enrollments} matrícula(s)</p>
         </div>
       </div>
 
       <CourseStatusActions courseId={course.id} status={course.status} />
 
       <section className="space-y-4 rounded-2xl border border-border bg-white p-6">
-        <h2 className="font-semibold text-navy-900">Informações básicas</h2>
+        <h2 className="font-semibold text-ink-900">Informações básicas</h2>
         <CourseForm categories={categories} course={course} />
       </section>
 
       <section className="space-y-4">
         <div>
-          <h2 className="font-semibold text-navy-900">Módulos e aulas</h2>
-          <p className="text-sm text-navy-700/60">Arraste para reordenar módulos e aulas.</p>
+          <h2 className="font-semibold text-ink-900">Módulos e aulas</h2>
+          <p className="text-sm text-ink-700/60">Arraste para reordenar módulos e aulas.</p>
         </div>
         <ModuleLessonBuilder courseId={course.id} modules={course.modules} />
       </section>

@@ -15,8 +15,8 @@ export default async function PerfilPage() {
   return (
     <div className="max-w-2xl space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-navy-900">Perfil e configurações</h1>
-        <p className="text-sm text-navy-700/70">Gerencie suas informações pessoais e sua senha.</p>
+        <h1 className="text-2xl font-semibold text-ink-900">Perfil e configurações</h1>
+        <p className="text-sm text-ink-700/70">Gerencie suas informações pessoais e sua senha.</p>
       </div>
 
       <section className="space-y-5 rounded-2xl border border-border bg-white p-6">
@@ -24,7 +24,7 @@ export default async function PerfilPage() {
 
         <ActionForm action={updateProfile} submitLabel="Salvar alterações">
           <div className="space-y-1.5">
-            <label htmlFor="name" className="text-sm font-medium text-navy-900">
+            <label htmlFor="name" className="text-sm font-medium text-ink-900">
               Nome completo
             </label>
             <input
@@ -32,44 +32,44 @@ export default async function PerfilPage() {
               name="name"
               defaultValue={user.name}
               required
-              className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none transition focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+              className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
             />
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-navy-900">E-mail</label>
+              <label className="text-sm font-medium text-ink-900">E-mail</label>
               <input
                 disabled
                 value={user.email}
-                className="w-full rounded-xl border border-border bg-surface-muted px-3.5 py-2.5 text-sm text-navy-700/70"
+                className="w-full rounded-xl border border-border bg-surface-muted px-3.5 py-2.5 text-sm text-ink-700/70"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-navy-900">Cargo</label>
+              <label className="text-sm font-medium text-ink-900">Cargo</label>
               <input
                 disabled
                 value={user.position ?? "-"}
-                className="w-full rounded-xl border border-border bg-surface-muted px-3.5 py-2.5 text-sm text-navy-700/70"
+                className="w-full rounded-xl border border-border bg-surface-muted px-3.5 py-2.5 text-sm text-ink-700/70"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-navy-900">Departamento</label>
+              <label className="text-sm font-medium text-ink-900">Departamento</label>
               <input
                 disabled
                 value={user.department?.name ?? "-"}
-                className="w-full rounded-xl border border-border bg-surface-muted px-3.5 py-2.5 text-sm text-navy-700/70"
+                className="w-full rounded-xl border border-border bg-surface-muted px-3.5 py-2.5 text-sm text-ink-700/70"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-navy-900">Último acesso</label>
+              <label className="text-sm font-medium text-ink-900">Último acesso</label>
               <input
                 disabled
                 value={formatDateTime(user.lastLoginAt)}
-                className="w-full rounded-xl border border-border bg-surface-muted px-3.5 py-2.5 text-sm text-navy-700/70"
+                className="w-full rounded-xl border border-border bg-surface-muted px-3.5 py-2.5 text-sm text-ink-700/70"
               />
             </div>
           </div>
@@ -78,13 +78,13 @@ export default async function PerfilPage() {
 
       <section className="space-y-5 rounded-2xl border border-border bg-white p-6">
         <div>
-          <h2 className="font-semibold text-navy-900">Alterar senha</h2>
-          <p className="text-sm text-navy-700/60">Use uma senha com pelo menos 6 caracteres.</p>
+          <h2 className="font-semibold text-ink-900">Alterar senha</h2>
+          <p className="text-sm text-ink-700/60">Use uma senha com pelo menos 6 caracteres.</p>
         </div>
 
         <ActionForm action={changePassword} submitLabel="Alterar senha" resetOnSuccess>
           <div className="space-y-1.5">
-            <label htmlFor="currentPassword" className="text-sm font-medium text-navy-900">
+            <label htmlFor="currentPassword" className="text-sm font-medium text-ink-900">
               Senha atual
             </label>
             <input
@@ -92,12 +92,12 @@ export default async function PerfilPage() {
               name="currentPassword"
               type="password"
               required
-              className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none transition focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+              className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
             />
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <label htmlFor="newPassword" className="text-sm font-medium text-navy-900">
+              <label htmlFor="newPassword" className="text-sm font-medium text-ink-900">
                 Nova senha
               </label>
               <input
@@ -106,11 +106,11 @@ export default async function PerfilPage() {
                 type="password"
                 required
                 minLength={6}
-                className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none transition focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+                className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
               />
             </div>
             <div className="space-y-1.5">
-              <label htmlFor="confirmPassword" className="text-sm font-medium text-navy-900">
+              <label htmlFor="confirmPassword" className="text-sm font-medium text-ink-900">
                 Confirmar nova senha
               </label>
               <input
@@ -119,7 +119,7 @@ export default async function PerfilPage() {
                 type="password"
                 required
                 minLength={6}
-                className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none transition focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+                className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
               />
             </div>
           </div>

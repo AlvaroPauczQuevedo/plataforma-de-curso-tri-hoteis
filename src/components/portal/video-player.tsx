@@ -84,7 +84,7 @@ export function VideoPlayer({
           Seu navegador não suporta reprodução de vídeo.
         </video>
       </div>
-      <p className="flex items-center gap-1.5 text-xs text-navy-700/60">
+      <p className="flex items-center gap-1.5 text-xs text-ink-700/60">
         {completed ? (
           <>
             <CheckCircle2 className="h-3.5 w-3.5 text-success-600" />

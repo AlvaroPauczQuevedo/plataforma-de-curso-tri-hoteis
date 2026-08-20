@@ -24,7 +24,7 @@ export function CoursesTabs({
             href={tab.key === "todos" ? "/meus-cursos" : `/meus-cursos?aba=${tab.key}`}
             className={cn(
               "flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition-colors",
-              active ? "bg-accent-600 text-white" : "text-navy-700 hover:bg-surface-muted"
+              active ? "bg-brand-700 text-white" : "text-ink-700 hover:bg-surface-muted"
             )}
           >
             {tab.label}

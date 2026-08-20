@@ -36,7 +36,7 @@ export function CourseCard({
       href={`/cursos/${id}`}
       className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
     >
-      <div className="relative h-36 w-full overflow-hidden bg-gradient-to-br from-navy-900 to-accent-600">
+      <div className="relative h-36 w-full overflow-hidden bg-gradient-to-br from-ink-900 to-brand-700">
         {coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -59,15 +59,15 @@ export function CourseCard({
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="space-y-1">
           {categoryName && (
-            <p className="text-xs font-medium uppercase tracking-wide text-accent-600">
+            <p className="text-xs font-medium uppercase tracking-wide text-brand-700">
               {categoryName}
             </p>
           )}
-          <h3 className="line-clamp-2 font-semibold text-navy-900">{title}</h3>
-          <p className="line-clamp-2 text-sm text-navy-700/70">{description}</p>
+          <h3 className="line-clamp-2 font-semibold text-ink-900">{title}</h3>
+          <p className="line-clamp-2 text-sm text-ink-700/70">{description}</p>
         </div>
 
-        <div className="mt-auto flex items-center gap-3 text-xs text-navy-700/60">
+        <div className="mt-auto flex items-center gap-3 text-xs text-ink-700/60">
           <span className="inline-flex items-center gap-1">
             <Clock className="h-3.5 w-3.5" /> {formatDuration(durationMinutes)}
           </span>
@@ -79,9 +79,9 @@ export function CourseCard({
         {typeof percent === "number" && (
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-medium text-navy-900">{percent}% concluído</span>
+              <span className="font-medium text-ink-900">{percent}% concluído</span>
               {dueDate && (
-                <span className={overdue ? "text-danger-600" : "text-navy-700/60"}>
+                <span className={overdue ? "text-danger-600" : "text-ink-700/60"}>
                   Prazo: {formatDate(dueDate)}
                 </span>
               )}

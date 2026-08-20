@@ -57,7 +57,7 @@ export function FileUploadField({
 
   return (
     <div className="space-y-1.5">
-      <label className="text-sm font-medium text-navy-900">{label}</label>
+      <label className="text-sm font-medium text-ink-900">{label}</label>
       <input type="hidden" name={name} value={fileId ?? ""} />
       <button
         type="button"
@@ -67,14 +67,14 @@ export function FileUploadField({
       >
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white">
           {uploading ? (
-            <Loader2 className="h-4 w-4 animate-spin text-accent-600" />
+            <Loader2 className="h-4 w-4 animate-spin text-brand-700" />
           ) : fileId ? (
             <CheckCircle2 className="h-4 w-4 text-success-600" />
           ) : (
-            <Icon className="h-4 w-4 text-navy-700/50" />
+            <Icon className="h-4 w-4 text-ink-700/50" />
           )}
         </div>
-        <span className="min-w-0 flex-1 truncate text-navy-700">
+        <span className="min-w-0 flex-1 truncate text-ink-700">
           {uploading ? "Enviando..." : fileName ? fileName : "Clique para selecionar um arquivo"}
         </span>
       </button>

@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useState } from "react";
 import {
-  GraduationCap,
   Home,
   BookOpen,
   History,
@@ -16,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
+import { LogoLockup } from "@/components/ui/logo";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -39,14 +39,8 @@ export function PortalNavbar({
     <header className="sticky top-0 z-40 border-b border-border bg-white/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-navy-900 to-accent-600">
-              <GraduationCap className="h-5 w-5 text-white" />
-            </div>
-            <div className="leading-tight">
-              <p className="text-sm font-semibold text-navy-900">Academia Corporativa</p>
-              <p className="text-[11px] text-navy-700/60">Tri Hotéis</p>
-            </div>
+          <Link href="/">
+            <LogoLockup />
           </Link>
 
           <nav className="hidden items-center gap-1 md:flex">
@@ -59,8 +53,8 @@ export function PortalNavbar({
                   className={cn(
                     "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                     active
-                      ? "bg-accent-600/10 text-accent-600"
-                      : "text-navy-700 hover:bg-surface-muted"
+                      ? "bg-brand-700/10 text-brand-700"
+                      : "text-ink-700 hover:bg-surface-muted"
                   )}
                 >
                   <link.icon className="h-4 w-4" />
@@ -77,18 +71,18 @@ export function PortalNavbar({
             className="hidden items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-surface-muted sm:flex"
           >
             <Avatar name={userName} src={avatarUrl} size="sm" />
-            <span className="text-sm font-medium text-navy-900">{userName.split(" ")[0]}</span>
+            <span className="text-sm font-medium text-ink-900">{userName.split(" ")[0]}</span>
           </Link>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="hidden items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-navy-700 hover:bg-surface-muted sm:flex"
+            className="hidden items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-ink-700 hover:bg-surface-muted sm:flex"
             title="Sair"
           >
             <LogOut className="h-4 w-4" />
             Sair
           </button>
           <button
-            className="rounded-lg p-2 text-navy-700 hover:bg-surface-muted md:hidden"
+            className="rounded-lg p-2 text-ink-700 hover:bg-surface-muted md:hidden"
             onClick={() => setOpen((v) => !v)}
             aria-label="Abrir menu"
           >
@@ -109,7 +103,7 @@ export function PortalNavbar({
                   onClick={() => setOpen(false)}
                   className={cn(
                     "flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium",
-                    active ? "bg-accent-600/10 text-accent-600" : "text-navy-700"
+                    active ? "bg-brand-700/10 text-brand-700" : "text-ink-700"
                   )}
                 >
                   <link.icon className="h-4 w-4" />
@@ -120,7 +114,7 @@ export function PortalNavbar({
             <Link
               href="/perfil"
               onClick={() => setOpen(false)}
-              className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-navy-700"
+              className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-ink-700"
             >
               <User className="h-4 w-4" />
               Perfil

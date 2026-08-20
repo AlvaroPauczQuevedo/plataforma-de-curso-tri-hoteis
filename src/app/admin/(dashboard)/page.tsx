@@ -30,8 +30,8 @@ export default async function AdminDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-navy-900">Dashboard</h1>
-        <p className="text-sm text-navy-700/70">Visão geral da Academia Corporativa Tri Hotéis.</p>
+        <h1 className="text-2xl font-semibold text-ink-900">Dashboard</h1>
+        <p className="text-sm text-ink-700/70">Visão geral da Academia Corporativa Tri Hotéis.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -52,29 +52,29 @@ export default async function AdminDashboardPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-2xl border border-border bg-white p-5">
-          <h2 className="mb-3 font-semibold text-navy-900">Status das matrículas</h2>
+          <h2 className="mb-3 font-semibold text-ink-900">Status das matrículas</h2>
           <StatusPieChart data={stats.statusBreakdown} />
         </div>
         <div className="rounded-2xl border border-border bg-white p-5">
-          <h2 className="mb-3 font-semibold text-navy-900">Funcionários por departamento</h2>
+          <h2 className="mb-3 font-semibold text-ink-900">Funcionários por departamento</h2>
           <DepartmentBarChart data={stats.departmentCounts} />
         </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-2xl border border-border bg-white p-5">
-          <h2 className="mb-3 font-semibold text-navy-900">Cursos mais acessados</h2>
+          <h2 className="mb-3 font-semibold text-ink-900">Cursos mais acessados</h2>
           {stats.mostAccessed.length === 0 ? (
-            <p className="py-8 text-center text-sm text-navy-700/50">Nenhuma matrícula registrada ainda.</p>
+            <p className="py-8 text-center text-sm text-ink-700/50">Nenhuma matrícula registrada ainda.</p>
           ) : (
             <ul className="space-y-3">
               {stats.mostAccessed.map((item, idx) => (
                 <li key={item.course.id} className="flex items-center gap-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-600/10 text-xs font-semibold text-accent-600">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-700/10 text-xs font-semibold text-brand-700">
                     {idx + 1}
                   </span>
-                  <span className="flex-1 truncate text-sm text-navy-900">{item.course.title}</span>
-                  <span className="text-xs font-medium text-navy-700/60">{item.count} matrícula(s)</span>
+                  <span className="flex-1 truncate text-sm text-ink-900">{item.course.title}</span>
+                  <span className="text-xs font-medium text-ink-700/60">{item.count} matrícula(s)</span>
                 </li>
               ))}
             </ul>
@@ -82,17 +82,17 @@ export default async function AdminDashboardPage() {
         </div>
 
         <div className="rounded-2xl border border-border bg-white p-5">
-          <h2 className="mb-3 font-semibold text-navy-900">Atividades recentes</h2>
+          <h2 className="mb-3 font-semibold text-ink-900">Atividades recentes</h2>
           {stats.recentActivity.length === 0 ? (
-            <p className="py-8 text-center text-sm text-navy-700/50">Nenhuma atividade registrada ainda.</p>
+            <p className="py-8 text-center text-sm text-ink-700/50">Nenhuma atividade registrada ainda.</p>
           ) : (
             <ul className="space-y-3">
               {stats.recentActivity.map((log) => (
                 <li key={log.id} className="text-sm">
-                  <span className="font-medium text-navy-900">{log.admin.name}</span>{" "}
-                  <span className="text-navy-700/70">{actionLabels[log.action] ?? log.action.toLowerCase()}</span>{" "}
-                  {log.details && <span className="text-navy-700/70">{log.details}</span>}
-                  <p className="text-xs text-navy-700/40">{formatDateTime(log.createdAt)}</p>
+                  <span className="font-medium text-ink-900">{log.admin.name}</span>{" "}
+                  <span className="text-ink-700/70">{actionLabels[log.action] ?? log.action.toLowerCase()}</span>{" "}
+                  {log.details && <span className="text-ink-700/70">{log.details}</span>}
+                  <p className="text-xs text-ink-700/40">{formatDateTime(log.createdAt)}</p>
                 </li>
               ))}
             </ul>

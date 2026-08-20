@@ -17,9 +17,10 @@ export async function generateCertificatePdf(params: {
   const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-  const navy = rgb(0.06, 0.09, 0.16);
-  const accent = rgb(0.31, 0.27, 0.9);
-  const gray = rgb(0.35, 0.4, 0.47);
+  // Identidade Tri Hotéis: grafite quente + laranja da marca (#FF6A00)
+  const navy = rgb(0.11, 0.1, 0.09);
+  const accent = rgb(1, 0.416, 0);
+  const gray = rgb(0.34, 0.32, 0.31);
 
   // moldura
   page.drawRectangle({

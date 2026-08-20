@@ -31,7 +31,7 @@ export function ProgressBar({
           "h-full rounded-full transition-all duration-500 ease-out",
           resolvedTone === "success"
             ? "bg-success-600"
-            : "bg-gradient-to-r from-accent-600 to-electric-500"
+            : "bg-gradient-to-r from-brand-700 to-brand-500"
         )}
         style={{ width: `${clamped}%` }}
       />

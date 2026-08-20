@@ -61,7 +61,7 @@ export default async function LessonPlayerPage({
       <aside className="order-2 space-y-4 lg:order-1">
         <Link
           href={`/cursos/${courseId}`}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-navy-700 hover:text-accent-600"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-700 hover:text-brand-700"
         >
           <ChevronLeft className="h-4 w-4" />
           Voltar ao curso
@@ -69,12 +69,12 @@ export default async function LessonPlayerPage({
 
         <div className="overflow-hidden rounded-2xl border border-border bg-white">
           <div className="border-b border-border px-4 py-3">
-            <p className="truncate text-sm font-semibold text-navy-900">{course.title}</p>
+            <p className="truncate text-sm font-semibold text-ink-900">{course.title}</p>
           </div>
           <div className="max-h-[60vh] overflow-y-auto">
             {course.modules.map((module, idx) => (
               <div key={module.id}>
-                <p className="bg-surface-muted/70 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-navy-700/60">
+                <p className="bg-surface-muted/70 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-ink-700/60">
                   Módulo {idx + 1}: {module.title}
                 </p>
                 <ul>
@@ -89,8 +89,8 @@ export default async function LessonPlayerPage({
                           className={cn(
                             "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors",
                             active
-                              ? "bg-accent-600/10 text-accent-600 font-medium"
-                              : "text-navy-700 hover:bg-surface-muted"
+                              ? "bg-brand-700/10 text-brand-700 font-medium"
+                              : "text-ink-700 hover:bg-surface-muted"
                           )}
                         >
                           {done ? (
@@ -118,7 +118,7 @@ export default async function LessonPlayerPage({
             </Badge>
             {currentProgress?.completed && <Badge tone="success">Concluída</Badge>}
           </div>
-          <h1 className="text-xl font-semibold text-navy-900 sm:text-2xl">{lesson.title}</h1>
+          <h1 className="text-xl font-semibold text-ink-900 sm:text-2xl">{lesson.title}</h1>
         </div>
 
         {lesson.type === "VIDEO" && lesson.videoSource === "UPLOAD" && lessonWithRelations?.videoFile && (
@@ -155,7 +155,7 @@ export default async function LessonPlayerPage({
 
         {lesson.type === "TEXT" && (
           <div className="space-y-4">
-            <div className="whitespace-pre-line rounded-2xl border border-border bg-white p-6 text-navy-800 leading-relaxed">
+            <div className="whitespace-pre-line rounded-2xl border border-border bg-white p-6 text-ink-800 leading-relaxed">
               {lesson.textContent}
             </div>
             <MarkCompleteButton lessonId={lesson.id} completed={Boolean(currentProgress?.completed)} />
@@ -166,7 +166,7 @@ export default async function LessonPlayerPage({
           {prevLesson ? (
             <Link
               href={`/cursos/${courseId}/aulas/${prevLesson.id}`}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-navy-700 hover:text-accent-600"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-700 hover:text-brand-700"
             >
               <ChevronLeft className="h-4 w-4" />
               Aula anterior
@@ -177,7 +177,7 @@ export default async function LessonPlayerPage({
           {nextLesson ? (
             <Link
               href={`/cursos/${courseId}/aulas/${nextLesson.id}`}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-navy-700 hover:text-accent-600"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-700 hover:text-brand-700"
             >
               Próxima aula
               <ChevronRight className="h-4 w-4" />
@@ -185,7 +185,7 @@ export default async function LessonPlayerPage({
           ) : (
             <Link
               href={`/cursos/${courseId}`}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-accent-600 hover:underline"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:underline"
             >
               Ver resumo do curso
               <ChevronRight className="h-4 w-4" />

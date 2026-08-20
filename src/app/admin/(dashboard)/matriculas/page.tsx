@@ -58,18 +58,18 @@ export default async function MatriculasPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-navy-900">Matrículas</h1>
-        <p className="text-sm text-navy-700/70">Libere cursos para um ou vários funcionários de uma vez.</p>
+        <h1 className="text-2xl font-semibold text-ink-900">Matrículas</h1>
+        <p className="text-sm text-ink-700/70">Libere cursos para um ou vários funcionários de uma vez.</p>
       </div>
 
       <section className="space-y-4 rounded-2xl border border-border bg-white p-6">
-        <h2 className="font-semibold text-navy-900">Nova matrícula em massa</h2>
+        <h2 className="font-semibold text-ink-900">Nova matrícula em massa</h2>
         <BulkEnrollForm employees={employees} courses={courses} />
       </section>
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-semibold text-navy-900">Matrículas existentes ({filtered.length})</h2>
+          <h2 className="font-semibold text-ink-900">Matrículas existentes ({filtered.length})</h2>
           <Suspense>
             <div className="flex gap-3">
               <SelectFilter
@@ -97,7 +97,7 @@ export default async function MatriculasPage({
           <div className="overflow-hidden rounded-2xl border border-border bg-white">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="bg-surface-muted/60 text-xs uppercase tracking-wide text-navy-700/60">
+                <thead className="bg-surface-muted/60 text-xs uppercase tracking-wide text-ink-700/60">
                   <tr>
                     <th className="px-4 py-3 font-medium">Funcionário</th>
                     <th className="px-4 py-3 font-medium">Curso</th>
@@ -111,21 +111,21 @@ export default async function MatriculasPage({
                   {filtered.map((e) => (
                     <tr key={e.id} className="hover:bg-surface-muted/40">
                       <td className="px-4 py-3">
-                        <p className="font-medium text-navy-900">{e.user.name}</p>
-                        <p className="text-xs text-navy-700/50">{e.user.email}</p>
+                        <p className="font-medium text-ink-900">{e.user.name}</p>
+                        <p className="text-xs text-ink-700/50">{e.user.email}</p>
                       </td>
-                      <td className="px-4 py-3 text-navy-700">
+                      <td className="px-4 py-3 text-ink-700">
                         {e.course.title}
                         {e.mandatory && <Badge tone="navy" className="ml-2">Obrigatório</Badge>}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <ProgressBar percent={e.percent} size="sm" className="w-24" />
-                          <span className="text-xs text-navy-700/60">{e.percent}%</span>
+                          <span className="text-xs text-ink-700/60">{e.percent}%</span>
                         </div>
                       </td>
                       <td className="px-4 py-3">{statusBadge[e.status as keyof typeof statusBadge]}</td>
-                      <td className="px-4 py-3 text-xs text-navy-700/60">{formatDate(e.dueDate)}</td>
+                      <td className="px-4 py-3 text-xs text-ink-700/60">{formatDate(e.dueDate)}</td>
                       <td className="px-4 py-3 text-right">
                         <ActionButton
                           action={removeEnrollment.bind(null, e.userId, e.courseId)}

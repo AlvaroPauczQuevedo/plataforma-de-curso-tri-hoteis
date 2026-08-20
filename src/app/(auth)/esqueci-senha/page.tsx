@@ -28,8 +28,8 @@ export default function ForgotPasswordPage() {
       title="Recuperar senha"
       subtitle="Informe seu e-mail corporativo para receber o link de redefinição."
       footer={
-        <p className="text-center text-xs text-navy-700/60">
-          <Link href="/login" className="font-medium text-accent-600 hover:underline">
+        <p className="text-center text-xs text-ink-700/60">
+          <Link href="/login" className="font-medium text-brand-700 hover:underline">
             Voltar para o login
           </Link>
         </p>
@@ -52,7 +52,7 @@ export default function ForgotPasswordPage() {
         )}
 
         <div className="space-y-1.5">
-          <label htmlFor="email" className="text-sm font-medium text-navy-900">
+          <label htmlFor="email" className="text-sm font-medium text-ink-900">
             E-mail
           </label>
           <input
@@ -61,7 +61,7 @@ export default function ForgotPasswordPage() {
             type="email"
             required
             placeholder="seunome@trihoteis.com.br"
-            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none transition focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
           />
         </div>
 

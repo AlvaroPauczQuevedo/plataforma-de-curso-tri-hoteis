@@ -25,7 +25,7 @@ export default async function PortalHomePage() {
 
   return (
     <div className="space-y-8">
-      <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-navy-950 via-navy-900 to-accent-600 p-6 text-white sm:p-8">
+      <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-ink-950 via-ink-900 to-brand-700 p-6 text-white sm:p-8">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
             <p className="text-sm text-white/70">Bem-vindo(a) de volta,</p>
@@ -46,7 +46,7 @@ export default async function PortalHomePage() {
               }
               variant="primary"
               size="lg"
-              className="bg-white text-navy-900 hover:bg-white/90"
+              className="bg-white text-ink-900 hover:bg-white/90"
             >
               <PlayCircle className="h-5 w-5" />
               Continuar estudando
@@ -69,7 +69,7 @@ export default async function PortalHomePage() {
 
       {upcomingDeadlines.length > 0 && (
         <section className="space-y-3">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-navy-900">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-ink-900">
             <AlarmClock className="h-5 w-5 text-warning-600" />
             Cursos obrigatórios próximos do prazo
           </h2>
@@ -96,9 +96,9 @@ export default async function PortalHomePage() {
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-navy-900">Cursos em andamento</h2>
+          <h2 className="text-lg font-semibold text-ink-900">Cursos em andamento</h2>
           {items.length > 0 && (
-            <Link href="/meus-cursos" className="text-sm font-medium text-accent-600 hover:underline">
+            <Link href="/meus-cursos" className="text-sm font-medium text-brand-700 hover:underline">
               Ver todos
             </Link>
           )}
@@ -141,7 +141,7 @@ export default async function PortalHomePage() {
 
       {recentlyCompleted.length > 0 && (
         <section className="space-y-3">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-navy-900">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-ink-900">
             <Award className="h-5 w-5 text-success-600" />
             Concluídos recentemente
           </h2>
@@ -155,8 +155,8 @@ export default async function PortalHomePage() {
                   <Award className="h-5 w-5 text-success-600" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-navy-900">{item.course.title}</p>
-                  <p className="text-xs text-navy-700/60">
+                  <p className="truncate text-sm font-medium text-ink-900">{item.course.title}</p>
+                  <p className="text-xs text-ink-700/60">
                     Concluído em {formatDate(item.completedAt)}
                   </p>
                 </div>

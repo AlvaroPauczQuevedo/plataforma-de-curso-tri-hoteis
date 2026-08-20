@@ -59,7 +59,7 @@ export function AvatarUploader({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-accent-600 text-white shadow-sm hover:bg-accent-500"
+          className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-brand-700 text-white shadow-sm hover:bg-brand-600"
           title="Alterar foto"
         >
           {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Camera className="h-3 w-3" />}
@@ -73,8 +73,8 @@ export function AvatarUploader({
         />
       </div>
       <div>
-        <p className="text-sm font-medium text-navy-900">Foto de perfil</p>
-        <p className="text-xs text-navy-700/60">PNG, JPG ou WEBP. Clique no ícone para alterar.</p>
+        <p className="text-sm font-medium text-ink-900">Foto de perfil</p>
+        <p className="text-xs text-ink-700/60">PNG, JPG ou WEBP. Clique no ícone para alterar.</p>
         {error && <p className="mt-1 text-xs text-danger-600">{error}</p>}
       </div>
     </div>

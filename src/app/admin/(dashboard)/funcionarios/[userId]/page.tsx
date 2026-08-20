@@ -49,7 +49,7 @@ export default async function FuncionarioDetailPage({
 
   return (
     <div className="max-w-4xl space-y-6">
-      <Link href="/admin/funcionarios" className="inline-flex items-center gap-1.5 text-sm font-medium text-navy-700 hover:text-accent-600">
+      <Link href="/admin/funcionarios" className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-700 hover:text-brand-700">
         <ChevronLeft className="h-4 w-4" />
         Voltar
       </Link>
@@ -58,29 +58,29 @@ export default async function FuncionarioDetailPage({
         <Avatar name={employee.name} src={employee.avatarUrl} size="lg" />
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold text-navy-900">{employee.name}</h1>
+            <h1 className="text-xl font-semibold text-ink-900">{employee.name}</h1>
             <Badge tone={employee.active ? "success" : "danger"}>
               {employee.active ? "Ativo" : "Inativo"}
             </Badge>
           </div>
-          <p className="text-sm text-navy-700/60">
+          <p className="text-sm text-ink-700/60">
             {employee.position ?? "Sem cargo definido"} · {employee.department?.name ?? "Sem departamento"}
           </p>
-          <p className="text-xs text-navy-700/50">Último acesso: {formatDateTime(employee.lastLoginAt)}</p>
+          <p className="text-xs text-ink-700/50">Último acesso: {formatDateTime(employee.lastLoginAt)}</p>
         </div>
       </div>
 
       <EmployeeStatusActions userId={employee.id} active={employee.active} />
 
       <section className="space-y-4 rounded-2xl border border-border bg-white p-6">
-        <h2 className="font-semibold text-navy-900">Dados cadastrais</h2>
+        <h2 className="font-semibold text-ink-900">Dados cadastrais</h2>
         <EmployeeForm departments={departments} employee={employee} />
       </section>
 
       <section className="space-y-4 rounded-2xl border border-border bg-white p-6">
-        <h2 className="font-semibold text-navy-900">Matricular em novo curso</h2>
+        <h2 className="font-semibold text-ink-900">Matricular em novo curso</h2>
         {availableCourses.length === 0 ? (
-          <p className="text-sm text-navy-700/60">
+          <p className="text-sm text-ink-700/60">
             Não há cursos publicados disponíveis para matrícula (o funcionário já está matriculado em
             todos, ou não há cursos publicados).
           </p>
@@ -90,9 +90,9 @@ export default async function FuncionarioDetailPage({
       </section>
 
       <section className="space-y-4 rounded-2xl border border-border bg-white p-6">
-        <h2 className="font-semibold text-navy-900">Histórico de treinamentos ({enrollments.length})</h2>
+        <h2 className="font-semibold text-ink-900">Histórico de treinamentos ({enrollments.length})</h2>
         {enrollments.length === 0 ? (
-          <p className="text-sm text-navy-700/60">Nenhum curso matriculado ainda.</p>
+          <p className="text-sm text-ink-700/60">Nenhum curso matriculado ainda.</p>
         ) : (
           <ul className="divide-y divide-border">
             {enrollments.map((enr) => {
@@ -105,13 +105,13 @@ export default async function FuncionarioDetailPage({
                 <li key={enr.id} className="space-y-2 py-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <p className="font-medium text-navy-900">{enr.course.title}</p>
+                      <p className="font-medium text-ink-900">{enr.course.title}</p>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
                         {enr.mandatory && <Badge tone="navy">Obrigatório</Badge>}
                         {completed && <Badge tone="success">Concluído</Badge>}
                         {overdue && <Badge tone="danger">Atrasado</Badge>}
                         {enr.dueDate && (
-                          <span className="text-navy-700/50">Prazo: {formatDate(enr.dueDate)}</span>
+                          <span className="text-ink-700/50">Prazo: {formatDate(enr.dueDate)}</span>
                         )}
                       </div>
                     </div>
@@ -125,7 +125,7 @@ export default async function FuncionarioDetailPage({
                   </div>
                   <div className="flex items-center gap-3">
                     <ProgressBar percent={percent} size="sm" className="max-w-xs" />
-                    <span className="text-xs font-medium text-navy-700/70">{percent}%</span>
+                    <span className="text-xs font-medium text-ink-700/70">{percent}%</span>
                   </div>
                 </li>
               );

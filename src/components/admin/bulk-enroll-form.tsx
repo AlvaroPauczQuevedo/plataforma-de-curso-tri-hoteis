@@ -70,11 +70,11 @@ export function BulkEnrollForm({ employees, courses }: { employees: Employee[]; 
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="space-y-1.5 sm:col-span-1">
-          <label className="text-sm font-medium text-navy-900">Curso</label>
+          <label className="text-sm font-medium text-ink-900">Curso</label>
           <select
             value={courseId}
             onChange={(e) => setCourseId(e.target.value)}
-            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
           >
             <option value="">Selecione um curso...</option>
             {courses.map((c) => (
@@ -85,16 +85,16 @@ export function BulkEnrollForm({ employees, courses }: { employees: Employee[]; 
           </select>
         </div>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-navy-900">Prazo (opcional)</label>
+          <label className="text-sm font-medium text-ink-900">Prazo (opcional)</label>
           <input
             type="date"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
-            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
           />
         </div>
         <div className="flex items-end pb-2.5">
-          <label className="flex items-center gap-2 text-sm text-navy-700">
+          <label className="flex items-center gap-2 text-sm text-ink-700">
             <input
               type="checkbox"
               checked={mandatory}
@@ -108,10 +108,10 @@ export function BulkEnrollForm({ employees, courses }: { employees: Employee[]; 
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-navy-900">
+          <label className="text-sm font-medium text-ink-900">
             Funcionários ({selected.size} selecionado(s))
           </label>
-          <button type="button" onClick={toggleAll} className="text-xs font-medium text-accent-600 hover:underline">
+          <button type="button" onClick={toggleAll} className="text-xs font-medium text-brand-700 hover:underline">
             {selected.size === filtered.length ? "Desmarcar todos" : "Selecionar todos"}
           </button>
         </div>
@@ -119,7 +119,7 @@ export function BulkEnrollForm({ employees, courses }: { employees: Employee[]; 
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar funcionário..."
-          className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+          className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
         />
         <div className="max-h-64 overflow-y-auto rounded-xl border border-border">
           {filtered.map((emp) => (
@@ -133,12 +133,12 @@ export function BulkEnrollForm({ employees, courses }: { employees: Employee[]; 
                 onChange={() => toggle(emp.id)}
                 className="h-4 w-4 rounded border-border"
               />
-              <span className="flex-1 text-navy-900">{emp.name}</span>
-              <span className="text-xs text-navy-700/50">{emp.department?.name ?? "-"}</span>
+              <span className="flex-1 text-ink-900">{emp.name}</span>
+              <span className="text-xs text-ink-700/50">{emp.department?.name ?? "-"}</span>
             </label>
           ))}
           {filtered.length === 0 && (
-            <p className="px-3.5 py-4 text-center text-sm text-navy-700/50">Nenhum funcionário encontrado.</p>
+            <p className="px-3.5 py-4 text-center text-sm text-ink-700/50">Nenhum funcionário encontrado.</p>
           )}
         </div>
       </div>

@@ -6,13 +6,15 @@ type Variant = "primary" | "secondary" | "ghost" | "danger" | "outline";
 type Size = "sm" | "md" | "lg";
 
 const variantClasses: Record<Variant, string> = {
+  // brand-700 garante contraste 5.18:1 com texto branco (WCAG AA);
+  // o hover escurece para brand-800, preservando a legibilidade.
   primary:
-    "bg-accent-600 text-white hover:bg-accent-500 shadow-sm shadow-accent-600/20 disabled:bg-accent-600/50",
+    "bg-brand-700 text-white hover:bg-brand-800 shadow-sm shadow-brand-700/25 disabled:bg-brand-700/50",
   secondary:
-    "bg-navy-900 text-white hover:bg-navy-800 disabled:bg-navy-900/50",
+    "bg-ink-900 text-white hover:bg-ink-800 disabled:bg-ink-900/50",
   outline:
-    "border border-border bg-white text-navy-900 hover:bg-surface-muted disabled:opacity-50",
-  ghost: "text-navy-700 hover:bg-surface-muted disabled:opacity-50",
+    "border border-border bg-white text-ink-900 hover:bg-surface-muted disabled:opacity-50",
+  ghost: "text-ink-700 hover:bg-surface-muted disabled:opacity-50",
   danger: "bg-danger-600 text-white hover:bg-danger-600/90 disabled:bg-danger-600/50",
 };
 

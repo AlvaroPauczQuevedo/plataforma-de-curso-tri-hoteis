@@ -53,8 +53,8 @@ export default async function FuncionariosPage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-navy-900">Funcionários</h1>
-          <p className="text-sm text-navy-700/70">{total} funcionário(s) cadastrado(s)</p>
+          <h1 className="text-2xl font-semibold text-ink-900">Funcionários</h1>
+          <p className="text-sm text-ink-700/70">{total} funcionário(s) cadastrado(s)</p>
         </div>
         <ButtonLink href="/admin/funcionarios/novo">
           <Plus className="h-4 w-4" />
@@ -87,7 +87,7 @@ export default async function FuncionariosPage({
         <div className="overflow-hidden rounded-2xl border border-border bg-white">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-surface-muted/60 text-xs uppercase tracking-wide text-navy-700/60">
+              <thead className="bg-surface-muted/60 text-xs uppercase tracking-wide text-ink-700/60">
                 <tr>
                   <th className="px-4 py-3 font-medium">Funcionário</th>
                   <th className="px-4 py-3 font-medium">Cargo</th>
@@ -105,24 +105,24 @@ export default async function FuncionariosPage({
                       <div className="flex items-center gap-2.5">
                         <Avatar name={emp.name} src={emp.avatarUrl} size="sm" />
                         <div className="min-w-0">
-                          <p className="truncate font-medium text-navy-900">{emp.name}</p>
-                          <p className="truncate text-xs text-navy-700/50">{emp.email}</p>
+                          <p className="truncate font-medium text-ink-900">{emp.name}</p>
+                          <p className="truncate text-xs text-ink-700/50">{emp.email}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-navy-700">{emp.position ?? "-"}</td>
-                    <td className="px-4 py-3 text-navy-700">{emp.department?.name ?? "-"}</td>
-                    <td className="px-4 py-3 text-navy-700">{emp._count.enrollments}</td>
+                    <td className="px-4 py-3 text-ink-700">{emp.position ?? "-"}</td>
+                    <td className="px-4 py-3 text-ink-700">{emp.department?.name ?? "-"}</td>
+                    <td className="px-4 py-3 text-ink-700">{emp._count.enrollments}</td>
                     <td className="px-4 py-3">
                       <Badge tone={emp.active ? "success" : "danger"}>
                         {emp.active ? "Ativo" : "Inativo"}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-xs text-navy-700/60">{formatDateTime(emp.lastLoginAt)}</td>
+                    <td className="px-4 py-3 text-xs text-ink-700/60">{formatDateTime(emp.lastLoginAt)}</td>
                     <td className="px-4 py-3 text-right">
                       <Link
                         href={`/admin/funcionarios/${emp.id}`}
-                        className="text-sm font-medium text-accent-600 hover:underline"
+                        className="text-sm font-medium text-brand-700 hover:underline"
                       >
                         Ver / editar
                       </Link>

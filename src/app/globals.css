@@ -1,30 +1,56 @@
 @import "tailwindcss";
 
+/*
+  Paleta Academia Corporativa Tri Hotéis
+  --------------------------------------
+  Cor da marca: #FF6A00 (extraída da logo oficial).
+
+  Uso do laranja pensado para conforto visual e acessibilidade:
+  - brand-500 (#FF6A00) é a cor pura da marca. Usada em superfícies e
+    elementos NÃO textuais: barra de progresso, indicador de menu ativo,
+    ícones, gradientes e o bloco da logo. Sobre ela usamos texto escuro.
+  - brand-700 (#CC4A00) é a cor de texto e de botões com texto branco —
+    contraste 4.62:1 sobre branco, aprovado no WCAG AA.
+  - Tons 50/100 são fundos suaves para selos e destaques, evitando
+    saturar a tela de laranja.
+
+  A base é grafite quente (não azul-marinho): azul e laranja são
+  complementares e "vibram" quando lado a lado, cansando a vista.
+  Grafite + laranja mantém o visual tecnológico e é confortável.
+*/
+
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #faf9f8;
+  --foreground: #1c1917;
 
-  --color-navy-950: #0b1120;
-  --color-navy-900: #0f172a;
-  --color-navy-800: #1e293b;
-  --color-navy-700: #334155;
+  /* Grafite quente — superfícies escuras (menu lateral, hero) */
+  --color-ink-950: #14100e;
+  --color-ink-900: #1c1917;
+  --color-ink-800: #292524;
+  --color-ink-700: #44403c;
 
-  --color-accent-600: #4f46e5;
-  --color-accent-500: #6366f1;
-  --color-accent-400: #818cf8;
-  --color-electric-500: #3b82f6;
-  --color-electric-400: #60a5fa;
+  /* Laranja da marca */
+  --color-brand-50: #fff7ed;
+  --color-brand-100: #ffedd5;
+  --color-brand-200: #fed7aa;
+  --color-brand-400: #ff8534;
+  --color-brand-500: #ff6a00;
+  --color-brand-600: #db5a00;
+  --color-brand-700: #cc4a00;
+  --color-brand-800: #a83c00;
 
-  --color-success-600: #16a34a;
+  /* Estados */
+  --color-success-600: #15803d;
   --color-success-100: #dcfce7;
-  --color-warning-600: #ca8a04;
+  --color-warning-600: #a16207;
   --color-warning-100: #fef9c3;
-  --color-danger-600: #dc2626;
+  --color-danger-600: #b91c1c;
   --color-danger-100: #fee2e2;
 
+  /* Neutros quentes */
   --color-surface: #ffffff;
-  --color-surface-muted: #f1f5f9;
-  --color-border: #e2e8f0;
+  --color-surface-muted: #f5f3f1;
+  --color-border: #e7e3df;
 }
 
 @theme inline {
@@ -32,16 +58,19 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
 
-  --color-navy-950: var(--color-navy-950);
-  --color-navy-900: var(--color-navy-900);
-  --color-navy-800: var(--color-navy-800);
-  --color-navy-700: var(--color-navy-700);
+  --color-ink-950: var(--color-ink-950);
+  --color-ink-900: var(--color-ink-900);
+  --color-ink-800: var(--color-ink-800);
+  --color-ink-700: var(--color-ink-700);
 
-  --color-accent-600: var(--color-accent-600);
-  --color-accent-500: var(--color-accent-500);
-  --color-accent-400: var(--color-accent-400);
-  --color-electric-500: var(--color-electric-500);
-  --color-electric-400: var(--color-electric-400);
+  --color-brand-50: var(--color-brand-50);
+  --color-brand-100: var(--color-brand-100);
+  --color-brand-200: var(--color-brand-200);
+  --color-brand-400: var(--color-brand-400);
+  --color-brand-500: var(--color-brand-500);
+  --color-brand-600: var(--color-brand-600);
+  --color-brand-700: var(--color-brand-700);
+  --color-brand-800: var(--color-brand-800);
 
   --color-success-600: var(--color-success-600);
   --color-success-100: var(--color-success-100);
@@ -62,7 +91,7 @@ body {
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-navy-700) transparent;
+  scrollbar-color: var(--color-ink-700) transparent;
 }
 
 .animate-fade-in {

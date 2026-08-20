@@ -31,16 +31,16 @@ export function LessonForm({
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-navy-900">Título da aula</label>
+          <label className="text-xs font-medium text-ink-900">Título da aula</label>
           <input
             name="title"
             required
             defaultValue={lesson?.title}
-            className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+            className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
           />
         </div>
         <div className="flex items-end pb-2">
-          <label className="flex items-center gap-2 text-xs text-navy-700">
+          <label className="flex items-center gap-2 text-xs text-ink-700">
             <input
               type="checkbox"
               name="required"
@@ -53,12 +53,12 @@ export function LessonForm({
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-xs font-medium text-navy-900">Tipo de conteúdo</label>
+        <label className="text-xs font-medium text-ink-900">Tipo de conteúdo</label>
         <select
           name="type"
           value={type}
           onChange={(e) => setType(e.target.value as typeof type)}
-          className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20 sm:w-56"
+          className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20 sm:w-56"
         >
           <option value="VIDEO">Vídeo</option>
           <option value="PDF">PDF</option>
@@ -69,12 +69,12 @@ export function LessonForm({
       {type === "VIDEO" && (
         <div className="space-y-3 rounded-lg border border-border bg-white p-3">
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-navy-900">Origem do vídeo</label>
+            <label className="text-xs font-medium text-ink-900">Origem do vídeo</label>
             <select
               name="videoSource"
               value={videoSource}
               onChange={(e) => setVideoSource(e.target.value as typeof videoSource)}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20 sm:w-56"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20 sm:w-56"
             >
               <option value="UPLOAD">Upload de arquivo</option>
               <option value="EMBED">Link incorporado (YouTube/Vimeo)</option>
@@ -90,12 +90,12 @@ export function LessonForm({
             />
           ) : (
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-navy-900">URL de incorporação (embed)</label>
+              <label className="text-xs font-medium text-ink-900">URL de incorporação (embed)</label>
               <input
                 name="videoEmbedUrl"
                 placeholder="https://www.youtube.com/embed/..."
                 defaultValue={lesson?.videoEmbedUrl ?? ""}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
               />
             </div>
           )}
@@ -116,12 +116,12 @@ export function LessonForm({
 
       {type === "TEXT" && (
         <div className="space-y-1.5 rounded-lg border border-border bg-white p-3">
-          <label className="text-xs font-medium text-navy-900">Conteúdo em texto</label>
+          <label className="text-xs font-medium text-ink-900">Conteúdo em texto</label>
           <textarea
             name="textContent"
             rows={5}
             defaultValue={lesson?.textContent ?? ""}
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+            className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
           />
         </div>
       )}

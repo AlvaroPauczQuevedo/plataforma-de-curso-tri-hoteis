@@ -20,7 +20,7 @@ export function AdminShell({
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-white px-4 sm:px-6">
           <button
-            className="rounded-lg p-2 text-navy-700 hover:bg-surface-muted lg:hidden"
+            className="rounded-lg p-2 text-ink-700 hover:bg-surface-muted lg:hidden"
             onClick={() => setMobileOpen(true)}
             aria-label="Abrir menu"
           >
@@ -29,7 +29,7 @@ export function AdminShell({
           <div className="hidden lg:block" />
           <div className="flex items-center gap-2">
             <Avatar name={adminName} size="sm" />
-            <span className="text-sm font-medium text-navy-900">{adminName}</span>
+            <span className="text-sm font-medium text-ink-900">{adminName}</span>
           </div>
         </header>
         <main className="flex-1 p-4 sm:p-6 lg:p-8">{children}</main>

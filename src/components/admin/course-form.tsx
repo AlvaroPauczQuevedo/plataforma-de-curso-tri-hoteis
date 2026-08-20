@@ -29,7 +29,7 @@ export function CourseForm({
       }}
     >
       <div className="space-y-1.5">
-        <label htmlFor="title" className="text-sm font-medium text-navy-900">
+        <label htmlFor="title" className="text-sm font-medium text-ink-900">
           Título do curso
         </label>
         <input
@@ -37,12 +37,12 @@ export function CourseForm({
           name="title"
           required
           defaultValue={course?.title}
-          className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+          className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
         />
       </div>
 
       <div className="space-y-1.5">
-        <label htmlFor="description" className="text-sm font-medium text-navy-900">
+        <label htmlFor="description" className="text-sm font-medium text-ink-900">
           Descrição
         </label>
         <textarea
@@ -51,20 +51,20 @@ export function CourseForm({
           required
           rows={3}
           defaultValue={course?.description}
-          className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+          className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <label htmlFor="categoryId" className="text-sm font-medium text-navy-900">
+          <label htmlFor="categoryId" className="text-sm font-medium text-ink-900">
             Categoria
           </label>
           <select
             id="categoryId"
             name="categoryId"
             defaultValue={course?.categoryId ?? ""}
-            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
           >
             <option value="">Sem categoria</option>
             {categories.map((c) => (
@@ -75,21 +75,21 @@ export function CourseForm({
           </select>
         </div>
         <div className="space-y-1.5">
-          <label htmlFor="instructor" className="text-sm font-medium text-navy-900">
+          <label htmlFor="instructor" className="text-sm font-medium text-ink-900">
             Instrutor(a)
           </label>
           <input
             id="instructor"
             name="instructor"
             defaultValue={course?.instructor ?? ""}
-            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
           />
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="space-y-1.5">
-          <label htmlFor="durationMinutes" className="text-sm font-medium text-navy-900">
+          <label htmlFor="durationMinutes" className="text-sm font-medium text-ink-900">
             Carga horária (min)
           </label>
           <input
@@ -98,18 +98,18 @@ export function CourseForm({
             type="number"
             min={0}
             defaultValue={course?.durationMinutes ?? 0}
-            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
           />
         </div>
         <div className="space-y-1.5">
-          <label htmlFor="difficulty" className="text-sm font-medium text-navy-900">
+          <label htmlFor="difficulty" className="text-sm font-medium text-ink-900">
             Nível de dificuldade
           </label>
           <select
             id="difficulty"
             name="difficulty"
             defaultValue={course?.difficulty ?? "INICIANTE"}
-            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
           >
             <option value="INICIANTE">Iniciante</option>
             <option value="INTERMEDIARIO">Intermediário</option>
@@ -117,7 +117,7 @@ export function CourseForm({
           </select>
         </div>
         <div className="space-y-1.5">
-          <label htmlFor="videoCompletionThreshold" className="text-sm font-medium text-navy-900">
+          <label htmlFor="videoCompletionThreshold" className="text-sm font-medium text-ink-900">
             % vídeo p/ concluir
           </label>
           <input
@@ -127,7 +127,7 @@ export function CourseForm({
             min={50}
             max={100}
             defaultValue={course?.videoCompletionThreshold ?? 90}
-            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
           />
         </div>
       </div>
@@ -141,7 +141,7 @@ export function CourseForm({
       />
 
       <div className="grid grid-cols-1 gap-3 rounded-xl bg-surface-muted p-4 sm:grid-cols-3">
-        <label className="flex items-center gap-2 text-sm text-navy-700">
+        <label className="flex items-center gap-2 text-sm text-ink-700">
           <input
             type="checkbox"
             name="sequential"
@@ -150,7 +150,7 @@ export function CourseForm({
           />
           Aulas em ordem obrigatória
         </label>
-        <label className="flex items-center gap-2 text-sm text-navy-700">
+        <label className="flex items-center gap-2 text-sm text-ink-700">
           <input
             type="checkbox"
             name="allowDownload"
@@ -159,7 +159,7 @@ export function CourseForm({
           />
           Permitir baixar materiais
         </label>
-        <label className="flex items-center gap-2 text-sm text-navy-700">
+        <label className="flex items-center gap-2 text-sm text-ink-700">
           <input
             type="checkbox"
             name="certificateEnabled"

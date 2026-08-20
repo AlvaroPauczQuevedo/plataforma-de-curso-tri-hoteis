@@ -108,13 +108,13 @@ export function ModuleLessonBuilder({
           value={newModuleTitle}
           onChange={(e) => setNewModuleTitle(e.target.value)}
           placeholder="Nome do novo módulo (ex: Módulo 4 — Avaliação)"
-          className="flex-1 rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+          className="flex-1 rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
         />
         <button
           type="button"
           onClick={handleAddModule}
           disabled={pending}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-accent-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-500 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50"
         >
           <Plus className="h-4 w-4" />
           Novo módulo
@@ -153,12 +153,12 @@ function SortableModuleCard({
           type="button"
           {...attributes}
           {...listeners}
-          className="cursor-grab touch-none rounded p-1.5 text-navy-700/40 hover:bg-white hover:text-navy-700"
+          className="cursor-grab touch-none rounded p-1.5 text-ink-700/40 hover:bg-white hover:text-ink-700"
           title="Arrastar para reordenar"
         >
           <GripVertical className="h-4 w-4" />
         </button>
-        <span className="shrink-0 text-xs font-semibold text-navy-700/50">Módulo {index + 1}</span>
+        <span className="shrink-0 text-xs font-semibold text-ink-700/50">Módulo {index + 1}</span>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -167,7 +167,7 @@ function SortableModuleCard({
               updateModuleTitle(module.id, title.trim()).then(() => router.refresh());
             }
           }}
-          className="flex-1 rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm font-medium text-navy-900 outline-none focus:border-border focus:bg-white"
+          className="flex-1 rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm font-medium text-ink-900 outline-none focus:border-border focus:bg-white"
         />
         <ActionButton
           action={() => deleteModule(module.id)}
@@ -196,7 +196,7 @@ function SortableModuleCard({
           <button
             type="button"
             onClick={() => setShowAddLesson(true)}
-            className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-accent-600 hover:bg-accent-600/10"
+            className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-700/10"
           >
             <Plus className="h-3.5 w-3.5" />
             Adicionar aula
@@ -230,7 +230,7 @@ function LessonList({ module }: { module: ModuleWithLessons }) {
   }
 
   if (ordered.length === 0) {
-    return <p className="px-2 py-2 text-xs text-navy-700/50">Nenhuma aula neste módulo ainda.</p>;
+    return <p className="px-2 py-2 text-xs text-ink-700/50">Nenhuma aula neste módulo ainda.</p>;
   }
 
   return (
@@ -269,7 +269,7 @@ function SortableLessonRow({ lesson }: { lesson: LessonWithFiles }) {
         <button
           type="button"
           onClick={() => setEditing(false)}
-          className="mt-1 text-xs text-navy-700/60 hover:underline"
+          className="mt-1 text-xs text-ink-700/60 hover:underline"
         >
           Cancelar
         </button>
@@ -287,14 +287,14 @@ function SortableLessonRow({ lesson }: { lesson: LessonWithFiles }) {
         type="button"
         {...attributes}
         {...listeners}
-        className="cursor-grab touch-none rounded p-1 text-navy-700/30 hover:text-navy-700"
+        className="cursor-grab touch-none rounded p-1 text-ink-700/30 hover:text-ink-700"
       >
         <GripVertical className="h-3.5 w-3.5" />
       </button>
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-600/10 text-accent-600">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-700/10 text-brand-700">
         <Icon className="h-3.5 w-3.5" />
       </div>
-      <span className="min-w-0 flex-1 truncate text-sm text-navy-900">{lesson.title}</span>
+      <span className="min-w-0 flex-1 truncate text-sm text-ink-900">{lesson.title}</span>
       {lesson.required ? (
         <Badge tone="navy" className="hidden sm:inline-flex">Obrigatória</Badge>
       ) : (
@@ -303,7 +303,7 @@ function SortableLessonRow({ lesson }: { lesson: LessonWithFiles }) {
       <button
         type="button"
         onClick={() => setEditing(true)}
-        className="rounded-lg p-1.5 text-navy-700/50 hover:bg-surface-muted hover:text-navy-900"
+        className="rounded-lg p-1.5 text-ink-700/50 hover:bg-surface-muted hover:text-ink-900"
         title="Editar aula"
       >
         <Pencil className="h-3.5 w-3.5" />

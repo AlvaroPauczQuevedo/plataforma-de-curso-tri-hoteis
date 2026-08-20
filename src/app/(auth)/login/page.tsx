@@ -12,9 +12,9 @@ export default function LoginPage({
       title="Bem-vindo de volta"
       subtitle="Entre com seu e-mail e senha para acessar seus cursos."
       footer={
-        <p className="text-center text-xs text-navy-700/60">
+        <p className="text-center text-xs text-ink-700/60">
           É administrador?{" "}
-          <Link href="/admin/login" className="font-medium text-accent-600 hover:underline">
+          <Link href="/admin/login" className="font-medium text-brand-700 hover:underline">
             Acesse o painel administrativo
           </Link>
         </p>

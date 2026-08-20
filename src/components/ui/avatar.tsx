@@ -33,7 +33,7 @@ export function Avatar({
     <div
       style={{ width: dims, height: dims }}
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent-600 to-electric-500 font-semibold text-white",
+        "flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-700 to-brand-500 font-semibold text-white",
         textSize,
         className
       )}

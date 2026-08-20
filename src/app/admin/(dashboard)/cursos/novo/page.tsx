@@ -10,14 +10,14 @@ export default async function NovoCursoPage() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <Link href="/admin/cursos" className="inline-flex items-center gap-1.5 text-sm font-medium text-navy-700 hover:text-accent-600">
+      <Link href="/admin/cursos" className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-700 hover:text-brand-700">
         <ChevronLeft className="h-4 w-4" />
         Voltar
       </Link>
 
       <div>
-        <h1 className="text-2xl font-semibold text-navy-900">Novo curso</h1>
-        <p className="text-sm text-navy-700/70">
+        <h1 className="text-2xl font-semibold text-ink-900">Novo curso</h1>
+        <p className="text-sm text-ink-700/70">
           O curso será criado como rascunho. Depois de salvar, você poderá adicionar módulos e aulas.
         </p>
       </div>
