@@ -9,22 +9,37 @@ português do Brasil.
 ```bash
 npm install
 npx prisma migrate dev      # cria o banco (SQLite) e aplica as migrações
-npx prisma db seed          # popula com dados de demonstração
-npm run dev                 # http://localhost:3000
+npm run build && npm start  # modo apresentação, acessível na rede local
 ```
 
-## Acessos de demonstração
+Para desenvolver, use `npm run dev` (recarrega a cada alteração, porém é bem
+mais lento) ou `npm run dev:local` para restringir o acesso ao próprio micro.
 
-| Perfil | E-mail | Senha |
-| --- | --- | --- |
-| Administrador | `admin@trihoteis.com.br` | `Admin@123` |
-| Funcionário (em andamento + concluídos) | `marina.costa@trihoteis.com.br` | `Colaborador@123` |
-| Funcionário (curso atrasado) | `joao.pereira@trihoteis.com.br` | `Colaborador@123` |
-| Funcionário (3 cursos concluídos + certificados) | `beatriz.santos@trihoteis.com.br` | `Colaborador@123` |
-| Funcionário (sem cursos liberados) | `pedro.rocha@trihoteis.com.br` | `Colaborador@123` |
-| Funcionário desativado (login bloqueado) | `roberto.dias@trihoteis.com.br` | `Colaborador@123` |
+`npm start` e `npm run dev` sobem em `0.0.0.0` e imprimem o endereço de acesso
+na inicialização, então a plataforma fica disponível para toda a rede local:
+
+```
+  Nesta máquina:  http://localhost:3000
+  Na rede local:  http://172.16.0.55:3000
+```
 
 O portal do funcionário fica em `/` e o painel administrativo em `/admin`.
+
+## Primeiro acesso
+
+O banco de demonstração foi limpo: resta apenas a conta de administrador, além
+dos departamentos e categorias. **As senhas não ficam neste repositório** — o
+administrador cadastra os funcionários em *Painel Administrativo → Funcionários
+→ Novo*, e a senha inicial de cada um é exibida uma única vez na tela, no
+momento do cadastro.
+
+Para recriar a base de demonstração (funcionários e cursos de exemplo) em um
+ambiente de testes:
+
+```bash
+npx prisma db seed          # popula com dados de demonstração
+npx tsx prisma/limpar-dados.ts   # remove tudo, preservando o administrador
+```
 
 ## Stack
 
@@ -34,6 +49,24 @@ O portal do funcionário fica em `/` e o painel administrativo em `/admin`.
 - **NextAuth** (credenciais + JWT), senhas com hash **bcrypt**
 - **Tailwind CSS**, **Recharts** (gráficos), **@dnd-kit** (arrastar e soltar),
   **pdf-lib** (geração de certificados), **Zod** (validação)
+
+## Identidade visual
+
+Paleta construída a partir do laranja da logo Tri Hotéis:
+
+| Papel | Token | Cor |
+| --- | --- | --- |
+| Laranja da marca (superfícies, gráficos, destaques) | `brand-500` | `#FF6A00` |
+| Laranja de texto e botões (contraste 4.62:1, WCAG AA) | `brand-700` | `#CC4A00` |
+| Neutro escuro (títulos, menu lateral) | `ink-900` | `#1C1917` |
+| Fundo da aplicação | `--background` | `#FAF9F8` |
+| Concluído | `success-600` | `#15803D` |
+| Prazo próximo | `warning-600` | `#A16207` |
+| Atrasado / erro | `danger-600` | `#B91C1C` |
+
+Os neutros são quentes (grafite, não azul) de propósito: azul e laranja são
+complementares e vibram quando usados lado a lado. Os tokens estão em
+`src/app/globals.css`.
 
 ## Estrutura
 
@@ -54,7 +87,10 @@ src/components/           design system e componentes de cada ambiente
 
 - **Progresso de vídeo**: a aula é concluída automaticamente ao atingir a
   porcentagem assistida configurada no curso (padrão **90%**). O player envia a
-  posição periodicamente e retoma de onde o funcionário parou.
+  posição periodicamente e retoma de onde o funcionário parou. Quem decide a
+  conclusão é o servidor: o limite vem do curso no banco e o avanço por
+  requisição é limitado pelo tempo real decorrido, de modo que arrastar a barra
+  até o fim (ou forjar a chamada) não conclui a aula.
 - **PDF e texto**: exigem clique em **"Marcar como concluído"** — abrir a página
   nunca conclui a aula sozinho.
 - **Progresso do curso**: recalculado a cada aula concluída, com base nas aulas
@@ -71,9 +107,13 @@ src/components/           design system e componentes de cada ambiente
 ## Observações desta entrega
 
 - **Recuperação de senha**: não há serviço de e-mail configurado neste ambiente.
-  O link de redefinição é gerado com token de uso único e validade de 1 hora, e
-  exibido na própria tela (modo demonstração). Em produção, basta enviar esse
-  link por e-mail em vez de exibi-lo.
+  A tela pública `/esqueci-senha` apenas registra a solicitação e **nunca exibe
+  o link** — mostrá-lo ali permitiria que qualquer pessoa que soubesse o e-mail
+  de um funcionário assumisse a conta dele. Quem gera o link é o administrador,
+  em *Funcionários → (funcionário) → Gerar link de redefinição*: token de uso
+  único, válido por 1 hora. Para automatizar, basta plugar um serviço de e-mail
+  em `requestPasswordReset` (`src/lib/actions/password-reset.ts`) e enviar o
+  token por lá.
 - **Armazenamento**: os arquivos ficam em `storage/uploads/` no servidor. A
   camada de acesso está isolada em `src/lib/storage.ts`, o que facilita migrar
   para um serviço de nuvem (S3 ou similar) futuramente.
@@ -81,3 +121,12 @@ src/components/           design system e componentes de cada ambiente
   (padrão 500 MB).
 - Antes de publicar em produção, troque `NEXTAUTH_SECRET` no `.env` por um
   valor secreto e aleatório.
+- **`NEXTAUTH_URL`**: o NextAuth precisa dessa variável para montar os
+  redirecionamentos de login — sem ela, ele assume `localhost:3000` e quem
+  entrar pelo IP da rede é jogado para a máquina errada depois de autenticar.
+  Como o IP vem do DHCP e muda, `scripts/servidor.mjs` o detecta a cada
+  inicialização em vez de deixá-lo fixo no `.env`. Quando houver um domínio
+  definitivo, basta definir `NEXTAUTH_URL` no `.env` — o script respeita o
+  valor já existente.
+- **Banco e backups não são versionados**: `prisma/*.db` está no `.gitignore`
+  porque contém e-mails e hashes de senha.

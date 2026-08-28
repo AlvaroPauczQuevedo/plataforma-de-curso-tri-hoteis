@@ -65,8 +65,10 @@ export async function fileBelongsToAccessibleCourse(userId: string, fileId: stri
   }
 
   if (courseWithCover) {
-    // capas de curso são visíveis para qualquer usuário autenticado (catálogo)
-    return true;
+    // Capas aparecem no catálogo, mas só de cursos publicados: a capa de um
+    // rascunho revelaria um curso que ainda não foi liberado.
+    if (courseWithCover.status === "PUBLISHED") return true;
+    return userHasCourseAccess(userId, courseWithCover.id);
   }
 
   const file = await db.fileAsset.findUnique({ where: { id: fileId } });

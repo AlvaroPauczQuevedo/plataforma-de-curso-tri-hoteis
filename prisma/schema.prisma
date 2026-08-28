@@ -189,6 +189,9 @@ model LessonProgress {
   completedAt        DateTime?
   videoPositionSeconds Int?
   videoWatchedPercent  Int?
+  /// Tempo real acumulado de reprodução. Só cresce com o relógio do servidor,
+  /// então não é possível "assistir" um vídeo mais rápido do que ele dura.
+  videoWatchedSeconds  Int       @default(0)
   updatedAt          DateTime  @updatedAt
 
   @@unique([userId, lessonId])

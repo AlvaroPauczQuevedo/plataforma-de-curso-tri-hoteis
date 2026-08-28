@@ -11,7 +11,7 @@ import { requestPasswordReset } from "@/lib/actions/password-reset";
 export default function ForgotPasswordPage() {
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<
-    { ok: true; message?: string; resetLink?: string } | { ok: false; error: string } | null
+    { ok: true; message?: string } | { ok: false; error: string } | null
   >(null);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -26,7 +26,7 @@ export default function ForgotPasswordPage() {
   return (
     <AuthShell
       title="Recuperar senha"
-      subtitle="Informe seu e-mail corporativo para receber o link de redefinição."
+      subtitle="Informe seu e-mail corporativo para registrar a solicitação de nova senha."
       footer={
         <p className="text-center text-xs text-ink-700/60">
           <Link href="/login" className="font-medium text-brand-700 hover:underline">
@@ -37,19 +37,7 @@ export default function ForgotPasswordPage() {
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {result && !result.ok && <Alert tone="danger">{result.error}</Alert>}
-        {result && result.ok && (
-          <Alert tone="success">
-            <p>{result.message}</p>
-            {result.resetLink && (
-              <p className="mt-2 text-xs">
-                Ambiente de demonstração — sem envio de e-mail real. Link gerado:{" "}
-                <Link href={result.resetLink} className="font-medium underline">
-                  {result.resetLink}
-                </Link>
-              </p>
-            )}
-          </Alert>
-        )}
+        {result && result.ok && <Alert tone="success">{result.message}</Alert>}
 
         <div className="space-y-1.5">
           <label htmlFor="email" className="text-sm font-medium text-ink-900">

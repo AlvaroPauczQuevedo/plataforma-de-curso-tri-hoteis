@@ -64,7 +64,9 @@ export async function getDashboardStats() {
     .slice(0, 5);
 
   const departmentCounts = await db.department.findMany({
-    include: { _count: { select: { users: true } } },
+    // Só funcionários: contar administradores faria o gráfico divergir do
+    // indicador "Funcionários cadastrados", que já filtra por EMPLOYEE.
+    include: { _count: { select: { users: { where: { role: "EMPLOYEE" } } } } },
   });
 
   const statusBreakdown = [

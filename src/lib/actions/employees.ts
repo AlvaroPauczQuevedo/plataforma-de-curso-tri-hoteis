@@ -153,6 +153,51 @@ export async function resetEmployeePassword(userId: string): Promise<ActionResul
   return { ok: true, message: `Nova senha temporária: ${tempPassword}` };
 }
 
+/**
+ * Gera um link de redefinição de senha para um funcionário.
+ *
+ * Fica no painel administrativo (e não na tela pública /esqueci-senha) porque
+ * quem recebe o link assume a conta: exposto publicamente, bastaria saber o
+ * e-mail de alguém para tomar o acesso dele. O administrador entrega o link
+ * ao funcionário pelo canal interno enquanto não há envio de e-mail.
+ */
+export async function generatePasswordResetLink(
+  userId: string
+): Promise<ActionResult & { resetLink?: string }> {
+  const admin = await requireAdmin();
+
+  const target = await db.user.findUnique({ where: { id: userId } });
+  if (!target) return { ok: false, error: "Funcionário não encontrado." };
+  if (!target.active) {
+    return { ok: false, error: "Reative o acesso antes de gerar um link de redefinição." };
+  }
+
+  // Invalida links anteriores ainda pendentes deste usuário.
+  await db.passwordResetToken.updateMany({
+    where: { userId, usedAt: null },
+    data: { usedAt: new Date() },
+  });
+
+  const token = randomUUID();
+  await db.passwordResetToken.create({
+    data: { userId, token, expiresAt: new Date(Date.now() + 60 * 60 * 1000) },
+  });
+
+  await logAdminActivity({
+    adminId: admin.id,
+    action: "GERAR_LINK_REDEFINICAO",
+    targetType: "User",
+    targetId: userId,
+    details: target.name,
+  });
+
+  return {
+    ok: true,
+    message: "Link válido por 1 hora e de uso único.",
+    resetLink: `/redefinir-senha/${token}`,
+  };
+}
+
 export async function createDepartment(name: string): Promise<ActionResult> {
   const admin = await requireAdmin();
   if (!name?.trim()) return { ok: false, error: "Informe o nome do departamento." };

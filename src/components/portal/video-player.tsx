@@ -13,8 +13,9 @@ export function VideoPlayer({
   initialCompleted,
 }: {
   lessonId: string;
-  src: string;
+  /** Apenas informativo: quem decide a conclusão é o servidor. */
   thresholdPercent: number;
+  src: string;
   initialPositionSeconds: number;
   initialCompleted: boolean;
 }) {
@@ -37,6 +38,18 @@ export function VideoPlayer({
     return () => video.removeEventListener("loadedmetadata", onLoadedMetadata);
   }, [initialPositionSeconds]);
 
+  /**
+   * Envia a posição atual. A conclusão é decidida e devolvida pelo servidor —
+   * o cliente nunca afirma que a aula terminou.
+   */
+  async function report(positionSeconds: number, percent: number) {
+    const result = await updateVideoProgress(lessonId, positionSeconds, percent);
+    if (result.ok && result.message === "completed" && !completed) {
+      setCompleted(true);
+      router.refresh();
+    }
+  }
+
   async function handleTimeUpdate() {
     const video = videoRef.current;
     if (!video || !video.duration) return;
@@ -45,28 +58,13 @@ export function VideoPlayer({
     if (now - lastSentRef.current < 4000) return; // envia no máximo a cada 4s
     lastSentRef.current = now;
 
-    const watchedPercent = Math.round((video.currentTime / video.duration) * 100);
-    const wasCompleted = completed;
-    const result = await updateVideoProgress(
-      lessonId,
-      video.currentTime,
-      watchedPercent,
-      thresholdPercent
-    );
-    if (result.ok && !wasCompleted && watchedPercent >= thresholdPercent) {
-      setCompleted(true);
-      router.refresh();
-    }
+    await report(video.currentTime, Math.round((video.currentTime / video.duration) * 100));
   }
 
   async function handleEnded() {
     const video = videoRef.current;
     if (!video) return;
-    const result = await updateVideoProgress(lessonId, video.duration, 100, thresholdPercent);
-    if (result.ok) {
-      setCompleted(true);
-      router.refresh();
-    }
+    await report(video.duration, 100);
   }
 
   return (

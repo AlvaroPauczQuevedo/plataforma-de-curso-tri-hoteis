@@ -6,14 +6,24 @@ import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
 import type { ActionResult } from "@/lib/actions/employees";
 
+/** Resposta idêntica exista ou não o e-mail, para não revelar a base. */
+const MENSAGEM_NEUTRA =
+  "Se este e-mail estiver cadastrado, a solicitação foi registrada. " +
+  "Procure o administrador do treinamento para receber o link de redefinição.";
+
 /**
- * Não há serviço de e-mail configurado neste ambiente de demonstração.
- * O link de redefinição é devolvido diretamente para exibição em tela,
- * simulando o que seria enviado por e-mail em produção.
+ * Registra um pedido de redefinição de senha.
+ *
+ * O token é gravado para que o envio por e-mail possa ser plugado sem
+ * mudar o fluxo, mas o link NUNCA é devolvido para quem preencheu o
+ * formulário: como esta tela é pública, devolvê-lo permitiria que qualquer
+ * pessoa que soubesse o e-mail de um funcionário assumisse a conta dele.
+ * Enquanto não houver serviço de e-mail configurado, o link é entregue pelo
+ * administrador em /admin/funcionarios (ver generatePasswordResetLink).
  */
 export async function requestPasswordReset(
   formData: FormData
-): Promise<ActionResult & { resetLink?: string }> {
+): Promise<ActionResult> {
   const email = z.string().email().safeParse(formData.get("email"));
   if (!email.success) {
     return { ok: false, error: "Informe um e-mail válido." };
@@ -25,10 +35,7 @@ export async function requestPasswordReset(
 
   // Não revelamos se o e-mail existe ou não, por segurança.
   if (!user || !user.active) {
-    return {
-      ok: true,
-      message: "Se o e-mail existir em nossa base, um link de redefinição foi gerado.",
-    };
+    return { ok: true, message: MENSAGEM_NEUTRA };
   }
 
   const token = randomUUID();
@@ -40,8 +47,7 @@ export async function requestPasswordReset(
 
   return {
     ok: true,
-    message: "Link de redefinição gerado com sucesso.",
-    resetLink: `/redefinir-senha/${token}`,
+    message: MENSAGEM_NEUTRA,
   };
 }
 

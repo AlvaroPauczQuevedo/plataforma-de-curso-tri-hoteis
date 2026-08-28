@@ -37,8 +37,11 @@ yarn-error.log*
 .vercel
 
 # prisma / database
-/prisma/dev.db
-/prisma/dev.db-journal
+# O padrão cobre dev.db e qualquer backup: bancos contêm e-mails e hashes de
+# senha dos usuários e não devem ser versionados.
+/prisma/*.db
+/prisma/*.db-journal
+/prisma/*.sqlite
 
 # uploaded files (kept locally, not versioned)
 /storage/uploads/*

@@ -6,8 +6,9 @@ type Variant = "primary" | "secondary" | "ghost" | "danger" | "outline";
 type Size = "sm" | "md" | "lg";
 
 const variantClasses: Record<Variant, string> = {
-  // brand-700 garante contraste 5.18:1 com texto branco (WCAG AA);
-  // o hover escurece para brand-800, preservando a legibilidade.
+  // brand-700 (#cc4a00) tem contraste 4.62:1 com texto branco — passa no
+  // WCAG AA e mantém o laranja da marca reconhecível; o hover escurece para
+  // brand-800 (#a83c00), preservando a legibilidade.
   primary:
     "bg-brand-700 text-white hover:bg-brand-800 shadow-sm shadow-brand-700/25 disabled:bg-brand-700/50",
   secondary:
