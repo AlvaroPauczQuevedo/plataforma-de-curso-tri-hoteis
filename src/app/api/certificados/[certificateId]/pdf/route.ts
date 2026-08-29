@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentSession } from "@/lib/session";
+import { sessaoDeApi } from "@/lib/session";
 import { db } from "@/lib/db";
 import { generateCertificatePdf } from "@/lib/certificate";
 
@@ -9,8 +9,8 @@ export async function GET(
 ) {
   const { certificateId } = await params;
 
-  const session = await getCurrentSession();
-  if (!session?.user) {
+  const usuario = await sessaoDeApi();
+  if (!usuario) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
 
@@ -23,7 +23,7 @@ export async function GET(
     return NextResponse.json({ error: "Certificado não encontrado." }, { status: 404 });
   }
 
-  if (certificate.userId !== session.user.id && session.user.role !== "ADMIN") {
+  if (certificate.userId !== usuario.id && usuario.role !== "ADMIN") {
     return NextResponse.json({ error: "Acesso não autorizado." }, { status: 403 });
   }
 

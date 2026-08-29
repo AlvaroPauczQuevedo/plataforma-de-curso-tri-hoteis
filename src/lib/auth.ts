@@ -2,6 +2,13 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
+import {
+  ipDaRequisicao,
+  LoginBloqueado,
+  permitirTentativa,
+  registrarFalha,
+  registrarSucesso,
+} from "@/lib/login-guard";
 
 export const authOptions: NextAuthOptions = {
   session: {
@@ -19,16 +26,28 @@ export const authOptions: NextAuthOptions = {
         email: { label: "E-mail", type: "email" },
         password: { label: "Senha", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Informe e-mail e senha.");
         }
 
-        const user = await db.user.findUnique({
-          where: { email: credentials.email.toLowerCase().trim() },
-        });
+        const email = credentials.email.toLowerCase().trim();
+        const ip = ipDaRequisicao(req?.headers as Record<string, string> | undefined);
+
+        // Barreiras de tentativa antes de qualquer comparação de senha.
+        try {
+          await permitirTentativa(email, ip);
+        } catch (erro) {
+          if (erro instanceof LoginBloqueado) throw new Error(erro.message);
+          throw erro;
+        }
+
+        const user = await db.user.findUnique({ where: { email } });
 
         if (!user) {
+          // Registra mesmo sem conta: alimenta a barreira por origem contra
+          // quem varre endereços.
+          await registrarFalha(email, ip);
           throw new Error("E-mail ou senha inválidos.");
         }
 
@@ -38,8 +57,11 @@ export const authOptions: NextAuthOptions = {
 
         const valid = await verifyPassword(credentials.password, user.passwordHash);
         if (!valid) {
+          await registrarFalha(email, ip);
           throw new Error("E-mail ou senha inválidos.");
         }
+
+        await registrarSucesso(user.id, email, ip);
 
         await db.user.update({
           where: { id: user.id },

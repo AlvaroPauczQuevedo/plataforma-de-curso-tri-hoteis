@@ -71,6 +71,11 @@ model User {
   /// Senha provisoria: bloqueia o uso da plataforma ate a troca.
   mustChangePassword Boolean @default(false)
 
+  /// Tentativas de senha erradas seguidas. Zera a cada login bem-sucedido.
+  failedAttempts Int      @default(0)
+  /// Enquanto no futuro, o login e recusado mesmo com a senha correta.
+  lockedUntil    DateTime?
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -239,6 +244,22 @@ model Certificate {
   issuedAt        DateTime @default(now())
 
   @@unique([userId, courseId])
+}
+
+/// Tentativas de login, para limitar por origem e para a trilha de auditoria.
+///
+/// Guarda o e-mail tentado mesmo quando a conta nao existe: sem isso, alguem
+/// varrendo enderecos passaria despercebido. Registros antigos sao descartados
+/// pela propria rotina de verificacao.
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  ip        String   @default("")
+  success   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ip, createdAt])
 }
 
 model PasswordResetToken {

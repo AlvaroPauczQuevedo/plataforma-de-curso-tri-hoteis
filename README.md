@@ -130,6 +130,11 @@ src/components/           design system e componentes de cada ambiente
   até o fim (ou forjar a chamada) não conclui a aula.
 - **PDF e texto**: exigem clique em **"Marcar como concluído"** — abrir a página
   nunca conclui a aula sozinho.
+- **"Oferecer download dos materiais"**: quando desligado, a plataforma não
+  apresenta botão de download e serve o PDF embutido no visualizador. Não é —
+  e não pode ser — um bloqueio absoluto: o arquivo chega ao navegador para ser
+  exibido, então quem insistir consegue guardá-lo. A opção controla o que a
+  plataforma oferece, não o que o navegador é capaz de fazer.
 - **Progresso do curso**: recalculado a cada aula concluída, com base nas aulas
   **obrigatórias**. Ao chegar a 100%, o certificado é emitido automaticamente
   (quando habilitado no curso).
@@ -138,8 +143,43 @@ src/components/           design system e componentes de cada ambiente
 - **Acesso a arquivos**: `/api/files/[id]` verifica sessão e matrícula antes de
   entregar o arquivo; vídeos são servidos com suporte a *range requests*
   (streaming e busca na linha do tempo).
-- **Desativar funcionário** bloqueia o login mas preserva todo o histórico.
+- **Desativar funcionário** bloqueia o login **e encerra a sessão já aberta**
+  na requisição seguinte, preservando todo o histórico. A situação da conta é
+  relida do banco a cada requisição — a sessão é um token de 8 horas e, sem
+  essa releitura, quem fosse desligado seguiria com acesso até o token expirar.
+- **Proteção do login**: 5 erros seguidos bloqueiam a conta por 15 minutos, e
+  há um teto de tentativas por origem para barrar quem varre muitas contas.
+  Ajustável no `.env`.
+- **Arquivos enviados** são conferidos pela assinatura do conteúdo, não pelo
+  tipo que o navegador declara.
 - Ações administrativas relevantes são registradas em **Histórico de atividades**.
+
+## Testes
+
+```bash
+npm test
+```
+
+47 testes, sem dependência extra — usam o executor nativo do Node (`node --test`)
+com `tsx` para o TypeScript. Cada execução cria um banco SQLite próprio em pasta
+temporária e aplica as migrações reais; **o banco de desenvolvimento nunca é
+tocado**.
+
+| Arquivo | O que cobre |
+| --- | --- |
+| `tests/video-credito.test.ts` | A regra que impede forjar a conclusão de um vídeo: arrastar a barra, repetir a chamada, deixar a aba parada, e o caminho honesto que precisa continuar funcionando. |
+| `tests/progresso.test.ts` | Cálculo do percentual, aulas opcionais fora da conta, isolamento entre alunos, emissão única do certificado e ordem obrigatória das aulas. |
+| `tests/login.test.ts` | Bloqueio por conta e por origem, expiração, e o `x-forwarded-for` só valendo com proxy confiável. |
+| `tests/arquivos.test.ts` | Assinatura dos arquivos enviados: aceita os formatos reais, recusa executável disfarçado. |
+
+A regra de crédito de vídeo mora em `src/lib/video-credito.ts` como função pura,
+separada da server action que a usa: é a única parte do sistema cujo resultado
+depende do relógio, e assim pode ser exercitada com o tempo controlado, em
+milissegundos em vez de minutos.
+
+**O que os testes não cobrem**: comportamento no nível HTTP — cabeçalhos de
+segurança, respostas 401/403 das rotas e o fluxo de sessão do NextAuth. Isso foi
+verificado manualmente e exigiria subir o servidor a cada execução.
 
 ## Publicação
 

@@ -6,19 +6,8 @@ import { requireUser } from "@/lib/session";
 import { recalculateCourseProgress } from "@/lib/progress";
 import { isLessonUnlocked } from "@/lib/access";
 import { readVideoDurationSeconds } from "@/lib/video-duration";
+import { calcularCredito } from "@/lib/video-credito";
 import type { ActionResult } from "@/lib/actions/employees";
-
-/** Tolerância para reprodução acelerada (até 2x) e atrasos de rede. */
-const SPEED_TOLERANCE = 2;
-/**
- * Crédito máximo por heartbeat. O player envia a cada 4s; o teto evita que uma
- * aba deixada aberta em segundo plano acumule tempo de uma só vez.
- */
-const MAX_CREDIT_PER_HEARTBEAT = 30;
-/** Crédito do primeiro heartbeat, quando ainda não há intervalo a medir. */
-const FIRST_HEARTBEAT_CREDIT_SECONDS = 5;
-/** Tempo mínimo exigido quando a duração do vídeo não pôde ser lida. */
-const FALLBACK_REQUIRED_SECONDS = 60;
 
 export async function markLessonComplete(lessonId: string): Promise<ActionResult> {
   const user = await requireUser();
@@ -132,44 +121,31 @@ export async function updateVideoProgress(
     where: { userId_lessonId: { userId: user.id, lessonId } },
   });
 
-  // O tempo assistido é creditado pelo menor entre dois limites independentes:
-  //  - o relógio do SERVIDOR desde o último heartbeat (com folga para 2x),
-  //    que impede acumular mais rápido do que o vídeo dura; e
-  //  - o avanço real do ponteiro do vídeo, que impede ganhar tempo com a
-  //    página aberta e parada.
-  // Arrastar a barra até o fim falha no primeiro; deixar a aba aberta falha
-  // no segundo. Assistir de verdade satisfaz os dois.
-  const elapsedSeconds = existing
-    ? (Date.now() - existing.updatedAt.getTime()) / 1000
-    : FIRST_HEARTBEAT_CREDIT_SECONDS;
-  const avancoDoVideo = safePosition - (existing?.videoPositionSeconds ?? 0);
-  const credito = Math.max(
-    0,
-    Math.min(
-      elapsedSeconds * SPEED_TOLERANCE,
-      avancoDoVideo,
-      MAX_CREDIT_PER_HEARTBEAT
-    )
-  );
-  const watchedSeconds = (existing?.videoWatchedSeconds ?? 0) + credito;
+  // A regra de crédito vive em lib/video-credito.ts, como função pura: é o que
+  // impede forjar a conclusão, e é a única parte do fluxo cujo resultado
+  // depende do relógio. Separada, dá para exercitá-la em teste sem esperar.
+  const credito = calcularCredito({
+    agora: new Date(),
+    anterior: existing
+      ? {
+          posicaoSegundos: existing.videoPositionSeconds ?? 0,
+          percentual: existing.videoWatchedPercent ?? 0,
+          segundosAssistidos: existing.videoWatchedSeconds,
+          concluida: existing.completed,
+          atualizadoEm: existing.updatedAt,
+        }
+      : null,
+    posicaoSegundos: safePosition,
+    percentualProposto: reportedPercent,
+    duracaoSegundos: duration,
+    limiarPercentual: thresholdPercent,
+  });
 
-  const requiredSeconds =
-    duration > 0 ? (duration * thresholdPercent) / 100 : FALLBACK_REQUIRED_SECONDS;
-
-  // O percentual exibido também é limitado pelo tempo efetivamente assistido.
-  const percentPorTempo = duration > 0 ? (watchedSeconds / duration) * 100 : reportedPercent;
-  const effectivePercent = Math.min(
-    100,
-    Math.max(
-      existing?.videoWatchedPercent ?? 0,
-      Math.min(reportedPercent, Math.round(percentPorTempo))
-    )
-  );
+  const watchedSeconds = credito.segundosAssistidos;
+  const effectivePercent = credito.percentual;
 
   const alreadyCompleted = existing?.completed ?? false;
-  const shouldComplete =
-    alreadyCompleted ||
-    (reportedPercent >= thresholdPercent && watchedSeconds >= requiredSeconds);
+  const shouldComplete = credito.concluir;
 
   await db.lessonProgress.upsert({
     where: { userId_lessonId: { userId: user.id, lessonId } },

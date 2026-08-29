@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentSession } from "@/lib/session";
+import { sessaoDeApi } from "@/lib/session";
 import { db } from "@/lib/db";
 import { saveUploadedFile, MAX_UPLOAD_BYTES, type UploadKind } from "@/lib/storage";
+import { conteudoConfereComTipo } from "@/lib/file-signature";
 
 const ALLOWED_MIME: Record<UploadKind, string[]> = {
   videos: ["video/mp4", "video/webm", "video/ogg", "video/quicktime"],
@@ -11,8 +12,8 @@ const ALLOWED_MIME: Record<UploadKind, string[]> = {
 };
 
 export async function POST(request: NextRequest) {
-  const session = await getCurrentSession();
-  if (!session?.user) {
+  const usuario = await sessaoDeApi();
+  if (!usuario) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
 
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Arquivo ou tipo inválido." }, { status: 400 });
   }
 
-  if (kind !== "avatars" && session.user.role !== "ADMIN") {
+  if (kind !== "avatars" && usuario.role !== "ADMIN") {
     return NextResponse.json({ error: "Apenas administradores podem enviar este tipo de arquivo." }, { status: 403 });
   }
 
@@ -46,6 +47,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // O tipo acima é o que o navegador declarou; aqui o conteúdo é conferido.
+  // Sem isto, renomear um executável para .mp4 basta para gravá-lo no acervo.
+  const inicio = Buffer.from(await file.slice(0, 16).arrayBuffer());
+  if (!conteudoConfereComTipo(inicio, file.type)) {
+    return NextResponse.json(
+      { error: "O conteúdo do arquivo não corresponde ao formato informado." },
+      { status: 400 }
+    );
+  }
+
   const { storagePath, filename } = await saveUploadedFile(file, kind);
 
   const kindLabel = { videos: "VIDEO", pdfs: "PDF", covers: "COVER", avatars: "AVATAR" }[kind];
@@ -58,7 +69,7 @@ export async function POST(request: NextRequest) {
       size: file.size,
       storagePath,
       kind: kindLabel,
-      uploadedById: session.user.id,
+      uploadedById: usuario.id,
     },
   });
 

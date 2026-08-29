@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentSession } from "@/lib/session";
+import { sessaoDeApi } from "@/lib/session";
 import { db } from "@/lib/db";
 import { absoluteStoragePath } from "@/lib/storage";
 import { fileBelongsToAccessibleCourse } from "@/lib/access";
@@ -12,8 +12,8 @@ export async function GET(
 ) {
   const { fileId } = await params;
 
-  const session = await getCurrentSession();
-  if (!session?.user) {
+  const usuario = await sessaoDeApi();
+  if (!usuario) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
 
@@ -23,9 +23,9 @@ export async function GET(
   }
 
   const allowed = await fileBelongsToAccessibleCourse(
-    session.user.id,
+    usuario.id,
     fileId,
-    session.user.role === "ADMIN"
+    usuario.role === "ADMIN"
   );
   if (!allowed) {
     return NextResponse.json({ error: "Acesso não autorizado a este arquivo." }, { status: 403 });
