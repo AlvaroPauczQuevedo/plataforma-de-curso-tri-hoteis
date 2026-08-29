@@ -5,6 +5,7 @@ import {
   BookOpen,
   ClipboardList,
   History,
+  KeyRound,
   LayoutDashboard,
   Settings,
   Users,
@@ -32,6 +33,9 @@ const GRUPOS: GrupoMenu[] = [
       { href: "/admin/relatorios", label: "Relatórios", icon: BarChart3 },
       { href: "/admin/atividades", label: "Atividades", icon: History },
       { href: "/admin/configuracoes", label: "Configurações", icon: Settings },
+      // Trocar a própria senha vive no portal, em /perfil. Sem este item, o
+      // administrador não tem caminho nenhum até lá pela interface.
+      { href: "/perfil", label: "Minha conta", icon: KeyRound },
     ],
   },
 ];
