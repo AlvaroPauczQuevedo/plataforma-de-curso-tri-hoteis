@@ -50,6 +50,20 @@ if (process.env.NODE_ENV === "production") {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  /**
+   * Otimizacao de imagem desligada, de proposito.
+   *
+   * O otimizador do Next exige a biblioteca nativa `sharp` em modo standalone,
+   * e aqui ele nao teria o que fazer: a unica imagem estatica e a logo, e os
+   * avatares vem de /api/files, uma rota autenticada que o otimizador nao
+   * conseguiria buscar do servidor — ele nao carrega o cookie de sessao. As
+   * capas de curso ja usam <img> comum.
+   *
+   * Ligar isto exigiria adicionar `sharp` as dependencias para servir uma
+   * unica logo. Nao compensa.
+   */
+  images: { unoptimized: true },
+
   async headers() {
     return [{ source: "/:path*", headers: cabecalhos }];
   },

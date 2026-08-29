@@ -117,8 +117,37 @@ export async function updateEmployee(
   return { ok: true, message: "Funcionário atualizado com sucesso." };
 }
 
+/**
+ * Ativa ou desativa um acesso.
+ *
+ * Agora que administradores enxergam uns aos outros, duas travas passam a ser
+ * necessarias — as duas evitam o mesmo desfecho: uma plataforma sem ninguem
+ * capaz de administra-la, sem caminho de volta pela interface.
+ */
 export async function toggleEmployeeActive(userId: string, active: boolean): Promise<ActionResult> {
   const admin = await requireAdmin();
+
+  if (!active) {
+    if (userId === admin.id) {
+      return {
+        ok: false,
+        error: "Você não pode desativar o próprio acesso. Peça a outro administrador.",
+      };
+    }
+
+    const alvo = await db.user.findUnique({ where: { id: userId }, select: { role: true } });
+    if (alvo?.role === "ADMIN") {
+      const administradoresAtivos = await db.user.count({
+        where: { role: "ADMIN", active: true },
+      });
+      if (administradoresAtivos <= 1) {
+        return {
+          ok: false,
+          error: "Este é o último administrador ativo. Ative outro antes de desativar este.",
+        };
+      }
+    }
+  }
 
   const target = await db.user.update({ where: { id: userId }, data: { active } });
 

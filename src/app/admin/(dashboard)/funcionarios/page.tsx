@@ -17,13 +17,26 @@ const PAGE_SIZE = 10;
 export default async function FuncionariosPage({
   searchParams,
 }: {
-  searchParams: { q?: string; departamento?: string; status?: string; page?: string };
+  searchParams: {
+    q?: string;
+    departamento?: string;
+    status?: string;
+    papel?: string;
+    page?: string;
+  };
 }) {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const page = Math.max(1, Number(searchParams.page ?? 1));
+  /*
+    A lista mostra TODAS as contas, inclusive as administrativas. Antes ela
+    filtrava por EMPLOYEE, e o efeito era que administradores ficavam
+    invisiveis entre si: ninguem conseguia redefinir a senha de um colega nem
+    desativar um acesso administrativo que precisasse sair.
+  */
   const where = {
-    role: "EMPLOYEE" as const,
+    ...(searchParams.papel === "admin" ? { role: "ADMIN" as const } : {}),
+    ...(searchParams.papel === "funcionario" ? { role: "EMPLOYEE" as const } : {}),
     ...(searchParams.q
       ? {
           OR: [
@@ -55,12 +68,14 @@ export default async function FuncionariosPage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-ink-900">Funcionários</h1>
-          <p className="text-sm text-ink-700/70">{total} funcionário(s) cadastrado(s)</p>
+          <h1 className="text-2xl font-semibold text-ink-900">Usuários</h1>
+          <p className="text-sm text-ink-700/70">
+            {total} conta(s) — funcionários e administradores
+          </p>
         </div>
         <ButtonLink href="/admin/funcionarios/novo">
           <Plus className="h-4 w-4" />
-          Novo funcionário
+          Novo usuário
         </ButtonLink>
       </div>
 
@@ -87,18 +102,27 @@ export default async function FuncionariosPage({
               { value: "inativo", label: "Inativos" },
             ]}
           />
+          <SelectFilter
+            paramKey="papel"
+            placeholder="Todos os perfis"
+            options={[
+              { value: "funcionario", label: "Funcionários" },
+              { value: "admin", label: "Administradores" },
+            ]}
+          />
         </div>
       </Suspense>
 
       {employees.length === 0 ? (
-        <EmptyState icon={Users} title="Nenhum funcionário encontrado" description="Ajuste os filtros ou cadastre um novo funcionário." />
+        <EmptyState icon={Users} title="Nenhuma conta encontrada" description="Ajuste os filtros ou cadastre um novo usuário." />
       ) : (
         <div className="overflow-hidden rounded-2xl border border-border bg-white">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-surface-muted/60 text-xs uppercase tracking-wide text-ink-700/60">
                 <tr>
-                  <th className="px-4 py-3 font-medium">Funcionário</th>
+                  <th className="px-4 py-3 font-medium">Usuário</th>
+                  <th className="px-4 py-3 font-medium">Perfil</th>
                   <th className="px-4 py-3 font-medium">Cargo</th>
                   <th className="px-4 py-3 font-medium">Departamento</th>
                   <th className="px-4 py-3 font-medium">Cursos</th>
@@ -118,6 +142,16 @@ export default async function FuncionariosPage({
                           <p className="truncate text-xs text-ink-700/50">{emp.email}</p>
                         </div>
                       </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {emp.role === "ADMIN" ? (
+                        <Badge tone="accent">Administrador</Badge>
+                      ) : (
+                        <Badge tone="neutral">Funcionário</Badge>
+                      )}
+                      {emp.id === admin.id && (
+                        <span className="ml-1.5 text-xs text-ink-700/50">você</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-ink-700">{emp.position ?? "-"}</td>
                     <td className="px-4 py-3 text-ink-700">{emp.department?.name ?? "-"}</td>

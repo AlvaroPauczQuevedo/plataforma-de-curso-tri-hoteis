@@ -18,7 +18,7 @@ const GRUPOS: GrupoMenu[] = [
   {
     titulo: "Gestão de pessoas",
     itens: [
-      { href: "/admin/funcionarios", label: "Funcionários", icon: Users },
+      { href: "/admin/funcionarios", label: "Usuários", icon: Users },
       { href: "/admin/matriculas", label: "Matrículas", icon: ClipboardList },
     ],
   },
@@ -38,7 +38,7 @@ const GRUPOS: GrupoMenu[] = [
 
 const CELULAR: ItemMenu[] = [
   { href: "/admin", label: "Painel", icon: LayoutDashboard, exato: true },
-  { href: "/admin/funcionarios", label: "Pessoas", icon: Users },
+  { href: "/admin/funcionarios", label: "Usuários", icon: Users },
   { href: "/admin/cursos", label: "Cursos", icon: BookOpen },
   { href: "/admin/relatorios", label: "Relatórios", icon: BarChart3 },
 ];
