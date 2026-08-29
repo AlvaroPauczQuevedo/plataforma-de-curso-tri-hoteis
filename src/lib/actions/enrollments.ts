@@ -6,6 +6,10 @@ import { requireAdmin } from "@/lib/session";
 import { logAdminActivity } from "@/lib/activity-log";
 import type { ActionResult } from "@/lib/actions/employees";
 import { recalculateCourseProgress } from "@/lib/progress";
+import {
+  bloqueioDeAlteracao,
+  bloqueioDeAlteracaoEmLote,
+} from "@/lib/alcance-admin";
 
 export async function enrollUsers(params: {
   courseId: string;
@@ -15,6 +19,10 @@ export async function enrollUsers(params: {
 }): Promise<ActionResult> {
   const admin = await requireAdmin();
   const { courseId, userIds, mandatory, dueDate } = params;
+
+  // Matricular altera o histórico da pessoa: vale o mesmo alcance do cadastro.
+  const bloqueio = await bloqueioDeAlteracaoEmLote(userIds, admin.id);
+  if (bloqueio) return bloqueio;
 
   if (userIds.length === 0) {
     return { ok: false, error: "Selecione ao menos um funcionário." };
@@ -61,6 +69,10 @@ export async function enrollUsers(params: {
 
 export async function removeEnrollment(userId: string, courseId: string): Promise<ActionResult> {
   const admin = await requireAdmin();
+
+  // Remover apaga progresso e certificado — mais destrutivo que editar o cadastro.
+  const bloqueio = await bloqueioDeAlteracao(userId, admin.id);
+  if (bloqueio) return bloqueio;
 
   await db.enrollment.deleteMany({ where: { userId, courseId } });
   await db.courseProgress.deleteMany({ where: { userId, courseId } });

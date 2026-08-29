@@ -149,6 +149,9 @@ export default async function FuncionariosPage({
                       ) : (
                         <Badge tone="neutral">Funcionário</Badge>
                       )}
+                      {emp.protegido && (
+                        <Badge tone="navy" className="ml-1.5">Protegida</Badge>
+                      )}
                       {emp.id === admin.id && (
                         <span className="ml-1.5 text-xs text-ink-700/50">você</span>
                       )}

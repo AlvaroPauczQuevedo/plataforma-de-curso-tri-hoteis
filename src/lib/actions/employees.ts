@@ -7,6 +7,10 @@ import { requireAdmin } from "@/lib/session";
 import { hashPassword } from "@/lib/password";
 import { logAdminActivity } from "@/lib/activity-log";
 import { randomUUID } from "crypto";
+import {
+  bloqueioDeAlteracao,
+  bloqueioDeVinculo,
+} from "@/lib/alcance-admin";
 
 const employeeSchema = z.object({
   name: z.string().min(2, "Informe o nome completo."),
@@ -32,6 +36,12 @@ export async function createEmployee(formData: FormData): Promise<ActionResult> 
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0].message };
   }
+
+  const vinculo = await bloqueioDeVinculo(
+    admin.id,
+    parsed.data.departmentId || null
+  );
+  if (vinculo) return vinculo;
 
   const existing = await db.user.findUnique({
     where: { email: parsed.data.email.toLowerCase().trim() },
@@ -75,6 +85,9 @@ export async function updateEmployee(
 ): Promise<ActionResult> {
   const admin = await requireAdmin();
 
+  const bloqueio = await bloqueioDeAlteracao(userId, admin.id);
+  if (bloqueio) return bloqueio;
+
   const parsed = employeeSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email"),
@@ -86,6 +99,12 @@ export async function updateEmployee(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0].message };
   }
+
+  const vinculo = await bloqueioDeVinculo(
+    admin.id,
+    parsed.data.departmentId || null
+  );
+  if (vinculo) return vinculo;
 
   const existing = await db.user.findFirst({
     where: { email: parsed.data.email.toLowerCase().trim(), NOT: { id: userId } },
@@ -127,6 +146,9 @@ export async function updateEmployee(
 export async function toggleEmployeeActive(userId: string, active: boolean): Promise<ActionResult> {
   const admin = await requireAdmin();
 
+  const bloqueio = await bloqueioDeAlteracao(userId, admin.id);
+  if (bloqueio) return bloqueio;
+
   if (!active) {
     if (userId === admin.id) {
       return {
@@ -166,6 +188,9 @@ export async function toggleEmployeeActive(userId: string, active: boolean): Pro
 export async function resetEmployeePassword(userId: string): Promise<ActionResult> {
   const admin = await requireAdmin();
 
+  const bloqueio = await bloqueioDeAlteracao(userId, admin.id);
+  if (bloqueio) return bloqueio;
+
   const tempPassword = randomUUID().slice(0, 10);
   const passwordHash = await hashPassword(tempPassword);
 
@@ -194,6 +219,9 @@ export async function generatePasswordResetLink(
   userId: string
 ): Promise<ActionResult & { resetLink?: string }> {
   const admin = await requireAdmin();
+
+  const bloqueio = await bloqueioDeAlteracao(userId, admin.id);
+  if (bloqueio) return bloqueio;
 
   const target = await db.user.findUnique({ where: { id: userId } });
   if (!target) return { ok: false, error: "Funcionário não encontrado." };

@@ -71,6 +71,14 @@ model User {
   /// Senha provisoria: bloqueia o uso da plataforma ate a troca.
   mustChangePassword Boolean @default(false)
 
+  /// Conta protegida ("proprietário"): só o próprio dono pode alterá-la.
+  ///
+  /// Um administrador comum enxerga a conta e o histórico dela, mas não
+  /// consegue desativar, editar nem redefinir a senha. Só quem já é protegido
+  /// pode conceder ou retirar esta marca — sem isso, bastaria desmarcar antes
+  /// de atacar, e a proteção não valeria nada.
+  protegido      Boolean  @default(false)
+
   /// Tentativas de senha erradas seguidas. Zera a cada login bem-sucedido.
   failedAttempts Int      @default(0)
   /// Enquanto no futuro, o login e recusado mesmo com a senha correta.

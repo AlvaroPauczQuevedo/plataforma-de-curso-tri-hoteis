@@ -2,11 +2,23 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
+import { Alert } from "@/components/ui/alert";
 import { EmployeeForm } from "@/components/admin/employee-form";
+import { departamentosPermitidos } from "@/lib/permissoes-usuario";
 
 export default async function NovoFuncionarioPage() {
-  await requireAdmin();
-  const departments = await db.department.findMany({ orderBy: { name: "asc" } });
+  const admin = await requireAdmin();
+  const ator = await db.user.findUniqueOrThrow({
+    where: { id: admin.id },
+    select: { id: true, protegido: true, departmentId: true },
+  });
+
+  // Um administrador comum só cadastra dentro do próprio departamento. Oferecer
+  // os demais na lista seria oferecer um cadastro que o servidor vai recusar.
+  const departments = departamentosPermitidos(
+    ator,
+    await db.department.findMany({ orderBy: { name: "asc" } })
+  );
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -22,9 +34,16 @@ export default async function NovoFuncionarioPage() {
         </p>
       </div>
 
-      <div className="rounded-2xl border border-border bg-white p-6">
-        <EmployeeForm departments={departments} />
-      </div>
+      {departments.length === 0 ? (
+        <Alert tone="info">
+          Sua conta ainda não tem departamento definido, então não há onde cadastrar
+          um usuário. Peça ao proprietário da plataforma para definir o seu departamento.
+        </Alert>
+      ) : (
+        <div className="rounded-2xl border border-border bg-white p-6">
+          <EmployeeForm departments={departments} />
+        </div>
+      )}
     </div>
   );
 }
