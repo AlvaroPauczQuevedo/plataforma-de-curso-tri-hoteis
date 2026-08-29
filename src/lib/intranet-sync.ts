@@ -1,4 +1,4 @@
-import { DatabaseSync } from "node:sqlite";
+import { randomInt } from "node:crypto";
 import path from "path";
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
@@ -65,17 +65,45 @@ function chaveDepartamento(nome: string): string {
     .toLowerCase();
 }
 
-/** Senha provisória curta, fácil de ditar por telefone e sem caracteres ambíguos. */
+/**
+ * Senha provisória curta, fácil de ditar por telefone e sem caracteres
+ * ambíguos (nada de O/0, I/1/l).
+ *
+ * Usa `randomInt` do node:crypto, e não `Math.random()`: esta senha dá acesso
+ * a uma conta, e a sequência do Math.random é previsível a partir de alguns
+ * valores observados — quem recebesse duas senhas conseguiria estimar as
+ * seguintes.
+ */
 function senhaProvisoria(): string {
   const alfabeto = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let saida = "";
   for (let i = 0; i < 8; i += 1) {
-    saida += alfabeto[Math.floor(Math.random() * alfabeto.length)];
+    saida += alfabeto[randomInt(alfabeto.length)];
   }
   return `Tri-${saida}`;
 }
 
-function lerFuncionariosDaIntranet(caminho: string): EmployeeRow[] {
+/**
+ * Lê o cadastro da intranet.
+ *
+ * O `node:sqlite` é carregado sob demanda, e não no topo do arquivo, porque
+ * ele só existe a partir do Node 22.5. Como este módulo é alcançado pela
+ * página de Funcionários, um import estático faria a tela quebrar em Node 18
+ * ou 20 — mesmo com a integração desligada, que é o caso padrão. Assim, a
+ * plataforma roda em Node 18+ e só exige 22.5 de quem realmente ativa a
+ * sincronização.
+ */
+async function lerFuncionariosDaIntranet(caminho: string): Promise<EmployeeRow[]> {
+  let DatabaseSync: typeof import("node:sqlite").DatabaseSync;
+  try {
+    ({ DatabaseSync } = await import("node:sqlite"));
+  } catch {
+    throw new Error(
+      "A sincronização com a intranet exige Node 22.5 ou superior (módulo node:sqlite). " +
+        `Esta instalação usa ${process.version}. Atualize o Node ou mantenha INTRANET_DB_PATH em branco.`
+    );
+  }
+
   const intranet = new DatabaseSync(caminho, { readOnly: true });
   try {
     return intranet
@@ -114,7 +142,7 @@ export async function sincronizarComIntranet(): Promise<SyncOutcome> {
 
   let funcionarios: EmployeeRow[];
   try {
-    funcionarios = lerFuncionariosDaIntranet(caminho);
+    funcionarios = await lerFuncionariosDaIntranet(caminho);
   } catch (erro) {
     throw new Error(
       `Não foi possível ler o cadastro da intranet em ${caminho}. ` +

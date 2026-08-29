@@ -1,5 +1,9 @@
 generator client {
   provider = "prisma-client-js"
+  // "native" cobre a maquina onde o `prisma generate` roda. Os alvos Debian
+  // sao para o caso de o build acontecer em ambiente diferente do de execucao
+  // (Linux com OpenSSL 1.1 ou 3.x, o par mais comum em hospedagem).
+  binaryTargets = ["native", "debian-openssl-3.0.x", "debian-openssl-1.1.x"]
 }
 
 datasource db {

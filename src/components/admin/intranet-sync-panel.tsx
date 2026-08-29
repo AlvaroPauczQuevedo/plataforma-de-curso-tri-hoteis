@@ -10,11 +10,15 @@ import { sincronizarFuncionarios, type SyncResult } from "@/lib/actions/intranet
 /**
  * Traz o cadastro de pessoas da intranet.
  *
+ * Só é renderizado quando a integração está configurada (ver a página de
+ * Funcionários): numa instalação sem intranet, a plataforma não deve exibir
+ * um botão para um sistema que não existe.
+ *
  * As senhas provisórias aparecem uma única vez, logo após a sincronização —
  * elas não ficam guardadas em lugar nenhum, só o hash vai para o banco. Por
  * isso o aviso para anotá-las antes de sair da tela.
  */
-export function IntranetSyncPanel({ configurada }: { configurada: boolean }) {
+export function IntranetSyncPanel() {
   const [pendente, iniciarTransicao] = useTransition();
   const [resultado, setResultado] = useState<SyncResult | null>(null);
   const router = useRouter();
@@ -43,20 +47,11 @@ export function IntranetSyncPanel({ configurada }: { configurada: boolean }) {
             </p>
           </div>
         </div>
-        <Button onClick={sincronizar} disabled={pendente || !configurada}>
+        <Button onClick={sincronizar} disabled={pendente}>
           <RefreshCw className={`h-4 w-4 ${pendente ? "animate-spin" : ""}`} />
           {pendente ? "Sincronizando..." : "Sincronizar agora"}
         </Button>
       </div>
-
-      {!configurada && (
-        <div className="mt-4">
-          <Alert tone="warning">
-            Sincronização não configurada. Defina <code>INTRANET_DB_PATH</code> no arquivo{" "}
-            <code>.env</code> apontando para o banco da intranet e reinicie a plataforma.
-          </Alert>
-        </div>
-      )}
 
       {resultado && !resultado.ok && (
         <div className="mt-4">

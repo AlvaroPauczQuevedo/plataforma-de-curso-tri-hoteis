@@ -2,13 +2,17 @@
   "name": "plataforma-de-curso-tri-hoteis-1",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=18.17.0"
+  },
   "scripts": {
     "dev": "node scripts/servidor.mjs dev",
     "build": "next build",
     "start": "node scripts/servidor.mjs start",
     "lint": "eslint",
     "dev:local": "next dev",
-    "start:local": "next start"
+    "start:local": "next start",
+    "backup": "tsx prisma/backup.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

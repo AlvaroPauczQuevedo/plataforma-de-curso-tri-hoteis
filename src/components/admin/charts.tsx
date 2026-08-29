@@ -58,8 +58,11 @@ export function StatusPieChart({
   );
 }
 
+/** Espaço vertical por barra: a própria barra mais o respiro entre elas. */
+const ALTURA_POR_BARRA = 30;
+
 export function DepartmentBarChart({ data }: { data: { name: string; total: number }[] }) {
-  if (data.every((d) => d.total === 0)) {
+  if (data.length === 0 || data.every((d) => d.total === 0)) {
     return (
       <div className="flex h-56 items-center justify-center text-sm text-ink-700/50">
         Nenhum funcionário cadastrado ainda.
@@ -67,12 +70,27 @@ export function DepartmentBarChart({ data }: { data: { name: string; total: numb
     );
   }
 
+  /*
+    A altura acompanha a quantidade de setores. Com altura fixa, uma base com
+    muitos departamentos empilha as barras uma sobre a outra e o eixo passa a
+    omitir rótulos — sobram barras sem nome. `interval={0}` completa a
+    correção, obrigando o eixo a escrever todos.
+  */
+  const altura = Math.max(224, data.length * ALTURA_POR_BARRA + 40);
+
   return (
-    <ResponsiveContainer width="100%" height={224}>
+    <ResponsiveContainer width="100%" height={altura}>
       <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16 }}>
         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e7e3df" />
         <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} stroke="#a8a29e" />
-        <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 12 }} stroke="#a8a29e" />
+        <YAxis
+          type="category"
+          dataKey="name"
+          width={150}
+          interval={0}
+          tick={{ fontSize: 12 }}
+          stroke="#a8a29e"
+        />
         <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e7e3df", fontSize: 13 }} />
         <Bar dataKey="total" fill="#ff6a00" radius={[0, 6, 6, 0]} barSize={16} isAnimationActive={false} />
       </BarChart>

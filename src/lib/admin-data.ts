@@ -86,7 +86,13 @@ export async function getDashboardStats() {
     avgCompletion,
     mostAccessed,
     recentActivity,
-    departmentCounts: departmentCounts.map((d) => ({ name: d.name, total: d._count.users })),
+    // Setores vazios não dizem nada num gráfico de "funcionários por
+    // departamento" e, depois da sincronização com a intranet, são muitos —
+    // ficam de fora. Ordem decrescente para a leitura ser imediata.
+    departmentCounts: departmentCounts
+      .map((d) => ({ name: d.name, total: d._count.users }))
+      .filter((d) => d.total > 0)
+      .sort((a, b) => b.total - a.total),
     statusBreakdown,
   };
 }

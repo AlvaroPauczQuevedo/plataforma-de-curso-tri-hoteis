@@ -3,7 +3,17 @@ import { createReadStream, statSync } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 
-export const STORAGE_ROOT = path.join(process.cwd(), "storage", "uploads");
+/**
+ * Onde ficam os vídeos, PDFs e imagens enviados.
+ *
+ * Configurável por STORAGE_DIR porque, em hospedagem que publica substituindo
+ * o diretório da aplicação, tudo que estiver dentro do projeto é perdido a
+ * cada atualização. Em produção aponte para um caminho FORA da pasta do
+ * projeto — o mesmo cuidado que DATABASE_URL exige.
+ */
+export const STORAGE_ROOT = path.resolve(
+  process.env.STORAGE_DIR || path.join(process.cwd(), "storage", "uploads")
+);
 
 export type UploadKind = "videos" | "pdfs" | "covers" | "avatars";
 

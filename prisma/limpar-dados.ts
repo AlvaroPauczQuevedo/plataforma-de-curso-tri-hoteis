@@ -15,7 +15,10 @@ import path from "path";
 const db = new PrismaClient();
 
 const ADMIN_EMAIL = "admin@trihoteis.com.br";
-const STORAGE_ROOT = path.join(process.cwd(), "storage", "uploads");
+/** Mesmo caminho usado por src/lib/storage.ts (respeita STORAGE_DIR). */
+const STORAGE_ROOT = path.resolve(
+  process.env.STORAGE_DIR || path.join(process.cwd(), "storage", "uploads")
+);
 /** Vídeo base usado pelo seed de demonstração — preservado. */
 const ARQUIVOS_PRESERVADOS = new Set(["seed-flower.mp4", ".gitkeep"]);
 

@@ -41,23 +41,29 @@ npx prisma db seed          # popula com dados de demonstração
 npx tsx prisma/limpar-dados.ts   # remove tudo, preservando o administrador
 ```
 
-## Integração com a intranet
+## Integração com a intranet (opcional, desligada por padrão)
 
-Esta plataforma e a [intranet](https://github.com/AlvaroPauczQuevedo/intranet-tri-hoteis)
-são **dois sistemas separados**, cada um com o próprio banco e o próprio login.
-O que existe entre eles:
+Esta plataforma **funciona sozinha** e é publicada de forma independente. A
+integração com a [intranet](https://github.com/AlvaroPauczQuevedo/intranet-tri-hoteis)
+existe, está pronta e testada, mas fica **desativada** enquanto as variáveis
+abaixo estiverem em branco — sem elas, nada na interface menciona um segundo
+sistema.
 
-- **Atalho na intranet** — o menu lateral da intranet mostra *Aprendizagem →
-  Faculdade*, que abre esta plataforma em outra aba. O endereço vem da
-  variável `FACULDADE_URL` no `.env` da intranet; em branco, o atalho não
-  aparece.
-- **Mesmas pessoas, mesma matrícula** — em *Painel Administrativo →
-  Funcionários*, o botão **Sincronizar agora** lê o cadastro da intranet e
-  espelha os funcionários aqui, com a mesma matrícula. Configure o caminho do
-  banco dela em `INTRANET_DB_PATH`.
-- **Mesmo visual** — as duas usam a mesma estrutura de tela (menu lateral
-  escuro, barra superior, barra inferior no celular) e a mesma paleta. A casca
-  está em `src/components/shell/app-shell.tsx` e os estilos no fim de
+Mesmo integrados, continuam sendo **dois sistemas separados**, cada um com o
+próprio banco e o próprio login. O que a integração acrescenta:
+
+- **Atalho na intranet** — com `FACULDADE_URL` preenchida no `.env` da
+  intranet, o menu lateral dela passa a mostrar *Aprendizagem → Faculdade*,
+  abrindo esta plataforma em outra aba. Em branco, o atalho não existe.
+- **Mesmas pessoas, mesma matrícula** — com `INTRANET_DB_PATH` apontando para
+  o banco da intranet, aparece em *Painel Administrativo → Funcionários* o
+  bloco **Cadastro da intranet**, com o botão *Sincronizar agora*, que espelha
+  os funcionários de lá com a mesma matrícula. Sem a variável, o bloco não é
+  renderizado.
+- **Mesmo visual** — este não depende de configuração: as duas usam a mesma
+  estrutura de tela (menu lateral escuro, barra superior, barra inferior no
+  celular) e a mesma paleta. A casca está em
+  `src/components/shell/app-shell.tsx` e os estilos no fim de
   `src/app/globals.css`, portados de `web/src/styles.css` da intranet.
 
 **O login não é compartilhado.** A intranet autentica por CPF; aqui é por
@@ -134,6 +140,78 @@ src/components/           design system e componentes de cada ambiente
   (streaming e busca na linha do tempo).
 - **Desativar funcionário** bloqueia o login mas preserva todo o histórico.
 - Ações administrativas relevantes são registradas em **Histórico de atividades**.
+
+## Publicação
+
+A plataforma sobe como **uma aplicação Node**, servindo API e interface no
+mesmo processo. Requer Node 20 ou superior.
+
+```bash
+npm ci
+npx prisma migrate deploy     # aplica as migrações (não recria nada)
+npm run build
+npm start
+```
+
+Copie `.env.example` para `.env` e ajuste — ele documenta cada variável.
+
+### Variáveis obrigatórias em produção
+
+Com `NODE_ENV=production`, `scripts/servidor.mjs` **recusa subir** se alguma
+faltar — as três falham em silêncio se passarem despercebidas:
+
+| Variável | Por quê |
+| --- | --- |
+| `NEXTAUTH_URL` | Endereço público real. Sem ela o NextAuth assume `localhost` e o login devolve o usuário para a máquina errada. |
+| `NEXTAUTH_SECRET` | Mínimo de 32 caracteres, gerado por você. Quem souber o valor fabrica uma sessão de administrador. |
+| `STORAGE_DIR` | Pasta dos vídeos e PDFs, **fora do diretório do projeto**. |
+| `DATABASE_URL` | Caminho do banco, também **fora do diretório do projeto**. |
+
+```bash
+node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
+```
+
+### Onde os dados precisam morar
+
+Este é o ponto que mais causa estrago: hospedagem que publica **substituindo o
+diretório da aplicação** apaga tudo que estiver dentro dele. Se o banco e os
+uploads ficarem em `prisma/dev.db` e `storage/uploads`, a primeira publicação
+funciona e a **segunda apaga matrículas, progresso, certificados e todos os
+vídeos das aulas** — e eles não voltam do repositório, porque estão (com
+razão) no `.gitignore`.
+
+```bash
+DATABASE_URL="file:/home/usuario/dados-faculdade/dev.db"
+STORAGE_DIR="/home/usuario/dados-faculdade/uploads"
+```
+
+### Backup
+
+```bash
+npm run backup                 # grava em BACKUP_DIR ou ./backups
+npm run backup -- /mnt/backup  # ou num destino específico
+```
+
+Copia **banco e arquivos juntos** — o banco referencia os arquivos por id, então
+um sem o outro não reconstrói as aulas. O banco é copiado com `VACUUM INTO`, e
+não com cópia de arquivo: o SQLite pode estar no meio de uma escrita, e copiar o
+arquivo cru produziria um backup corrompido justamente quando ele é necessário.
+Pode rodar com a plataforma no ar.
+
+Para restaurar: pare a plataforma, coloque `dev.db` no caminho de `DATABASE_URL`
+e a pasta `uploads` no caminho de `STORAGE_DIR`.
+
+### Prisma em Linux
+
+`prisma/schema.prisma` declara `binaryTargets` com os alvos Debian (OpenSSL 1.1
+e 3.x) além do `native`, para o caso de o build acontecer em ambiente diferente
+do de execução. Se a hospedagem usar outra distribuição (Alpine, por exemplo),
+acrescente o alvo correspondente e rode `npx prisma generate` de novo.
+
+### Primeiro acesso
+
+`npx tsx prisma/criar-admins.ts` cria as contas administrativas com senhas
+aleatórias, impressas uma única vez. **Troque-as depois do primeiro acesso.**
 
 ## Observações desta entrega
 

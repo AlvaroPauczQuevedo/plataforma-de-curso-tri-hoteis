@@ -32,13 +32,74 @@ function ipDaRede() {
   return privado ?? candidatos[0] ?? "localhost";
 }
 
+const producao = process.env.NODE_ENV === "production";
+
+/**
+ * Barreiras de produção.
+ *
+ * As duas falhas que estas checagens evitam são silenciosas: com NEXTAUTH_URL
+ * ausente o login "funciona" mas devolve o usuário para localhost; com o
+ * segredo de desenvolvimento, quem conhecer o valor fabrica uma sessão de
+ * administrador. Recusar a subida é melhor do que descobrir depois.
+ */
+function exigirConfiguracaoDeProducao() {
+  const problemas = [];
+
+  if (!process.env.NEXTAUTH_URL) {
+    problemas.push(
+      [
+        "NEXTAUTH_URL não definida.",
+        "Precisa ser o endereço público real, ex.: https://faculdade.trihoteis.com.br",
+        "Sem ela o NextAuth assume localhost e o login volta para a máquina errada.",
+      ].join("\n     ")
+    );
+  }
+
+  const segredo = process.env.NEXTAUTH_SECRET || "";
+  if (segredo.length < 32) {
+    problemas.push(
+      [
+        "NEXTAUTH_SECRET ausente ou curto demais (mínimo 32 caracteres).",
+        "Gere um próprio:",
+        `node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"`,
+      ].join("\n     ")
+    );
+  } else if (/dev|teste|test|troque|change|secret/i.test(segredo)) {
+    problemas.push(
+      "NEXTAUTH_SECRET parece ser um valor de exemplo. Gere um próprio e aleatório."
+    );
+  }
+
+  if (!process.env.STORAGE_DIR) {
+    problemas.push(
+      [
+        "STORAGE_DIR não definida — os arquivos enviados ficariam dentro da pasta",
+        "do projeto e seriam perdidos na próxima publicação. Aponte para um",
+        "caminho fora do projeto, ex.: /home/usuario/dados-faculdade/uploads",
+      ].join("\n     ")
+    );
+  }
+
+  if (problemas.length === 0) return;
+
+  console.error("\n  Configuração de produção incompleta:\n");
+  for (const problema of problemas) console.error(`   - ${problema}\n`);
+  console.error("  Defina as variáveis e suba novamente.\n");
+  process.exit(1);
+}
+
+if (producao) exigirConfiguracaoDeProducao();
+
 const ip = ipDaRede();
 const url = process.env.NEXTAUTH_URL || `http://${ip}:${porta}`;
 
 console.log(`\n  Academia Corporativa Tri Hotéis`);
 console.log(`  Nesta máquina:  http://localhost:${porta}`);
-console.log(`  Na rede local:  http://${ip}:${porta}`);
-console.log(`  NEXTAUTH_URL:   ${url}\n`);
+if (!producao) console.log(`  Na rede local:  http://${ip}:${porta}`);
+console.log(`  NEXTAUTH_URL:   ${url}`);
+console.log(
+  `  Arquivos:       ${process.env.STORAGE_DIR ?? "storage/uploads (dentro do projeto)"}\n`
+);
 
 // Chama o binário do Next pelo próprio Node: no Windows, spawn de um .cmd
 // falha com EINVAL a partir do Node 24.

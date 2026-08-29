@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...menos o modelo, que precisa ser versionado para documentar as variaveis.
+!.env.example
 
 # vercel
 .vercel
@@ -54,3 +56,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# backups (banco + arquivos enviados) — nunca versionar
+/backups/

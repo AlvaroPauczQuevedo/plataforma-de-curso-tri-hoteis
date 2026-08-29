@@ -64,7 +64,12 @@ export default async function FuncionariosPage({
         </ButtonLink>
       </div>
 
-      <IntranetSyncPanel configurada={syncDisponivel()} />
+      {/*
+        A plataforma funciona sozinha. O bloco da intranet só existe quando
+        INTRANET_DB_PATH aponta para o cadastro dela — sem isso, nada aqui
+        menciona um segundo sistema.
+      */}
+      {syncDisponivel() && <IntranetSyncPanel />}
 
       <Suspense>
         <div className="flex flex-wrap gap-3">
