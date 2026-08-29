@@ -1,10 +1,49 @@
 "use client";
 
-import { useState } from "react";
-import { Menu } from "lucide-react";
-import { AdminSidebar } from "@/components/admin/sidebar";
-import { Avatar } from "@/components/ui/avatar";
+import {
+  BarChart3,
+  BookOpen,
+  ClipboardList,
+  History,
+  LayoutDashboard,
+  Settings,
+  Users,
+} from "lucide-react";
+import { AppShell, type GrupoMenu, type ItemMenu } from "@/components/shell/app-shell";
 
+const GRUPOS: GrupoMenu[] = [
+  {
+    itens: [{ href: "/admin", label: "Dashboard", icon: LayoutDashboard, exato: true }],
+  },
+  {
+    titulo: "Gestão de pessoas",
+    itens: [
+      { href: "/admin/funcionarios", label: "Funcionários", icon: Users },
+      { href: "/admin/matriculas", label: "Matrículas", icon: ClipboardList },
+    ],
+  },
+  {
+    titulo: "Conteúdo",
+    itens: [{ href: "/admin/cursos", label: "Cursos", icon: BookOpen }],
+  },
+  {
+    titulo: "Administração",
+    itens: [
+      { href: "/admin/relatorios", label: "Relatórios", icon: BarChart3 },
+      { href: "/admin/atividades", label: "Atividades", icon: History },
+      { href: "/admin/configuracoes", label: "Configurações", icon: Settings },
+    ],
+  },
+];
+
+const CELULAR: ItemMenu[] = [
+  { href: "/admin", label: "Painel", icon: LayoutDashboard, exato: true },
+  { href: "/admin/funcionarios", label: "Pessoas", icon: Users },
+  { href: "/admin/cursos", label: "Cursos", icon: BookOpen },
+  { href: "/admin/relatorios", label: "Relatórios", icon: BarChart3 },
+];
+
+/** Casca do painel administrativo, com a mesma estrutura de tela da intranet. */
 export function AdminShell({
   children,
   adminName,
@@ -12,28 +51,15 @@ export function AdminShell({
   children: React.ReactNode;
   adminName: string;
 }) {
-  const [mobileOpen, setMobileOpen] = useState(false);
-
   return (
-    <div className="flex min-h-screen bg-surface-muted">
-      <AdminSidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-white px-4 sm:px-6">
-          <button
-            className="rounded-lg p-2 text-ink-700 hover:bg-surface-muted lg:hidden"
-            onClick={() => setMobileOpen(true)}
-            aria-label="Abrir menu"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-          <div className="hidden lg:block" />
-          <div className="flex items-center gap-2">
-            <Avatar name={adminName} size="sm" />
-            <span className="text-sm font-medium text-ink-900">{adminName}</span>
-          </div>
-        </header>
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
-      </div>
-    </div>
+    <AppShell
+      grupos={GRUPOS}
+      menuCelular={CELULAR}
+      subtitulo="Painel administrativo"
+      rodape="Academia Corporativa"
+      usuario={{ nome: adminName }}
+    >
+      {children}
+    </AppShell>
   );
 }

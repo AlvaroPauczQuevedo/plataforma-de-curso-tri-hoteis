@@ -122,3 +122,228 @@ body {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* =====================================================================
+   Casca compartilhada com a intranet
+   ---------------------------------------------------------------------
+   Portada de intranet-tri-hoteis/web/src/styles.css para que os dois
+   sistemas tenham a mesma estrutura de tela: menu lateral escuro fixo,
+   barra superior e barra inferior no celular. Quem sai de um e entra no
+   outro reconhece o mesmo produto.
+
+   Os tokens abaixo repetem exatamente os valores da intranet. Convivem
+   com os tokens Tailwind (--color-*) porque nomeiam a mesma paleta: o
+   laranja da marca e o mesmo #ff6a00 nos dois lados.
+   ===================================================================== */
+
+:root {
+  --cor-marca: #ff6a00;
+  /* Tom interativo derivado da marca, escuro o bastante para texto branco. */
+  --cor-primaria: #bf5000;
+  --cor-primaria-escura: #9d4200;
+  --cor-primaria-clara: #fff3eb;
+
+  --texto: #1c1917;
+  --texto-suave: #57534e;
+  --texto-fraco: #78716c;
+  --borda: #e7e5e4;
+  --borda-forte: #d6d3d1;
+  --superficie: #ffffff;
+  --superficie-alt: #faf9f8;
+  --barra-lateral: #1c1917;
+
+  --sucesso: #15803d;
+  --atencao: #a16207;
+  --erro: #b91c1c;
+
+  --raio-sm: 6px;
+  --sombra-lg: 0 12px 32px rgba(15, 23, 42, 0.16);
+
+  --lateral: 264px;
+  --topo: 64px;
+}
+
+.app {
+  display: grid;
+  grid-template-columns: var(--lateral) 1fr;
+  min-height: 100vh;
+}
+
+.lateral {
+  background: var(--barra-lateral);
+  color: #d6d3d1;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.lateral__marca {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lateral__nome { font-weight: 650; color: #fff; font-size: 0.95rem; }
+.lateral__sub { font-size: 0.72rem; color: #a8a29e; }
+
+.lateral__nav { padding: 12px 10px 24px; flex: 1; }
+.lateral__grupo { margin-top: 18px; }
+.lateral__grupo-titulo {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #a8a29e;
+  padding: 0 12px 6px;
+  font-weight: 700;
+}
+
+.lateral__item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 12px;
+  border-radius: var(--raio-sm);
+  color: #d6d3d1;
+  text-decoration: none;
+  font-size: 0.9rem;
+  margin-bottom: 2px;
+  transition: background 0.12s, color 0.12s;
+}
+.lateral__item:hover { background: rgba(255, 255, 255, 0.07); color: #fff; }
+.lateral__item.ativo { background: var(--cor-primaria); color: #fff; font-weight: 600; }
+
+.lateral__rodape {
+  padding: 14px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.72rem;
+  color: #a8a29e;
+}
+
+.conteudo { display: flex; flex-direction: column; min-width: 0; }
+
+.topo {
+  height: var(--topo);
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borda);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+/*
+  O botao sanduiche so existe no celular, onde o menu lateral vira gaveta.
+  A regra usa as duas classes de proposito: .icone-botao aparece depois nesta
+  folha e, com a mesma especificidade, venceria um simples .topo__menu — o
+  botao ficava visivel no desktop, ao lado de um menu lateral ja aberto.
+*/
+.icone-botao.topo__menu { display: none; }
+.topo__acoes { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+
+.icone-botao {
+  position: relative;
+  width: 40px; height: 40px;
+  border: none;
+  background: transparent;
+  border-radius: var(--raio-sm);
+  cursor: pointer;
+  color: var(--texto-suave);
+  display: grid;
+  place-items: center;
+}
+.icone-botao:hover { background: var(--superficie-alt); color: var(--texto); }
+
+/*
+  Botao do usuario no topo. Classe propria em vez de sobrescrever .icone-botao:
+  aquela regra fixa 40x40 e, por vir depois do Tailwind na folha, venceria
+  qualquer utilitario de largura aplicado no componente.
+*/
+.topo__usuario {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  width: auto;
+  padding: 0 8px;
+  border: none;
+  background: transparent;
+  border-radius: var(--raio-sm);
+  cursor: pointer;
+  color: var(--texto-suave);
+  white-space: nowrap;
+}
+.topo__usuario:hover { background: var(--superficie-alt); color: var(--texto); }
+
+.principal { padding: 24px; flex: 1; max-width: 1400px; width: 100%; }
+
+.barra-inferior { display: none; }
+.lateral__fechar { display: none; }
+.sobreposicao { display: none; }
+
+@media (max-width: 1024px) {
+  .app { grid-template-columns: 1fr; }
+  .lateral {
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    width: 280px;
+    z-index: 60;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+  }
+  .lateral.aberta { transform: translateX(0); box-shadow: var(--sombra-lg); }
+  .lateral__fechar {
+    display: grid;
+    place-items: center;
+    margin-left: auto;
+    width: 36px; height: 36px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: var(--raio-sm);
+    color: #fff;
+    cursor: pointer;
+  }
+  .sobreposicao.visivel {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    z-index: 50;
+  }
+  .icone-botao.topo__menu { display: grid; }
+  .principal { padding: 16px 14px 84px; }
+
+  .barra-inferior {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--superficie);
+    border-top: 1px solid var(--borda);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    z-index: 40;
+  }
+  .barra-inferior a {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 2px;
+    color: var(--texto-fraco);
+    text-decoration: none;
+    font-size: 0.68rem;
+    border-radius: var(--raio-sm);
+  }
+  .barra-inferior a.ativo { color: var(--cor-primaria); font-weight: 650; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lateral { transition: none; }
+}

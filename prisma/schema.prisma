@@ -54,6 +54,19 @@ model User {
   department   Department? @relation(fields: [departmentId], references: [id])
   avatarUrl    String?
   lastLoginAt  DateTime?
+
+  /// Matricula do funcionario. E o mesmo numero usado na intranet, para que a
+  /// mesma pessoa seja reconhecivel nos dois sistemas.
+  matricula    String?  @unique
+  /// Id do funcionario no cadastro da intranet. E por ele que a sincronizacao
+  /// reencontra a pessoa mesmo que nome, e-mail ou matricula mudem la.
+  intranetEmployeeId String? @unique
+  /// Quando veio da intranet, guarda a data da ultima sincronizacao. Nulo
+  /// significa cadastro feito direto aqui.
+  syncedAt     DateTime?
+  /// Senha provisoria: bloqueia o uso da plataforma ate a troca.
+  mustChangePassword Boolean @default(false)
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
+import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
-import { PortalNavbar } from "@/components/portal/navbar";
+import { PortalShell } from "@/components/portal/portal-shell";
 
 export default async function PortalLayout({
   children,
@@ -8,12 +10,28 @@ export default async function PortalLayout({
 }) {
   const user = await requireUser();
 
+  const conta = await db.user.findUnique({
+    where: { id: user.id },
+    select: { mustChangePassword: true, matricula: true },
+  });
+
+  /**
+   * Senha provisória vigente bloqueia o portal inteiro até a troca. A
+   * verificação é aqui, no servidor, e não no middleware: o middleware só
+   * enxerga o token da sessão, que não acompanha a troca de senha feita
+   * depois do login.
+   */
+  if (conta?.mustChangePassword) {
+    redirect("/trocar-senha");
+  }
+
   return (
-    <div className="flex min-h-screen flex-col bg-surface-muted">
-      <PortalNavbar userName={user.name ?? "Funcionário"} avatarUrl={user.avatarUrl} />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
-        {children}
-      </main>
-    </div>
+    <PortalShell
+      userName={user.name ?? "Funcionário"}
+      avatarUrl={user.avatarUrl}
+      matricula={conta?.matricula}
+    >
+      {children}
+    </PortalShell>
   );
 }

@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SearchInput, SelectFilter, Pagination } from "@/components/admin/table-filters";
+import { IntranetSyncPanel } from "@/components/admin/intranet-sync-panel";
+import { syncDisponivel } from "@/lib/intranet-sync";
 import { formatDateTime } from "@/lib/utils";
 
 const PAGE_SIZE = 10;
@@ -61,6 +63,8 @@ export default async function FuncionariosPage({
           Novo funcionário
         </ButtonLink>
       </div>
+
+      <IntranetSyncPanel configurada={syncDisponivel()} />
 
       <Suspense>
         <div className="flex flex-wrap gap-3">

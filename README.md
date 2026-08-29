@@ -41,6 +41,37 @@ npx prisma db seed          # popula com dados de demonstração
 npx tsx prisma/limpar-dados.ts   # remove tudo, preservando o administrador
 ```
 
+## Integração com a intranet
+
+Esta plataforma e a [intranet](https://github.com/AlvaroPauczQuevedo/intranet-tri-hoteis)
+são **dois sistemas separados**, cada um com o próprio banco e o próprio login.
+O que existe entre eles:
+
+- **Atalho na intranet** — o menu lateral da intranet mostra *Aprendizagem →
+  Faculdade*, que abre esta plataforma em outra aba. O endereço vem da
+  variável `FACULDADE_URL` no `.env` da intranet; em branco, o atalho não
+  aparece.
+- **Mesmas pessoas, mesma matrícula** — em *Painel Administrativo →
+  Funcionários*, o botão **Sincronizar agora** lê o cadastro da intranet e
+  espelha os funcionários aqui, com a mesma matrícula. Configure o caminho do
+  banco dela em `INTRANET_DB_PATH`.
+- **Mesmo visual** — as duas usam a mesma estrutura de tela (menu lateral
+  escuro, barra superior, barra inferior no celular) e a mesma paleta. A casca
+  está em `src/components/shell/app-shell.tsx` e os estilos no fim de
+  `src/app/globals.css`, portados de `web/src/styles.css` da intranet.
+
+**O login não é compartilhado.** A intranet autentica por CPF; aqui é por
+e-mail corporativo. Senhas são hashes e não podem ser copiadas de um sistema
+para o outro, então cada conta criada pela sincronização nasce com uma **senha
+provisória**, exibida uma única vez ao administrador no momento da
+sincronização. No primeiro acesso a plataforma exige a troca dessa senha antes
+de liberar qualquer tela.
+
+A leitura do cadastro é **somente-leitura** e feita direto no arquivo SQLite da
+intranet: a integração não exige que ela esteja no ar, e nada é escrito lá.
+Quem é desligado na intranet é **desativado** aqui, nunca apagado — o histórico
+de treinamento e os certificados precisam sobreviver ao desligamento.
+
 ## Stack
 
 - **Next.js 14** (App Router) + **TypeScript**
@@ -119,6 +150,9 @@ src/components/           design system e componentes de cada ambiente
   para um serviço de nuvem (S3 ou similar) futuramente.
 - **Limite de upload**: configurável em `.env` via `UPLOAD_MAX_SIZE_MB`
   (padrão 500 MB).
+- **`INTRANET_DB_PATH`**: caminho do banco da intranet, para a sincronização de
+  funcionários. Em branco, o botão de sincronizar fica desabilitado e a
+  plataforma funciona de forma independente.
 - Antes de publicar em produção, troque `NEXTAUTH_SECRET` no `.env` por um
   valor secreto e aleatório.
 - **`NEXTAUTH_URL`**: o NextAuth precisa dessa variável para montar os
