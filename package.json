@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=18.17.0"
+    "node": ">=20.9.0"
   },
   "scripts": {
     "dev": "node scripts/servidor.mjs dev",
@@ -13,7 +13,8 @@
     "dev:local": "next dev",
     "start:local": "next start",
     "backup": "tsx prisma/backup.ts",
-    "test": "node --import tsx --test tests/*.test.ts"
+    "test": "node --import tsx --test tests/*.test.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
