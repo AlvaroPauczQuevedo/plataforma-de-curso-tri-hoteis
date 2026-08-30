@@ -8,7 +8,18 @@ import { useState } from "react";
 import { setCourseStatus, duplicateCourse, deleteCourse } from "@/lib/actions/courses";
 import type { CourseStatus } from "@prisma/client";
 
-export function CourseStatusActions({ courseId, status }: { courseId: string; status: CourseStatus }) {
+export function CourseStatusActions({
+  courseId,
+  status,
+  matriculas = 0,
+  certificados = 0,
+}: {
+  courseId: string;
+  status: CourseStatus;
+  /** Quanto histórico a exclusão destrói. Vai na confirmação. */
+  matriculas?: number;
+  certificados?: number;
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
@@ -76,7 +87,15 @@ export function CourseStatusActions({ courseId, status }: { courseId: string; st
             return res;
           }}
           variant="danger"
-          confirmMessage="Excluir este curso permanentemente? Esta ação não pode ser desfeita."
+          confirmMessage={
+            matriculas + certificados > 0
+              ? "Excluir este curso apaga junto " +
+                `${matriculas} matrícula(s)` +
+                (certificados > 0 ? ` e ${certificados} certificado(s) já emitido(s)` : "") +
+                ", com todo o progresso registrado. Não há como desfazer. " +
+                "Para tirar o curso do ar sem perder o histórico, arquive em vez de excluir."
+              : "Excluir este curso permanentemente? Esta ação não pode ser desfeita."
+          }
         >
           <Trash2 className="h-4 w-4" />
           Excluir

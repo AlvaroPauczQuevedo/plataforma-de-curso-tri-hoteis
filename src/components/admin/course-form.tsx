@@ -4,14 +4,21 @@ import { useRouter } from "next/navigation";
 import { ActionForm } from "@/components/shared/action-form";
 import { FileUploadField } from "@/components/admin/file-upload-field";
 import { createCourse, updateCourse } from "@/lib/actions/courses";
-import type { Category, Course } from "@prisma/client";
+import type { Category, Course, Department } from "@prisma/client";
 
 export function CourseForm({
   categories,
   course,
+  departamentos,
 }: {
   categories: Category[];
   course?: Course & { coverFile?: { originalName: string } | null };
+  /**
+   * Departamentos que este administrador pode escolher. Vem vazio para quem
+   * só administra um departamento — nesse caso o curso já nasce no dele e não
+   * há escolha a fazer, então o campo nem aparece.
+   */
+  departamentos?: Department[];
 }) {
   const router = useRouter();
   const isEdit = Boolean(course);
@@ -74,6 +81,29 @@ export function CourseForm({
             ))}
           </select>
         </div>
+        {departamentos && departamentos.length > 0 && (
+          <div className="space-y-1.5">
+            <label htmlFor="departmentId" className="text-sm font-medium text-ink-900">
+              Departamento responsável
+            </label>
+            <select
+              id="departmentId"
+              name="departmentId"
+              defaultValue={course?.departmentId ?? ""}
+              className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
+            >
+              <option value="">Sem departamento (só o proprietário altera)</option>
+              {departamentos.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-ink-700/60">
+              Define quem pode editar o curso e o conteúdo dele.
+            </p>
+          </div>
+        )}
         <div className="space-y-1.5">
           <label htmlFor="instructor" className="text-sm font-medium text-ink-900">
             Instrutor(a)

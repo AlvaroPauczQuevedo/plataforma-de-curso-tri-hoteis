@@ -6,6 +6,13 @@ import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import { logAdminActivity } from "@/lib/activity-log";
 import type { ActionResult } from "@/lib/actions/employees";
+import {
+  bloqueioDeAula,
+  bloqueioDeCurso,
+  bloqueioDeModulo,
+  bloqueioDeVinculoDeCurso,
+  departamentoDoAtor,
+} from "@/lib/alcance-admin";
 
 const courseSchema = z.object({
   title: z.string().min(3, "Informe o título do curso."),
@@ -18,6 +25,7 @@ const courseSchema = z.object({
   allowDownload: z.coerce.boolean().default(true),
   certificateEnabled: z.coerce.boolean().default(true),
   videoCompletionThreshold: z.coerce.number().int().min(50).max(100).default(90),
+  departmentId: z.string().optional(),
 });
 
 function boolFromForm(formData: FormData, key: string) {
@@ -44,6 +52,12 @@ export async function createCourse(formData: FormData): Promise<ActionResult & {
     return { ok: false, error: parsed.error.issues[0].message };
   }
 
+  // O curso nasce no departamento de quem o cria. O proprietário não tem
+  // departamento, e os cursos dele ficam sem dono até que alguém seja atribuído.
+  const departmentId = await departamentoDoAtor(admin.id);
+  const vinculo = await bloqueioDeVinculoDeCurso(admin.id, departmentId);
+  if (vinculo) return vinculo;
+
   const coverFileId = (formData.get("coverFileId") as string) || undefined;
 
   const course = await db.course.create({
@@ -51,6 +65,7 @@ export async function createCourse(formData: FormData): Promise<ActionResult & {
       ...parsed.data,
       categoryId: parsed.data.categoryId || null,
       coverFileId: coverFileId || null,
+      departmentId,
       createdById: admin.id,
     },
   });
@@ -70,6 +85,9 @@ export async function createCourse(formData: FormData): Promise<ActionResult & {
 export async function updateCourse(courseId: string, formData: FormData): Promise<ActionResult> {
   const admin = await requireAdmin();
 
+  const bloqueio = await bloqueioDeCurso(courseId, admin.id);
+  if (bloqueio) return bloqueio;
+
   const parsed = courseSchema.safeParse({
     title: formData.get("title"),
     description: formData.get("description"),
@@ -81,11 +99,18 @@ export async function updateCourse(courseId: string, formData: FormData): Promis
     allowDownload: boolFromForm(formData, "allowDownload"),
     certificateEnabled: boolFromForm(formData, "certificateEnabled"),
     videoCompletionThreshold: formData.get("videoCompletionThreshold") || 90,
+    departmentId: formData.get("departmentId") || undefined,
   });
 
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0].message };
   }
+
+  // Trocar o curso de departamento é entregá-lo a outro time. Quem não pode
+  // criar conteúdo lá também não pode empurrar um curso para lá.
+  const destino = parsed.data.departmentId || null;
+  const vinculo = await bloqueioDeVinculoDeCurso(admin.id, destino);
+  if (vinculo) return vinculo;
 
   const coverFileId = (formData.get("coverFileId") as string) || undefined;
 
@@ -94,6 +119,7 @@ export async function updateCourse(courseId: string, formData: FormData): Promis
     data: {
       ...parsed.data,
       categoryId: parsed.data.categoryId || null,
+      departmentId: destino,
       ...(coverFileId ? { coverFileId } : {}),
     },
   });
@@ -115,6 +141,9 @@ export async function setCourseStatus(
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED"
 ): Promise<ActionResult> {
   const admin = await requireAdmin();
+
+  const bloqueio = await bloqueioDeCurso(courseId, admin.id);
+  if (bloqueio) return bloqueio;
 
   if (status === "PUBLISHED") {
     const course = await db.course.findUnique({
@@ -144,6 +173,9 @@ export async function setCourseStatus(
 export async function duplicateCourse(courseId: string): Promise<ActionResult & { courseId?: string }> {
   const admin = await requireAdmin();
 
+  const bloqueio = await bloqueioDeCurso(courseId, admin.id);
+  if (bloqueio) return bloqueio;
+
   const course = await db.course.findUnique({
     where: { id: courseId },
     include: { modules: { include: { lessons: true }, orderBy: { order: "asc" } } },
@@ -164,6 +196,7 @@ export async function duplicateCourse(courseId: string): Promise<ActionResult & 
       allowDownload: course.allowDownload,
       certificateEnabled: course.certificateEnabled,
       videoCompletionThreshold: course.videoCompletionThreshold,
+      departmentId: await departamentoDoAtor(admin.id),
       createdById: admin.id,
       modules: {
         create: course.modules.map((m) => ({
@@ -202,6 +235,9 @@ export async function duplicateCourse(courseId: string): Promise<ActionResult & 
 
 export async function deleteCourse(courseId: string): Promise<ActionResult> {
   const admin = await requireAdmin();
+
+  const bloqueio = await bloqueioDeCurso(courseId, admin.id);
+  if (bloqueio) return bloqueio;
 
   const course = await db.course.findUnique({ where: { id: courseId } });
   if (!course) return { ok: false, error: "Curso não encontrado." };
@@ -253,6 +289,10 @@ export async function createCategory(name: string): Promise<ActionResult> {
 
 export async function createModule(courseId: string, title: string): Promise<ActionResult> {
   const admin = await requireAdmin();
+
+  const bloqueio = await bloqueioDeCurso(courseId, admin.id);
+  if (bloqueio) return bloqueio;
+
   if (!title?.trim()) return { ok: false, error: "Informe o título do módulo." };
 
   const count = await db.module.count({ where: { courseId } });
@@ -271,7 +311,11 @@ export async function createModule(courseId: string, title: string): Promise<Act
 }
 
 export async function updateModuleTitle(moduleId: string, title: string): Promise<ActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
+
+  const bloqueio = await bloqueioDeModulo(moduleId, admin.id);
+  if (bloqueio) return bloqueio;
+
   if (!title?.trim()) return { ok: false, error: "Informe o título do módulo." };
 
   const mod = await db.module.update({ where: { id: moduleId }, data: { title: title.trim() } });
@@ -280,14 +324,22 @@ export async function updateModuleTitle(moduleId: string, title: string): Promis
 }
 
 export async function deleteModule(moduleId: string): Promise<ActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
+
+  const bloqueio = await bloqueioDeModulo(moduleId, admin.id);
+  if (bloqueio) return bloqueio;
+
   const mod = await db.module.delete({ where: { id: moduleId } });
   revalidatePath(`/admin/cursos/${mod.courseId}`);
   return { ok: true };
 }
 
 export async function reorderModules(courseId: string, orderedIds: string[]): Promise<ActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
+
+  const bloqueio = await bloqueioDeCurso(courseId, admin.id);
+  if (bloqueio) return bloqueio;
+
   await db.$transaction(
     orderedIds.map((id, index) =>
       db.module.update({ where: { id }, data: { order: index } })
@@ -312,7 +364,10 @@ const lessonSchema = z.object({
 });
 
 export async function createLesson(moduleId: string, formData: FormData): Promise<ActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
+
+  const bloqueio = await bloqueioDeModulo(moduleId, admin.id);
+  if (bloqueio) return bloqueio;
 
   const parsed = lessonSchema.safeParse({
     title: formData.get("title"),
@@ -355,7 +410,10 @@ export async function createLesson(moduleId: string, formData: FormData): Promis
 }
 
 export async function updateLesson(lessonId: string, formData: FormData): Promise<ActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
+
+  const bloqueio = await bloqueioDeAula(lessonId, admin.id);
+  if (bloqueio) return bloqueio;
 
   const parsed = lessonSchema.safeParse({
     title: formData.get("title"),
@@ -394,14 +452,22 @@ export async function updateLesson(lessonId: string, formData: FormData): Promis
 }
 
 export async function deleteLesson(lessonId: string): Promise<ActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
+
+  const bloqueio = await bloqueioDeAula(lessonId, admin.id);
+  if (bloqueio) return bloqueio;
+
   const lesson = await db.lesson.delete({ where: { id: lessonId }, include: { module: true } });
   revalidatePath(`/admin/cursos/${lesson.module.courseId}`);
   return { ok: true };
 }
 
 export async function reorderLessons(moduleId: string, orderedIds: string[]): Promise<ActionResult> {
-  await requireAdmin();
+  const admin = await requireAdmin();
+
+  const bloqueio = await bloqueioDeModulo(moduleId, admin.id);
+  if (bloqueio) return bloqueio;
+
   await db.$transaction(
     orderedIds.map((id, index) =>
       db.lesson.update({ where: { id }, data: { order: index } })

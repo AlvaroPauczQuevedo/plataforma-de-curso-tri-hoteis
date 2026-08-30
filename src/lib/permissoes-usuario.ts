@@ -29,6 +29,10 @@ export type Alvo = {
   departmentId: string | null;
 };
 
+const SEM_DEPARTAMENTO_CONTEUDO =
+  "Sua conta ainda não tem departamento definido, então não alcança nenhum conteúdo. " +
+  "Peça ao proprietário da plataforma para definir o seu departamento.";
+
 const SEM_DEPARTAMENTO =
   "Sua conta ainda não tem departamento definido, então não alcança nenhum usuário. " +
   "Peça ao proprietário da plataforma para definir o seu departamento.";
@@ -82,4 +86,50 @@ export function departamentosPermitidos<T extends { id: string }>(
 ): T[] {
   if (ator.protegido) return todos;
   return todos.filter((d) => d.id === ator.departmentId);
+}
+
+/**
+ * Conteúdo (cursos, módulos, aulas) segue a mesma lógica das pessoas.
+ *
+ * O curso é a unidade que carrega o departamento; módulo e aula herdam o dele.
+ * Curso sem departamento fica reservado ao proprietário — é o estado dos cursos
+ * criados antes desta regra, e obriga uma atribuição consciente em vez de
+ * deixá-los abertos a qualquer administrador por omissão.
+ */
+export type CursoComDono = {
+  title: string;
+  departmentId: string | null;
+};
+
+export function motivoDeBloqueioDeCurso(
+  curso: CursoComDono,
+  ator: Ator
+): string | null {
+  if (ator.protegido) return null; // o proprietário alcança todos os departamentos
+  if (!ator.departmentId) return SEM_DEPARTAMENTO_CONTEUDO;
+
+  if (curso.departmentId === null) {
+    return `"${curso.title}" ainda não foi atribuído a um departamento. Só o proprietário da plataforma pode alterá-lo ou atribuí-lo.`;
+  }
+
+  if (curso.departmentId !== ator.departmentId) {
+    return `"${curso.title}" pertence a outro departamento. Você só altera conteúdo do seu.`;
+  }
+
+  return null;
+}
+
+/** Igual à de pessoas, mas para o departamento que um curso vai receber. */
+export function motivoDeVinculoDeCursoInvalido(
+  ator: Ator,
+  departmentId: string | null
+): string | null {
+  if (ator.protegido) return null;
+  if (!ator.departmentId) return SEM_DEPARTAMENTO_CONTEUDO;
+
+  if (departmentId !== ator.departmentId) {
+    return "Você só pode criar cursos no seu próprio departamento.";
+  }
+
+  return null;
 }

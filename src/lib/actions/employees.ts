@@ -10,6 +10,7 @@ import { randomUUID } from "crypto";
 import {
   bloqueioDeAlteracao,
   bloqueioDeVinculo,
+  ehProprietario,
 } from "@/lib/alcance-admin";
 
 const employeeSchema = z.object({
@@ -257,6 +258,17 @@ export async function generatePasswordResetLink(
 
 export async function createDepartment(name: string): Promise<ActionResult> {
   const admin = await requireAdmin();
+
+  // Criar departamento é decidir a estrutura da plataforma, e só o proprietário
+  // consegue atribuir alguém a um. Aberto a todos, geraria só departamentos
+  // órfãos que ninguém pode usar.
+  if (!(await ehProprietario(admin.id))) {
+    return {
+      ok: false,
+      error: "Só o proprietário da plataforma pode criar departamentos.",
+    };
+  }
+
   if (!name?.trim()) return { ok: false, error: "Informe o nome do departamento." };
 
   const existing = await db.department.findUnique({ where: { name: name.trim() } });

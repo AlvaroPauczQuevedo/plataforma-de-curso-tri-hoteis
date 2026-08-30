@@ -25,7 +25,7 @@ export default async function CursosPage({
   const [courses, categories] = await Promise.all([
     db.course.findMany({
       where,
-      include: { category: true, coverFile: true, _count: { select: { enrollments: true, modules: true } } },
+      include: { category: true, department: true, coverFile: true, _count: { select: { enrollments: true, modules: true } } },
       orderBy: { updatedAt: "desc" },
     }),
     db.category.findMany({ orderBy: { name: "asc" } }),
@@ -104,6 +104,10 @@ export default async function CursosPage({
                   <span>{course._count.modules} módulo(s)</span>
                   <span>{course._count.enrollments} matrícula(s)</span>
                 </div>
+                {/* Quem responde pelo curso — define quem pode editá-lo. */}
+                <p className="text-xs text-ink-700/50">
+                  {course.department?.name ?? "Sem departamento"}
+                </p>
               </div>
             </Link>
           ))}

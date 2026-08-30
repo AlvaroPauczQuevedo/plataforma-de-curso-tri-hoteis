@@ -7,14 +7,16 @@ import { Badge } from "@/components/ui/badge";
 import { CourseForm } from "@/components/admin/course-form";
 import { CourseStatusActions } from "@/components/admin/course-status-actions";
 import { ModuleLessonBuilder } from "@/components/admin/module-lesson-builder";
+import { Alert } from "@/components/ui/alert";
 import { statusLabel } from "@/lib/utils";
+import { motivoDeBloqueioDeCurso } from "@/lib/permissoes-usuario";
 
 export default async function CourseEditorPage({
   params,
 }: {
   params: { courseId: string };
 }) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const { courseId } = params;
 
   const [course, categories] = await Promise.all([
@@ -31,13 +33,25 @@ export default async function CourseEditorPage({
             },
           },
         },
-        _count: { select: { enrollments: true } },
+        _count: { select: { enrollments: true, certificates: true } },
       },
     }),
     db.category.findMany({ orderBy: { name: "asc" } }),
   ]);
 
   if (!course) notFound();
+
+  const ator = await db.user.findUniqueOrThrow({
+    where: { id: admin.id },
+    select: { id: true, protegido: true, departmentId: true },
+  });
+  const motivo = motivoDeBloqueioDeCurso(course, ator);
+
+  // Só o proprietário escolhe o departamento de um curso. Para os demais o
+  // curso já nasce no departamento deles e não há escolha a oferecer.
+  const departamentos = ator.protegido
+    ? await db.department.findMany({ orderBy: { name: "asc" } })
+    : [];
 
   const statusTone = course.status === "PUBLISHED" ? "success" : course.status === "ARCHIVED" ? "neutral" : "warning";
 
@@ -58,19 +72,62 @@ export default async function CourseEditorPage({
         </div>
       </div>
 
-      <CourseStatusActions courseId={course.id} status={course.status} />
+      {/*
+        Fora do alcance, o curso vira consulta. Esconder os controles é melhor
+        do que exibi-los e deixar o servidor recusar depois do clique.
+      */}
+      {motivo ? (
+        <Alert tone="info">{motivo} Você continua vendo o curso e o conteúdo dele.</Alert>
+      ) : (
+        <CourseStatusActions
+          courseId={course.id}
+          status={course.status}
+          matriculas={course._count.enrollments}
+          certificados={course._count.certificates}
+        />
+      )}
 
       <section className="space-y-4 rounded-2xl border border-border bg-white p-6">
         <h2 className="font-semibold text-ink-900">Informações básicas</h2>
-        <CourseForm categories={categories} course={course} />
+        {motivo ? (
+          <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-ink-700/60">Descrição</dt>
+              <dd className="text-ink-900">{course.description}</dd>
+            </div>
+            <div>
+              <dt className="text-ink-700/60">Instrutor(a)</dt>
+              <dd className="text-ink-900">{course.instructor ?? "—"}</dd>
+            </div>
+          </dl>
+        ) : (
+          <CourseForm
+            categories={categories}
+            course={course}
+            departamentos={departamentos}
+          />
+        )}
       </section>
 
       <section className="space-y-4">
         <div>
           <h2 className="font-semibold text-ink-900">Módulos e aulas</h2>
-          <p className="text-sm text-ink-700/60">Arraste para reordenar módulos e aulas.</p>
+          {!motivo && (
+            <p className="text-sm text-ink-700/60">Arraste para reordenar módulos e aulas.</p>
+          )}
         </div>
-        <ModuleLessonBuilder courseId={course.id} modules={course.modules} />
+        {motivo ? (
+          <ul className="divide-y divide-border rounded-2xl border border-border bg-white">
+            {course.modules.map((m) => (
+              <li key={m.id} className="px-6 py-4">
+                <p className="font-medium text-ink-900">{m.title}</p>
+                <p className="text-sm text-ink-700/60">{m.lessons.length} aula(s)</p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <ModuleLessonBuilder courseId={course.id} modules={course.modules} />
+        )}
       </section>
     </div>
   );

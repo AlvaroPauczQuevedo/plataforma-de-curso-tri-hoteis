@@ -2,11 +2,24 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
+import { Alert } from "@/components/ui/alert";
 import { CourseForm } from "@/components/admin/course-form";
 
 export default async function NovoCursoPage() {
-  await requireAdmin();
+  const admin = await requireAdmin();
+  const ator = await db.user.findUniqueOrThrow({
+    where: { id: admin.id },
+    select: { protegido: true, departmentId: true },
+  });
+
+  // Quem não é proprietário e não tem departamento não tem onde criar o curso:
+  // ele nasceria sem dono e a própria pessoa não conseguiria editá-lo depois.
+  const semOndeCriar = !ator.protegido && !ator.departmentId;
+
   const categories = await db.category.findMany({ orderBy: { name: "asc" } });
+  const departamentos = ator.protegido
+    ? await db.department.findMany({ orderBy: { name: "asc" } })
+    : [];
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -22,9 +35,16 @@ export default async function NovoCursoPage() {
         </p>
       </div>
 
-      <div className="rounded-2xl border border-border bg-white p-6">
-        <CourseForm categories={categories} />
-      </div>
+      {semOndeCriar ? (
+        <Alert tone="info">
+          Sua conta ainda não tem departamento definido, então não há onde criar o
+          curso. Peça ao proprietário da plataforma para definir o seu departamento.
+        </Alert>
+      ) : (
+        <div className="rounded-2xl border border-border bg-white p-6">
+          <CourseForm categories={categories} departamentos={departamentos} />
+        </div>
+      )}
     </div>
   );
 }

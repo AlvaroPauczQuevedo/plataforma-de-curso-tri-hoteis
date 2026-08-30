@@ -3,6 +3,8 @@ import { describe, it } from "node:test";
 import {
   departamentosPermitidos,
   motivoDeBloqueio,
+  motivoDeBloqueioDeCurso,
+  motivoDeVinculoDeCursoInvalido,
   motivoDeVinculoInvalido,
   type Alvo,
   type Ator,
@@ -113,5 +115,53 @@ describe("Departamentos oferecidos no formulário", () => {
 
   it("administrador sem departamento não vê nenhum", () => {
     assert.equal(departamentosPermitidos(ator({ departmentId: null }), todos).length, 0);
+  });
+});
+
+describe("Alcance de conteúdo (cursos, módulos, aulas)", () => {
+  const curso = (departmentId: string | null) => ({ title: "NR-35", departmentId });
+
+  it("altera curso do próprio departamento", () => {
+    assert.equal(motivoDeBloqueioDeCurso(curso(RECEPCAO), ator()), null);
+  });
+
+  it("não altera curso de outro departamento", () => {
+    const motivo = motivoDeBloqueioDeCurso(curso(FINANCEIRO), ator());
+    assert.match(motivo ?? "", /outro departamento/);
+  });
+
+  /**
+   * Curso sem departamento fica reservado ao proprietário. É o estado dos
+   * cursos criados antes desta regra: deixá-los abertos a qualquer
+   * administrador seria o contrário do que a regra existe para fazer.
+   */
+  it("curso sem departamento é só do proprietário", () => {
+    assert.notEqual(motivoDeBloqueioDeCurso(curso(null), ator()), null);
+    assert.equal(motivoDeBloqueioDeCurso(curso(null), ator({ protegido: true })), null);
+  });
+
+  it("o proprietário alcança curso de qualquer departamento", () => {
+    const dono = ator({ protegido: true, departmentId: null });
+    assert.equal(motivoDeBloqueioDeCurso(curso(FINANCEIRO), dono), null);
+  });
+
+  it("administrador sem departamento não alcança curso nenhum", () => {
+    const motivo = motivoDeBloqueioDeCurso(curso(RECEPCAO), ator({ departmentId: null }));
+    assert.match(motivo ?? "", /não tem departamento definido/);
+  });
+
+  it("não empurra um curso para outro departamento", () => {
+    const motivo = motivoDeVinculoDeCursoInvalido(ator(), FINANCEIRO);
+    assert.match(motivo ?? "", /seu próprio departamento/);
+  });
+
+  it("não larga um curso sem departamento", () => {
+    assert.notEqual(motivoDeVinculoDeCursoInvalido(ator(), null), null);
+  });
+
+  it("o proprietário move um curso para onde quiser", () => {
+    const dono = ator({ protegido: true, departmentId: null });
+    assert.equal(motivoDeVinculoDeCursoInvalido(dono, FINANCEIRO), null);
+    assert.equal(motivoDeVinculoDeCursoInvalido(dono, null), null);
   });
 });

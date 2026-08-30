@@ -44,6 +44,7 @@ model Department {
   name      String   @unique
   createdAt DateTime @default(now())
   users     User[]
+  courses   Course[]
 }
 
 model User {
@@ -139,6 +140,11 @@ model Course {
   allowDownload      Boolean          @default(true)
   certificateEnabled Boolean          @default(true)
   videoCompletionThreshold Int        @default(90)
+  /// Departamento dono do curso. Define quem pode alterá-lo: um administrador
+  /// comum só mexe nos cursos do seu departamento. Nulo significa que o curso
+  /// nao foi atribuido a nenhum — nesse estado, so o proprietario pode altera-lo.
+  departmentId       String?
+  department         Department?      @relation(fields: [departmentId], references: [id])
   createdById        String
   createdBy          User             @relation("CourseCreatedBy", fields: [createdById], references: [id])
   createdAt          DateTime         @default(now())
