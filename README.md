@@ -162,6 +162,37 @@ Os neutros são quentes (grafite, não azul) de propósito: azul e laranja são
 complementares e vibram quando usados lado a lado. Os tokens estão em
 `src/app/globals.css`.
 
+### Imagem de capa dos cursos
+
+**Envie 1600 × 500 px** (proporção 3,2:1), em JPEG ou WebP, abaixo de 300 KB.
+
+A mesma imagem é usada em dois lugares com formatos bem diferentes, e o
+navegador corta o que não couber (`object-cover`, sempre pelo centro):
+
+| Onde aparece | Altura | Largura máxima | Proporção |
+| --- | --- | --- | --- |
+| Cartão do curso — portal | 144 px | ~440 px | ~3:1 |
+| Cartão do curso — painel | 112 px | ~440 px | ~3,9:1 |
+| Banner da página do curso | 224 px (176 px no celular) | 1352 px | ~6:1 |
+
+Os 3,2:1 recomendados acertam o cartão quase na mosca e sacrificam o banner,
+que é a escolha certa: o cartão aparece no início, em "Meus cursos" e na lista
+do painel; o banner aparece uma vez só.
+
+**Área segura.** Como o corte muda conforme a tela, mantenha texto e logotipo
+dentro da **metade central na vertical** e dos **75% centrais na horizontal**.
+Fora disso, some: o banner corta cerca de metade da altura, e o cartão no
+celular corta cerca de um quinto da largura.
+
+**O peso importa mais do que parece.** A otimização de imagem do Next está
+desligada em `next.config.mjs` — o arquivo enviado é exatamente o que cada
+funcionário baixa, no tamanho original, toda vez que abre a lista de cursos.
+Uma capa de 4 MB multiplicada por doze cursos na tela é o que transforma um
+portal rápido em um portal lento.
+
+Formatos aceitos: JPEG, PNG e WebP. WebP costuma entregar o mesmo resultado
+com metade do peso do JPEG — vale como padrão.
+
 ## Estrutura
 
 ```

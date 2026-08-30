@@ -11,6 +11,26 @@ const acceptByKind: Record<Kind, string> = {
   covers: "image/jpeg,image/png,image/webp",
 };
 
+/*
+  A orientação de formato fica junto do campo porque é ali que ela é lembrada.
+  Em documentação separada ela existe, mas quem cadastra um curso às pressas
+  não vai abrir para conferir — e o arquivo errado só dá sinal depois, quando
+  a capa aparece cortada ou o portal fica lento.
+
+  A medida da capa vem dos contêineres que a exibem: 3:1 no cartão e 6:1 no
+  banner. Não há tamanho que sirva aos dois, então o recomendado favorece o
+  cartão, que aparece três vezes mais.
+*/
+const dicaPorTipo: Record<Kind, string | null> = {
+  covers:
+    "Recomendado 1600 × 500 px, em JPEG ou WebP, até 300 KB. As bordas são " +
+    "cortadas conforme a tela — deixe texto e logotipo no centro.",
+  videos:
+    "MP4 ou WebM. Comprimir antes de enviar (WebM/VP9 em 720p) costuma reduzir " +
+    "o arquivo à metade sem perda visível — e o envio na mesma proporção.",
+  pdfs: null,
+};
+
 export function FileUploadField({
   kind,
   name,
@@ -79,6 +99,9 @@ export function FileUploadField({
         </span>
       </button>
       <input ref={inputRef} type="file" accept={acceptByKind[kind]} className="hidden" onChange={handleChange} />
+      {dicaPorTipo[kind] && (
+        <p className="text-xs leading-relaxed text-ink-700/60">{dicaPorTipo[kind]}</p>
+      )}
       {error && <p className="text-xs text-danger-600">{error}</p>}
     </div>
   );
