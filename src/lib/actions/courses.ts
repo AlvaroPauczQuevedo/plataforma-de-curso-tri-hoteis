@@ -12,6 +12,7 @@ import {
   bloqueioDeModulo,
   bloqueioDeVinculoDeCurso,
   departamentoDoAtor,
+  ehProprietario,
 } from "@/lib/alcance-admin";
 
 const courseSchema = z.object({
@@ -106,9 +107,29 @@ export async function updateCourse(courseId: string, formData: FormData): Promis
     return { ok: false, error: parsed.error.issues[0].message };
   }
 
-  // Trocar o curso de departamento é entregá-lo a outro time. Quem não pode
-  // criar conteúdo lá também não pode empurrar um curso para lá.
-  const destino = parsed.data.departmentId || null;
+  /*
+    Trocar o curso de departamento é entregá-lo a outro time. Quem não pode
+    criar conteúdo lá também não pode empurrar um curso para lá.
+
+    Mas só o proprietário escolhe o departamento: para os demais o campo nem
+    aparece no formulário. Ler o campo ausente como `null` seria interpretá-lo
+    como "mover o curso para nenhum departamento" — exatamente o que a trava
+    abaixo recusa. O efeito era o administrador não conseguir salvar alteração
+    nenhuma no próprio curso, recebendo "Você só pode criar cursos no seu
+    próprio departamento" ao mexer em qualquer outro campo.
+
+    Para quem não é proprietário, o destino é o departamento que o curso já
+    tem — e `bloqueioDeCurso`, acima, já provou que é o dele.
+  */
+  const [proprietario, atual] = await Promise.all([
+    ehProprietario(admin.id),
+    db.course.findUnique({ where: { id: courseId }, select: { departmentId: true } }),
+  ]);
+
+  const destino = proprietario
+    ? parsed.data.departmentId || null
+    : atual?.departmentId ?? null;
+
   const vinculo = await bloqueioDeVinculoDeCurso(admin.id, destino);
   if (vinculo) return vinculo;
 
