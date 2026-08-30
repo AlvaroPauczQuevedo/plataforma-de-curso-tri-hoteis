@@ -81,7 +81,16 @@ export async function generateCertificatePdf(params: {
     gray
   );
 
-  centerText(`Código de verificação: ${code}`, 70, regular, 10, gray);
+  /*
+    O código sozinho não serve de nada se quem recebe o certificado não souber
+    onde conferi-lo. O endereço vai impresso junto, para que auditor ou futuro
+    empregador consiga validar sem precisar perguntar a ninguém.
+  */
+  const base = (process.env.NEXTAUTH_URL || "").replace(/\/+$/, "");
+  centerText(`Código de verificação: ${code}`, 78, regular, 10, gray);
+  if (base) {
+    centerText(`Confira em ${base}/validar/${code}`, 62, regular, 9, gray);
+  }
 
   return pdfDoc.save();
 }

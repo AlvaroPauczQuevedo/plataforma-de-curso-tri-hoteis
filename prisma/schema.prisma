@@ -45,6 +45,7 @@ model Department {
   createdAt DateTime @default(now())
   users     User[]
   courses   Course[]
+  obrigatorios CursoObrigatorio[]
 }
 
 model User {
@@ -151,11 +152,35 @@ model Course {
   updatedAt          DateTime         @updatedAt
 
   modules         Module[]
+  obrigatorios    CursoObrigatorio[]
   enrollments     Enrollment[]
   courseProgress  CourseProgress[]
   certificates    Certificate[]
 
   @@index([status])
+}
+
+/// Curso obrigatorio para um departamento inteiro.
+///
+/// Existe para que ninguem precise matricular pessoa por pessoa: marcado aqui,
+/// o curso alcanca quem ja esta no departamento e quem entrar depois.
+///
+/// A matricula continua sendo uma linha em Enrollment — esta tabela diz apenas
+/// QUEM deve estar matriculado, e a sincronizacao cria o que falta. Assim o
+/// progresso, o certificado e a remocao individual seguem funcionando igual.
+model CursoObrigatorio {
+  id           String     @id @default(cuid())
+  courseId     String
+  course       Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  /// Dias a partir da matricula para concluir. Nulo significa sem prazo.
+  prazoDias    Int?
+  createdAt    DateTime   @default(now())
+
+  @@unique([courseId, departmentId])
+  @@index([departmentId])
 }
 
 model Module {

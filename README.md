@@ -27,11 +27,12 @@ O portal do funcionário fica em `/` e o painel administrativo em `/admin`.
 
 ## Primeiro acesso
 
-O banco de demonstração foi limpo: resta apenas a conta de administrador, além
-dos departamentos e categorias. **As senhas não ficam neste repositório** — o
-administrador cadastra os funcionários em *Painel Administrativo → Funcionários
-→ Novo*, e a senha inicial de cada um é exibida uma única vez na tela, no
-momento do cadastro.
+O banco de demonstração foi limpo: restam apenas as contas administrativas, os
+departamentos e as categorias. **As senhas não ficam neste repositório** — o
+administrador cadastra as pessoas em *Painel Administrativo → Usuários → Novo*,
+e a senha inicial de cada uma é exibida uma única vez na tela, no momento do
+cadastro. Ela vale até o primeiro acesso: a plataforma exige a troca antes de
+liberar qualquer tela.
 
 Para recriar a base de demonstração (funcionários e cursos de exemplo) em um
 ambiente de testes:
@@ -40,6 +41,61 @@ ambiente de testes:
 npx prisma db seed          # popula com dados de demonstração
 npx tsx prisma/limpar-dados.ts   # remove tudo, preservando o administrador
 ```
+
+## Hierarquia de administradores
+
+Todo administrador **enxerga a plataforma inteira** — todos os usuários, todos
+os cursos. O que a hierarquia limita é o que cada um pode **alterar**.
+
+| | Administrador de departamento | Proprietário |
+| --- | --- | --- |
+| Ver usuários e cursos | todos | todos |
+| Alterar usuário | só do seu departamento | qualquer um |
+| Matricular / remover matrícula | só do seu departamento | qualquer um |
+| Criar curso | nasce no seu departamento | escolhe o departamento |
+| Alterar curso, módulos e aulas | só do seu departamento | qualquer um |
+| Marcar treinamento obrigatório | só para o seu departamento | qualquer um |
+| Criar departamento | não | sim |
+| Ter a própria conta alterada por outro | sim | **não** |
+
+### O proprietário
+
+É uma conta administradora com duas particularidades: **nenhum outro
+administrador pode editá-la, desativá-la ou redefinir a senha dela**, e ela é a
+única isenta da regra de departamento.
+
+A isenção não é privilégio decorativo: sem ela ninguém poderia definir o
+departamento de um usuário recém-criado nem atribuir um curso a um time, e o
+sistema travaria sozinho.
+
+```bash
+# criar do zero (a senha é impressa uma única vez)
+npx tsx prisma/criar-proprietario.ts fulano@trihoteis.com.br "Nome Completo"
+
+# ou promover uma conta que já existe
+npx tsx prisma/definir-proprietario.ts fulano@trihoteis.com.br
+```
+
+Ambos rodam **por linha de comando de propósito**. Fosse um botão na interface,
+qualquer administrador poderia se autopromover e a proteção não valeria nada.
+Quem tem acesso ao servidor já tem acesso ao banco de qualquer forma.
+
+**O risco que isso traz:** perdido o acesso a essa conta, nenhum colega
+consegue destravá-la pela interface. A recuperação só é possível pelo servidor.
+
+### Por que as quatro portas, e não só a edição
+
+As travas valem para **editar, desativar, redefinir senha e gerar link de
+redefinição**. Proteger só a edição não protegeria nada: redefinir a senha já
+entrega a conta inteira a quem redefiniu.
+
+Pelo mesmo motivo, um administrador comum **não troca o próprio departamento**.
+Como toda conta pode editar a si mesma, sem essa trava bastaria mudar de setor
+para alcançar qualquer pessoa da plataforma.
+
+Curso **sem departamento** fica reservado ao proprietário — é o estado dos
+cursos criados antes desta regra, e obriga uma atribuição consciente em vez de
+deixá-los abertos a todos por omissão.
 
 ## Integração com a intranet (opcional, desligada por padrão)
 
@@ -56,7 +112,7 @@ próprio banco e o próprio login. O que a integração acrescenta:
   intranet, o menu lateral dela passa a mostrar *Aprendizagem → Faculdade*,
   abrindo esta plataforma em outra aba. Em branco, o atalho não existe.
 - **Mesmas pessoas, mesma matrícula** — com `INTRANET_DB_PATH` apontando para
-  o banco da intranet, aparece em *Painel Administrativo → Funcionários* o
+  o banco da intranet, aparece em *Painel Administrativo → Usuários* o
   bloco **Cadastro da intranet**, com o botão *Sincronizar agora*, que espelha
   os funcionários de lá com a mesma matrícula. Sem a variável, o bloco não é
   renderizado.
@@ -86,6 +142,7 @@ de treinamento e os certificados precisam sobreviver ao desligamento.
 - **NextAuth** (credenciais + JWT), senhas com hash **bcrypt**
 - **Tailwind CSS**, **Recharts** (gráficos), **@dnd-kit** (arrastar e soltar),
   **pdf-lib** (geração de certificados), **Zod** (validação)
+- **Nodemailer** para e-mail — carregado só quando há SMTP configurado
 
 ## Identidade visual
 
@@ -114,11 +171,22 @@ storage/uploads/          vídeos, PDFs e imagens (fora de /public)
 src/app/(auth)/           login, recuperação e redefinição de senha
 src/app/(portal)/         portal do funcionário
 src/app/admin/            painel administrativo
+src/app/validar/          conferência pública de certificado
+src/app/error.tsx         tela de erro — avisa o servidor quando algo quebra
 src/app/api/              autenticação, upload, arquivos e certificados
 src/lib/actions/          server actions (CRUD, matrículas, progresso)
 src/lib/progress.ts       motor de cálculo de progresso
 src/components/           design system e componentes de cada ambiente
 ```
+
+Quatro módulos concentram as decisões que mais lugares precisam respeitar:
+
+| Arquivo | Decide |
+| --- | --- |
+| `src/lib/permissoes-usuario.ts` | Quem pode alterar quem — funções puras, sem banco. As server actions, as telas e os testes chamam **as mesmas funções**; duplicada, a regra divergiria em silêncio e a tela ofereceria botões que o servidor recusa. |
+| `src/lib/alcance-admin.ts` | Traduz a decisão acima para as server actions, buscando os registros. Fica fora dos arquivos `"use server"` porque lá todo export vira endpoint. |
+| `src/lib/matricula-automatica.ts` | Quem deve estar matriculado em quê, por departamento. |
+| `src/lib/video-credito.ts` | Quanto de vídeo realmente foi assistido. |
 
 ## Regras de negócio principais
 
@@ -147,6 +215,36 @@ src/components/           design system e componentes de cada ambiente
   na requisição seguinte, preservando todo o histórico. A situação da conta é
   relida do banco a cada requisição — a sessão é um token de 8 horas e, sem
   essa releitura, quem fosse desligado seguiria com acesso até o token expirar.
+- **Treinamento obrigatório por departamento**: marcado na tela do curso, o
+  curso alcança **todo mundo do departamento na hora** — e quem for contratado
+  ou transferido para lá depois entra sozinho. Com prazo opcional em dias,
+  contado a partir da matrícula.
+
+  A regra é **só criar, nunca remover**: quem já estava matriculado por fora
+  continua, quem mudou de departamento não perde o histórico do curso antigo, e
+  retirar a obrigatoriedade **não desmatricula ninguém**. Remover em massa
+  apagaria progresso e certificados já emitidos — a operação mais destrutiva da
+  plataforma. Saídas individuais continuam sendo feitas uma a uma, com
+  confirmação.
+
+  Administradores ficam de fora da matrícula automática: eles gerenciam o
+  treinamento, e matriculá-los encheria o portal deles com os cursos que eles
+  mesmos publicaram.
+- **Senha provisória**: senha criada por outra pessoa — cadastro de funcionário,
+  redefinição pelo painel, sincronização com a intranet — vale **até o primeiro
+  acesso**. Portal e painel administrativo bloqueiam a navegação até a troca. A
+  verificação é no servidor e não no middleware: o middleware só enxerga o token
+  da sessão, que não acompanha a troca feita depois do login.
+- **Certificado conferível**: cada certificado tem um código único e uma página
+  pública em `/validar/<código>`, cujo endereço vai impresso no PDF. Mostra
+  apenas nome, curso e data — sem e-mail, sem cargo, sem matrícula — e não há
+  listagem nem busca, então nada ali permite varrer a base. O código é sorteado
+  com `crypto.getRandomValues`; previsível, permitiria adivinhar códigos válidos
+  e ler o nome de quem concluiu.
+- **Excluir um curso** apaga em cascata módulos, aulas, matrículas, progresso e
+  **certificados já emitidos**. A confirmação diz quantos registros serão
+  destruídos e sugere arquivar. Arquivar tira o curso do portal preservando todo
+  o histórico.
 - **Proteção do login**: 5 erros seguidos bloqueiam a conta por 15 minutos, e
   há um teto de tentativas por origem para barrar quem varre muitas contas.
   Ajustável no `.env`.
@@ -154,13 +252,61 @@ src/components/           design system e componentes de cada ambiente
   tipo que o navegador declara.
 - Ações administrativas relevantes são registradas em **Histórico de atividades**.
 
+## Relatórios
+
+| Tela | Responde |
+| --- | --- |
+| **Relatórios** | Como vai cada curso e cada departamento — visão consolidada, em percentuais. |
+| **Conformidade** | Nome a nome: quem está em dia, atrasado, ou vence nos próximos 7 dias. É a pergunta que auditoria e RH fazem, e que a consolidação não responde. |
+
+Conformidade considera **apenas matrículas obrigatórias**. Curso opcional não é
+dívida de ninguém, e misturá-lo inflaria as pendências até o relatório virar
+ruído.
+
+## E-mail (opcional)
+
+A plataforma **funciona sem SMTP configurado**, exatamente como funcionava antes
+de o envio existir: o administrador entrega senha e link à mão. Configurado, três
+fluxos passam a avisar a pessoa direto:
+
+| Quando | O que sai |
+| --- | --- |
+| Funcionário cadastrado, ou senha redefinida no painel | Endereço, e-mail e senha provisória |
+| `/esqueci-senha` | Link de redefinição, **para o e-mail da própria conta** |
+| Administrador gera link de redefinição | O mesmo link, por e-mail |
+
+O segundo é o que mais muda na prática: hoje a tela pública só registra o pedido
+e o funcionário precisa procurar o administrador. Com SMTP, ela se resolve
+sozinha — e continua segura, porque **o link nunca é devolvido na tela**, só
+enviado ao endereço cadastrado. Devolvê-lo ali permitiria que qualquer pessoa
+que soubesse o e-mail de um funcionário assumisse a conta dele.
+
+Precisa das **cinco** variáveis (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`,
+`SMTP_PASS`, `SMTP_FROM`). Faltando uma, o envio fica desligado de propósito:
+melhor não enviar do que falhar a cada cadastro. Uma falha de envio nunca
+invalida a operação — o funcionário é cadastrado de qualquer forma e a senha
+aparece na tela para entrega manual.
+
+## Monitoramento (opcional)
+
+Erro em produção vira aviso ativo, por e-mail (`ALERTA_EMAIL`, usa o SMTP acima)
+ou por webhook (`ALERTA_WEBHOOK_URL`, um POST com JSON — Slack, Discord, n8n).
+Sem nenhum dos dois, só o log, que é como a plataforma sempre funcionou.
+
+Avisos iguais ficam em silêncio por `ALERTA_INTERVALO_MIN` minutos (padrão 30).
+Uma página quebrada é aberta dezenas de vezes por minuto; sem agrupamento, o
+alerta viraria ruído que se aprende a ignorar.
+
+O monitoramento **nunca lança**: derrubar a requisição por não conseguir avisar
+sobre a falha seria pior do que monitoramento nenhum.
+
 ## Testes
 
 ```bash
 npm test
 ```
 
-47 testes, sem dependência extra — usam o executor nativo do Node (`node --test`)
+105 testes, sem dependência extra — usam o executor nativo do Node (`node --test`)
 com `tsx` para o TypeScript. Cada execução cria um banco SQLite próprio em pasta
 temporária e aplica as migrações reais; **o banco de desenvolvimento nunca é
 tocado**.
@@ -171,6 +317,11 @@ tocado**.
 | `tests/progresso.test.ts` | Cálculo do percentual, aulas opcionais fora da conta, isolamento entre alunos, emissão única do certificado e ordem obrigatória das aulas. |
 | `tests/login.test.ts` | Bloqueio por conta e por origem, expiração, e o `x-forwarded-for` só valendo com proxy confiável. |
 | `tests/arquivos.test.ts` | Assinatura dos arquivos enviados: aceita os formatos reais, recusa executável disfarçado. |
+| `tests/permissoes-usuario.test.ts` | Quem altera quem: conta protegida, alcance por departamento, e a trava que impede um administrador de trocar o próprio setor para alcançar a plataforma toda. |
+| `tests/matricula-automatica.test.ts` | Matrícula obrigatória: idempotência ao rodar várias vezes, prazo contado a partir da matrícula, inativo e administrador fora, e a garantia de que retirar a obrigatoriedade não desmatricula ninguém. |
+| `tests/email.test.ts` | Só liga com as cinco variáveis; escapa o que veio do cadastro antes de montar o HTML. |
+| `tests/monitoramento.test.ts` | Agrupamento de avisos e a garantia de que uma falha ao avisar não derruba quem chamou. |
+| `tests/certificado-codigo.test.ts` | Imprevisibilidade e ausência de colisão no código do certificado — que virou segredo quando a conferência ficou pública. |
 
 A regra de crédito de vídeo mora em `src/lib/video-credito.ts` como função pura,
 separada da server action que a usa: é a única parte do sistema cujo resultado
@@ -188,12 +339,24 @@ mesmo processo. Requer Node 20 ou superior.
 
 ```bash
 npm ci
-npx prisma migrate deploy     # aplica as migrações (não recria nada)
 npm run build
 npm start
 ```
 
 Copie `.env.example` para `.env` e ajuste — ele documenta cada variável.
+
+**As migrações se aplicam sozinhas.** Com `NODE_ENV=production`,
+`scripts/servidor.mjs` roda `prisma migrate deploy` antes de subir o servidor.
+Isso existe porque o contrário já custou caro duas vezes: publicar código que
+espera uma coluna nova deixa o site quebrado até alguém lembrar de rodar a
+migração à mão, e o intervalo entre uma coisa e outra é tempo fora do ar.
+
+`migrate deploy` só aplica migrações já versionadas no repositório — nunca gera
+migração nova, nunca apaga dados, e não faz nada quando não há pendência.
+
+Falhando, o servidor **sobe assim mesmo**, com aviso destacado no log. Recusar a
+subida trocaria "algumas telas com erro" por "site inteiro fora do ar", que é
+pior — mas nesse estado a plataforma precisa de atenção imediata.
 
 ### Variáveis obrigatórias em produção
 
@@ -241,6 +404,27 @@ Pode rodar com a plataforma no ar.
 Para restaurar: pare a plataforma, coloque `dev.db` no caminho de `DATABASE_URL`
 e a pasta `uploads` no caminho de `STORAGE_DIR`.
 
+O script **apaga sozinho os backups antigos**, mantendo os `BACKUP_KEEP` mais
+recentes (padrão 14) — sem isso, um backup diário encheria o disco em poucos
+meses. Só remove pastas com o formato de carimbo que ele mesmo cria, então nada
+que estiver no destino por outro motivo é tocado. A limpeza acontece **depois**
+de o novo backup estar gravado: com o disco cheio, é melhor terminar com os
+antigos intactos do que com nenhum.
+
+Agendamento diário (ajuste o caminho da aplicação):
+
+```
+0 3 * * * cd /caminho/para/last-source && \
+  DATABASE_URL="file:/home/usuario/dados-faculdade/dev.db" \
+  STORAGE_DIR="/home/usuario/dados-faculdade/uploads" \
+  BACKUP_DIR="/home/usuario/backups-faculdade" \
+  npx tsx prisma/backup.ts >> /home/usuario/backup.log 2>&1
+```
+
+Em hospedagem CloudLinux (Hostinger, por exemplo), o `npx` não está no `PATH` do
+cron — use o caminho completo, algo como
+`/opt/alt/alt-nodejs22/root/usr/bin/npx`.
+
 ### Prisma em Linux
 
 `prisma/schema.prisma` declara `binaryTargets` com os alvos Debian (OpenSSL 1.1
@@ -250,19 +434,29 @@ acrescente o alvo correspondente e rode `npx prisma generate` de novo.
 
 ### Primeiro acesso
 
-`npx tsx prisma/criar-admins.ts` cria as contas administrativas com senhas
-aleatórias, impressas uma única vez. **Troque-as depois do primeiro acesso.**
+```bash
+npx tsx prisma/criar-proprietario.ts voce@trihoteis.com.br "Seu Nome"
+npx tsx prisma/criar-admins.ts    # contas por setor, se for o caso
+```
+
+As senhas são sorteadas com `randomInt` e impressas **uma única vez**, no
+terminal do servidor. Não ficam salvas em texto puro em lugar nenhum e não há
+como recuperá-las depois.
+
+Comece pelo proprietário: só ele consegue definir o departamento dos demais
+administradores, e **enquanto um administrador estiver sem departamento ele
+enxerga tudo e não altera nada**.
+
+A senha inicial vale só até o primeiro acesso — a plataforma exige a troca antes
+de liberar qualquer tela.
 
 ## Observações desta entrega
 
-- **Recuperação de senha**: não há serviço de e-mail configurado neste ambiente.
-  A tela pública `/esqueci-senha` apenas registra a solicitação e **nunca exibe
-  o link** — mostrá-lo ali permitiria que qualquer pessoa que soubesse o e-mail
-  de um funcionário assumisse a conta dele. Quem gera o link é o administrador,
-  em *Funcionários → (funcionário) → Gerar link de redefinição*: token de uso
-  único, válido por 1 hora. Para automatizar, basta plugar um serviço de e-mail
-  em `requestPasswordReset` (`src/lib/actions/password-reset.ts`) e enviar o
-  token por lá.
+- **Recuperação de senha**: o envio por e-mail existe e liga ao preencher as
+  variáveis `SMTP_*` (ver *E-mail*). **Sem SMTP configurado**, a tela pública
+  `/esqueci-senha` apenas registra a solicitação e nunca exibe o link — quem o
+  gera é o administrador, em *Usuários → (pessoa) → Gerar link de
+  redefinição*. Token de uso único, válido por 1 hora, nos dois caminhos.
 - **Armazenamento**: os arquivos ficam em `storage/uploads/` no servidor. A
   camada de acesso está isolada em `src/lib/storage.ts`, o que facilita migrar
   para um serviço de nuvem (S3 ou similar) futuramente.
@@ -282,3 +476,21 @@ aleatórias, impressas uma única vez. **Troque-as depois do primeiro acesso.**
   valor já existente.
 - **Banco e backups não são versionados**: `prisma/*.db` está no `.gitignore`
   porque contém e-mails e hashes de senha.
+- **A conferência de certificado é pública** (`/validar`), e é isso que a torna
+  útil: quem confere é gente de fora — auditor, cliente, outro empregador —, que
+  não tem login aqui.
+
+## Ordem de configuração após publicar
+
+Cada passo destrava o próximo:
+
+1. **Crie o proprietário** (`criar-proprietario.ts`) e troque a senha no
+   primeiro acesso, em *Minha conta*.
+2. **Defina o departamento de cada administrador.** Sem isso eles veem tudo e
+   não alteram nada — e só o proprietário consegue atribuir.
+3. **Atribua os cursos existentes a um departamento.** Curso sem departamento só
+   o proprietário altera.
+4. **Agende o backup** no cron. É o único item da lista cuja ausência pode custar
+   dados irrecuperáveis.
+5. **Preencha SMTP e alertas**, se quiser envio de e-mail e aviso de erro.
+   Precisa das credenciais do domínio de vocês.

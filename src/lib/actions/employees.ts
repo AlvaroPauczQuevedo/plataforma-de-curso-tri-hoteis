@@ -7,6 +7,8 @@ import { requireAdmin } from "@/lib/session";
 import { hashPassword } from "@/lib/password";
 import { logAdminActivity } from "@/lib/activity-log";
 import { randomUUID } from "crypto";
+import { emailDeBoasVindas, emailDeRedefinicao, enviarEmail } from "@/lib/email";
+import { sincronizarUsuario } from "@/lib/matricula-automatica";
 import {
   bloqueioDeAlteracao,
   bloqueioDeVinculo,
@@ -62,6 +64,8 @@ export async function createEmployee(formData: FormData): Promise<ActionResult> 
       departmentId: parsed.data.departmentId || null,
       role: parsed.data.role,
       passwordHash,
+      // Senha gerada por outra pessoa: vale só até o primeiro acesso.
+      mustChangePassword: true,
     },
   });
 
@@ -73,10 +77,25 @@ export async function createEmployee(formData: FormData): Promise<ActionResult> 
     details: `Funcionário ${user.name} cadastrado. Senha temporária: ${tempPassword}`,
   });
 
+  // Já entra matriculado no que for obrigatório para o departamento dele.
+  const matriculas = await sincronizarUsuario(user.id, admin.id);
+
+  // O envio é um extra: falhando, o cadastro continua válido e a senha aparece
+  // na tela para entrega à mão, exatamente como funcionava antes.
+  const envio = await enviarEmail(emailDeBoasVindas(user.name, user.email, tempPassword));
+
+  const sufixo =
+    matriculas.criadas > 0
+      ? ` Matriculado automaticamente em ${matriculas.criadas} curso(s) obrigatório(s).`
+      : "";
+
   revalidatePath("/admin/funcionarios");
   return {
     ok: true,
-    message: `Funcionário cadastrado. Senha temporária: ${tempPassword}`,
+    message:
+      (envio.enviado
+        ? `Funcionário cadastrado e avisado por e-mail. Senha temporária: ${tempPassword}`
+        : `Funcionário cadastrado. Senha temporária: ${tempPassword}`) + sufixo,
   };
 }
 
@@ -132,9 +151,22 @@ export async function updateEmployee(
     targetId: userId,
   });
 
+  /*
+    Mudou de departamento, entra no que é obrigatório no novo. O que era
+    obrigatório no antigo continua matriculado de propósito: pode haver
+    progresso e certificado já emitidos, e desmatricular apagaria os dois.
+  */
+  const matriculas = await sincronizarUsuario(userId, admin.id);
+
   revalidatePath("/admin/funcionarios");
   revalidatePath(`/admin/funcionarios/${userId}`);
-  return { ok: true, message: "Funcionário atualizado com sucesso." };
+  return {
+    ok: true,
+    message:
+      matriculas.criadas > 0
+        ? `Funcionário atualizado. Matriculado em ${matriculas.criadas} curso(s) obrigatório(s) do novo departamento.`
+        : "Funcionário atualizado com sucesso.",
+  };
 }
 
 /**
@@ -195,7 +227,10 @@ export async function resetEmployeePassword(userId: string): Promise<ActionResul
   const tempPassword = randomUUID().slice(0, 10);
   const passwordHash = await hashPassword(tempPassword);
 
-  await db.user.update({ where: { id: userId }, data: { passwordHash } });
+  const alvo = await db.user.update({
+    where: { id: userId },
+    data: { passwordHash, mustChangePassword: true },
+  });
 
   await logAdminActivity({
     adminId: admin.id,
@@ -204,8 +239,15 @@ export async function resetEmployeePassword(userId: string): Promise<ActionResul
     targetId: userId,
   });
 
+  const envio = await enviarEmail(emailDeBoasVindas(alvo.name, alvo.email, tempPassword));
+
   revalidatePath(`/admin/funcionarios/${userId}`);
-  return { ok: true, message: `Nova senha temporária: ${tempPassword}` };
+  return {
+    ok: true,
+    message: envio.enviado
+      ? `Nova senha enviada por e-mail para ${alvo.email}. Senha: ${tempPassword}`
+      : `Nova senha temporária: ${tempPassword}`,
+  };
 }
 
 /**
@@ -249,9 +291,13 @@ export async function generatePasswordResetLink(
     details: target.name,
   });
 
+  const envio = await enviarEmail(emailDeRedefinicao(target.name, target.email, token));
+
   return {
     ok: true,
-    message: "Link válido por 1 hora e de uso único.",
+    message: envio.enviado
+      ? `Link enviado para ${target.email}. Válido por 1 hora e de uso único.`
+      : "Link válido por 1 hora e de uso único.",
     resetLink: `/redefinir-senha/${token}`,
   };
 }

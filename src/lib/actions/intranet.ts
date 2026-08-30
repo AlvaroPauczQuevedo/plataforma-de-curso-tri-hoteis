@@ -73,7 +73,9 @@ const trocaSchema = z
  * esta troca: a senha provisória passou pelas mãos do administrador e não
  * pode continuar valendo.
  */
-export async function trocarSenhaProvisoria(formData: FormData): Promise<ActionResult> {
+export async function trocarSenhaProvisoria(
+  formData: FormData
+): Promise<ActionResult & { redirectTo?: string }> {
   const usuario = await requireUser();
 
   const parsed = trocaSchema.safeParse({
@@ -100,5 +102,10 @@ export async function trocarSenhaProvisoria(formData: FormData): Promise<ActionR
   });
 
   revalidatePath("/");
-  return { ok: true, message: "Senha alterada. Bom estudo!" };
+  // Administrador volta para o painel; funcionário, para o portal.
+  return {
+    ok: true,
+    message: "Senha alterada com sucesso.",
+    redirectTo: registro.role === "ADMIN" ? "/admin" : "/",
+  };
 }

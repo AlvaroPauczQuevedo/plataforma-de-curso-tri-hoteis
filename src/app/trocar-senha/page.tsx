@@ -20,7 +20,9 @@ const campoClasse =
 export default function TrocarSenhaPage() {
   const [pendente, iniciarTransicao] = useTransition();
   const [resultado, setResultado] = useState<
-    { ok: true; message?: string } | { ok: false; error: string } | null
+    | { ok: true; message?: string; redirectTo?: string }
+    | { ok: false; error: string }
+    | null
   >(null);
   const router = useRouter();
 
@@ -31,7 +33,8 @@ export default function TrocarSenhaPage() {
       const resposta = await trocarSenhaProvisoria(dados);
       setResultado(resposta);
       if (resposta.ok) {
-        setTimeout(() => router.push("/"), 1200);
+        const destino = "redirectTo" in resposta ? resposta.redirectTo : "/";
+        setTimeout(() => router.push(destino ?? "/"), 1200);
       }
     });
   }

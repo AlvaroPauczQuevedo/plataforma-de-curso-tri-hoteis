@@ -63,8 +63,26 @@ export function statusLabel(status: string) {
   return map[status] ?? status;
 }
 
+/**
+ * Código de certificado.
+ *
+ * Sorteado com `crypto.getRandomValues`, e não com `Math.random`. A diferença
+ * passou a importar quando a conferência virou pública: com código previsível,
+ * dava para adivinhar códigos válidos e ler nome e curso de quem concluiu.
+ *
+ * A Web Crypto é usada em vez de `node:crypto` porque este arquivo também é
+ * importado por componentes de cliente — o import do Node quebraria o pacote
+ * do navegador.
+ *
+ * Alfabeto sem I, O, 0 e 1: o código é lido em voz alta e digitado à mão.
+ */
 export function randomCode(prefix: string) {
-  const raw = Math.random().toString(36).slice(2, 8).toUpperCase();
-  const stamp = Date.now().toString(36).slice(-4).toUpperCase();
-  return `${prefix}-${stamp}${raw}`;
+  const alfabeto = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = new Uint8Array(10);
+  crypto.getRandomValues(bytes);
+
+  const sorteado = Array.from(bytes, (b) => alfabeto[b % alfabeto.length]).join("");
+  const ano = new Date().getFullYear();
+
+  return `${prefix}-${ano}-${sorteado}`;
 }

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { CourseForm } from "@/components/admin/course-form";
 import { CourseStatusActions } from "@/components/admin/course-status-actions";
 import { ModuleLessonBuilder } from "@/components/admin/module-lesson-builder";
+import { ObrigatoriosPanel } from "@/components/admin/obrigatorios-panel";
 import { Alert } from "@/components/ui/alert";
 import { statusLabel } from "@/lib/utils";
 import { motivoDeBloqueioDeCurso } from "@/lib/permissoes-usuario";
@@ -49,9 +50,45 @@ export default async function CourseEditorPage({
 
   // Só o proprietário escolhe o departamento de um curso. Para os demais o
   // curso já nasce no departamento deles e não há escolha a oferecer.
-  const departamentos = ator.protegido
-    ? await db.department.findMany({ orderBy: { name: "asc" } })
-    : [];
+  const todosDepartamentos = await db.department.findMany({ orderBy: { name: "asc" } });
+  const departamentos = ator.protegido ? todosDepartamentos : [];
+
+  /*
+    Obrigatoriedade só pode ser criada para departamentos que o administrador
+    administra — senão ele criaria obrigação de treinamento para o time dos
+    outros. O proprietário alcança todos.
+  */
+  const podeObrigar = ator.protegido
+    ? todosDepartamentos
+    : todosDepartamentos.filter((d) => d.id === ator.departmentId);
+
+  const obrigatorios = await db.cursoObrigatorio.findMany({
+    where: { courseId },
+    include: { department: true },
+    orderBy: { department: { name: "asc" } },
+  });
+
+  /*
+    A contagem é de quem a regra realmente alcança: funcionário ativo. Contar
+    o total do departamento incluiria administradores e contas desativadas, e o
+    número na tela não bateria com as matrículas criadas.
+  */
+  const ativosPorDepartamento = new Map(
+    (
+      await db.user.groupBy({
+        by: ["departmentId"],
+        where: { role: "EMPLOYEE", active: true, departmentId: { not: null } },
+        _count: { _all: true },
+      })
+    ).map((g) => [g.departmentId, g._count._all])
+  );
+
+  const obrigatoriosNaTela = obrigatorios.map((o) => ({
+    departmentId: o.departmentId,
+    departamento: o.department.name,
+    prazoDias: o.prazoDias,
+    matriculados: ativosPorDepartamento.get(o.departmentId) ?? 0,
+  }));
 
   const statusTone = course.status === "PUBLISHED" ? "success" : course.status === "ARCHIVED" ? "neutral" : "warning";
 
@@ -108,6 +145,22 @@ export default async function CourseEditorPage({
           />
         )}
       </section>
+
+      {!motivo && (
+        <section className="space-y-4 rounded-2xl border border-border bg-white p-6">
+          <div>
+            <h2 className="font-semibold text-ink-900">Treinamento obrigatório</h2>
+            <p className="text-sm text-ink-700/60">
+              Departamentos inteiros que precisam fazer este curso.
+            </p>
+          </div>
+          <ObrigatoriosPanel
+            courseId={course.id}
+            disponiveis={podeObrigar}
+            atuais={obrigatoriosNaTela}
+          />
+        </section>
+      )}
 
       <section className="space-y-4">
         <div>

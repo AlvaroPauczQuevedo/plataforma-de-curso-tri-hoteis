@@ -66,7 +66,9 @@ export async function encerrar() {
 let contador = 0;
 const proximo = () => (contador += 1);
 
-export async function criarFuncionario(opcoes: { ativo?: boolean; senha?: string } = {}) {
+export async function criarFuncionario(
+  opcoes: { ativo?: boolean; senha?: string; departmentId?: string } = {}
+) {
   const n = proximo();
   return db.user.create({
     data: {
@@ -75,6 +77,7 @@ export async function criarFuncionario(opcoes: { ativo?: boolean; senha?: string
       passwordHash: await bcrypt.hash(opcoes.senha ?? "Senha@123", 4),
       role: "EMPLOYEE",
       active: opcoes.ativo ?? true,
+      departmentId: opcoes.departmentId ?? null,
     },
   });
 }

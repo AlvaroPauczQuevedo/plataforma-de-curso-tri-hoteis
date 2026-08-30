@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Award, Download } from "lucide-react";
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
@@ -44,6 +45,17 @@ export default async function CertificadosPage() {
                 <p className="text-xs text-ink-700/60">
                   Emitido em {formatDate(cert.issuedAt)} · Código {cert.code}
                 </p>
+                {/*
+                  O link de conferência fica visível para o próprio funcionário:
+                  é o que ele manda a quem pedir comprovação, sem precisar enviar
+                  o PDF nem pedir nada ao RH.
+                */}
+                <Link
+                  href={`/validar/${cert.code}`}
+                  className="text-xs font-medium text-brand-700 hover:underline"
+                >
+                  Link para comprovar autenticidade
+                </Link>
               </div>
               <ButtonLink href={`/api/certificados/${cert.id}/pdf`} variant="outline" size="sm">
                 <Download className="h-4 w-4" />

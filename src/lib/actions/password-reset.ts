@@ -5,21 +5,32 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
 import type { ActionResult } from "@/lib/actions/employees";
+import { emailDeRedefinicao, enviarEmail, envioDisponivel } from "@/lib/email";
 
-/** Resposta idêntica exista ou não o e-mail, para não revelar a base. */
-const MENSAGEM_NEUTRA =
+/**
+ * Resposta idêntica exista ou não o e-mail, para não revelar a base.
+ *
+ * O texto muda conforme haja SMTP configurado, mas nunca conforme o e-mail
+ * exista — senão a própria diferença de mensagem revelaria quem é cadastrado.
+ */
+const MENSAGEM_COM_EMAIL =
+  "Se este e-mail estiver cadastrado, o link de redefinição foi enviado para ele. " +
+  "O link vale por 1 hora. Confira também a caixa de spam.";
+
+const MENSAGEM_SEM_EMAIL =
   "Se este e-mail estiver cadastrado, a solicitação foi registrada. " +
   "Procure o administrador do treinamento para receber o link de redefinição.";
 
 /**
  * Registra um pedido de redefinição de senha.
  *
- * O token é gravado para que o envio por e-mail possa ser plugado sem
- * mudar o fluxo, mas o link NUNCA é devolvido para quem preencheu o
- * formulário: como esta tela é pública, devolvê-lo permitiria que qualquer
- * pessoa que soubesse o e-mail de um funcionário assumisse a conta dele.
- * Enquanto não houver serviço de e-mail configurado, o link é entregue pelo
- * administrador em /admin/funcionarios (ver generatePasswordResetLink).
+ * O link NUNCA é devolvido para quem preencheu o formulário: como esta tela é
+ * pública, devolvê-lo permitiria que qualquer pessoa que soubesse o e-mail de
+ * um funcionário assumisse a conta dele. Ele só sai por e-mail, para o próprio
+ * endereço da conta — quem não tem acesso à caixa não recebe nada.
+ *
+ * Sem SMTP configurado, o token continua sendo gravado e o administrador o
+ * entrega pelo painel (ver generatePasswordResetLink).
  */
 export async function requestPasswordReset(
   formData: FormData
@@ -29,14 +40,23 @@ export async function requestPasswordReset(
     return { ok: false, error: "Informe um e-mail válido." };
   }
 
+  const mensagem = envioDisponivel() ? MENSAGEM_COM_EMAIL : MENSAGEM_SEM_EMAIL;
+
   const user = await db.user.findUnique({
     where: { email: email.data.toLowerCase().trim() },
   });
 
   // Não revelamos se o e-mail existe ou não, por segurança.
   if (!user || !user.active) {
-    return { ok: true, message: MENSAGEM_NEUTRA };
+    return { ok: true, message: mensagem };
   }
+
+  // Invalida pedidos anteriores ainda pendentes: sem isto, cada tentativa
+  // deixaria mais um link válido circulando por uma hora.
+  await db.passwordResetToken.updateMany({
+    where: { userId: user.id, usedAt: null },
+    data: { usedAt: new Date() },
+  });
 
   const token = randomUUID();
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
@@ -45,10 +65,9 @@ export async function requestPasswordReset(
     data: { userId: user.id, token, expiresAt },
   });
 
-  return {
-    ok: true,
-    message: MENSAGEM_NEUTRA,
-  };
+  await enviarEmail(emailDeRedefinicao(user.name, user.email, token));
+
+  return { ok: true, message: mensagem };
 }
 
 const resetSchema = z
@@ -78,7 +97,12 @@ export async function resetPassword(token: string, formData: FormData): Promise<
   const passwordHash = await hashPassword(parsed.data.password);
 
   await db.$transaction([
-    db.user.update({ where: { id: resetToken.userId }, data: { passwordHash } }),
+    // A pessoa escolheu a própria senha: a exigência de troca deixa de fazer
+    // sentido, senão o primeiro acesso pediria a troca de novo.
+    db.user.update({
+      where: { id: resetToken.userId },
+      data: { passwordHash, mustChangePassword: false },
+    }),
     db.passwordResetToken.update({ where: { id: resetToken.id }, data: { usedAt: new Date() } }),
   ]);
 

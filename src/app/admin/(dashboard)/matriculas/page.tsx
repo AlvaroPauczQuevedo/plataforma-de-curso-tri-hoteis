@@ -7,16 +7,20 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { EmptyState } from "@/components/ui/empty-state";
 import { BulkEnrollForm } from "@/components/admin/bulk-enroll-form";
 import { ActionButton } from "@/components/shared/action-button";
-import { SelectFilter } from "@/components/admin/table-filters";
+import { SelectFilter, Pagination } from "@/components/admin/table-filters";
 import { removeEnrollment } from "@/lib/actions/enrollments";
 import { formatDate } from "@/lib/utils";
+
+const PAGE_SIZE = 25;
 
 export default async function MatriculasPage({
   searchParams,
 }: {
-  searchParams: { curso?: string; status?: string };
+  searchParams: { curso?: string; status?: string; page?: string };
 }) {
   await requireAdmin();
+
+  const page = Math.max(1, Number(searchParams.page ?? 1));
 
   const [employees, courses] = await Promise.all([
     db.user.findMany({
@@ -33,7 +37,17 @@ export default async function MatriculasPage({
     orderBy: { assignedAt: "desc" },
   });
 
-  const progresses = await db.courseProgress.findMany();
+  /*
+    O progresso é buscado só para as matrículas em tela, e não da tabela
+    inteira: sem este filtro, cada abertura desta página carregava um registro
+    por par funcionário-curso da plataforma toda.
+  */
+  const progresses = await db.courseProgress.findMany({
+    where: {
+      userId: { in: [...new Set(enrollments.map((e) => e.userId))] },
+      courseId: { in: [...new Set(enrollments.map((e) => e.courseId))] },
+    },
+  });
   const progressMap = new Map(progresses.map((p) => [`${p.userId}:${p.courseId}`, p]));
   const now = new Date();
 
@@ -47,6 +61,16 @@ export default async function MatriculasPage({
   });
 
   const filtered = searchParams.status ? enriched.filter((e) => e.status === searchParams.status) : enriched;
+
+  /*
+    A paginação acontece depois do filtro, em memória, porque o status não
+    existe no banco: ele nasce do cruzamento entre progresso e prazo. Paginar
+    antes faria o filtro valer só dentro da página, e a contagem do topo
+    mentiria. O ganho aqui é não desenhar milhares de linhas de uma vez; para
+    paginar no banco, o status precisaria ser gravado junto com a matrícula.
+  */
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pagina = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const statusBadge = {
     not_started: <Badge tone="neutral">Não iniciado</Badge>,
@@ -108,7 +132,7 @@ export default async function MatriculasPage({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {filtered.map((e) => (
+                  {pagina.map((e) => (
                     <tr key={e.id} className="hover:bg-surface-muted/40">
                       <td className="px-4 py-3">
                         <p className="font-medium text-ink-900">{e.user.name}</p>
@@ -141,6 +165,7 @@ export default async function MatriculasPage({
                 </tbody>
               </table>
             </div>
+            <Pagination page={page} totalPages={totalPages} />
           </div>
         )}
       </section>

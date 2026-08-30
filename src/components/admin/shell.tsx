@@ -5,6 +5,7 @@ import {
   BookOpen,
   ClipboardList,
   History,
+  ShieldCheck,
   KeyRound,
   LayoutDashboard,
   Settings,
@@ -31,6 +32,7 @@ const GRUPOS: GrupoMenu[] = [
     titulo: "Administração",
     itens: [
       { href: "/admin/relatorios", label: "Relatórios", icon: BarChart3 },
+      { href: "/admin/conformidade", label: "Conformidade", icon: ShieldCheck },
       { href: "/admin/atividades", label: "Atividades", icon: History },
       { href: "/admin/configuracoes", label: "Configurações", icon: Settings },
       // Trocar a própria senha vive no portal, em /perfil. Sem este item, o

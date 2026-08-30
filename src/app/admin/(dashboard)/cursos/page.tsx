@@ -6,15 +6,20 @@ import { requireAdmin } from "@/lib/session";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { SearchInput, SelectFilter } from "@/components/admin/table-filters";
+import { SearchInput, SelectFilter, Pagination } from "@/components/admin/table-filters";
 import { statusLabel, difficultyLabel, formatDuration } from "@/lib/utils";
+
+// Doze cabe em 1, 2 ou 3 colunas sem deixar a última fileira quebrada.
+const PAGE_SIZE = 12;
 
 export default async function CursosPage({
   searchParams,
 }: {
-  searchParams: { q?: string; categoria?: string; status?: string };
+  searchParams: { q?: string; categoria?: string; status?: string; page?: string };
 }) {
   await requireAdmin();
+
+  const page = Math.max(1, Number(searchParams.page ?? 1));
 
   const where = {
     ...(searchParams.q ? { title: { contains: searchParams.q } } : {}),
@@ -22,14 +27,19 @@ export default async function CursosPage({
     ...(searchParams.status ? { status: searchParams.status as "DRAFT" | "PUBLISHED" | "ARCHIVED" } : {}),
   };
 
-  const [courses, categories] = await Promise.all([
+  const [courses, total, categories] = await Promise.all([
     db.course.findMany({
       where,
       include: { category: true, department: true, coverFile: true, _count: { select: { enrollments: true, modules: true } } },
       orderBy: { updatedAt: "desc" },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
     }),
+    db.course.count({ where }),
     db.category.findMany({ orderBy: { name: "asc" } }),
   ]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const statusTone = { DRAFT: "warning", PUBLISHED: "success", ARCHIVED: "neutral" } as const;
 
@@ -38,7 +48,7 @@ export default async function CursosPage({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-ink-900">Cursos</h1>
-          <p className="text-sm text-ink-700/70">{courses.length} curso(s) cadastrado(s)</p>
+          <p className="text-sm text-ink-700/70">{total} curso(s) cadastrado(s)</p>
         </div>
         <ButtonLink href="/admin/cursos/novo">
           <Plus className="h-4 w-4" />
@@ -69,8 +79,9 @@ export default async function CursosPage({
       {courses.length === 0 ? (
         <EmptyState icon={BookOpen} title="Nenhum curso encontrado" description="Ajuste os filtros ou crie um novo curso." />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {courses.map((course) => (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {courses.map((course) => (
             <Link
               key={course.id}
               href={`/admin/cursos/${course.id}`}
@@ -111,7 +122,9 @@ export default async function CursosPage({
               </div>
             </Link>
           ))}
-        </div>
+          </div>
+          <Pagination page={page} totalPages={totalPages} />
+        </>
       )}
     </div>
   );

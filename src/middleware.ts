@@ -7,6 +7,9 @@ const PUBLIC_PATHS = [
   "/esqueci-senha",
   "/redefinir-senha",
   "/admin/login",
+  // A conferência de certificado é pública de propósito: quem confere é gente
+  // de fora — auditor, cliente, outro empregador —, que não tem login aqui.
+  "/validar",
 ];
 
 function isPublicPath(pathname: string) {

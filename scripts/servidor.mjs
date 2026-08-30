@@ -8,7 +8,7 @@
  * detectado a cada inicialização. Um NEXTAUTH_URL já definido no ambiente
  * (domínio definitivo, por exemplo) tem prioridade e é respeitado.
  */
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { networkInterfaces } from "node:os";
 import { createRequire } from "node:module";
 
@@ -88,7 +88,50 @@ function exigirConfiguracaoDeProducao() {
   process.exit(1);
 }
 
-if (producao) exigirConfiguracaoDeProducao();
+/**
+ * Aplica as migrações pendentes antes de subir, em produção.
+ *
+ * Sem isto, publicar código que espera uma coluna nova deixa o site quebrado
+ * até alguém lembrar de rodar `prisma migrate deploy` na mão — foi o que
+ * aconteceu duas vezes aqui, e o intervalo entre uma coisa e outra é tempo de
+ * site fora do ar.
+ *
+ * `migrate deploy` só aplica migrações já versionadas no repositório: nunca
+ * gera migração nova nem apaga dados, e não faz nada quando não há pendência.
+ *
+ * Falhando, o servidor sobe assim mesmo. Recusar a subida trocaria "algumas
+ * telas com erro" por "site inteiro fora do ar", que é pior — mas o aviso vai
+ * bem visível no log, porque nesse estado a plataforma precisa de atenção.
+ */
+function aplicarMigracoes() {
+  const require = createRequire(import.meta.url);
+
+  let prismaBin;
+  try {
+    prismaBin = require.resolve("prisma/build/index.js");
+  } catch {
+    console.error("\n  AVISO: CLI do Prisma não encontrado — migrações não aplicadas.");
+    console.error("  Rode `npx prisma migrate deploy` manualmente se houver pendência.\n");
+    return;
+  }
+
+  console.log("  Aplicando migrações pendentes...");
+  const resultado = spawnSync(process.execPath, [prismaBin, "migrate", "deploy"], {
+    stdio: "inherit",
+    env: process.env,
+  });
+
+  if (resultado.status !== 0) {
+    console.error("\n  AVISO: `prisma migrate deploy` falhou (código " + resultado.status + ").");
+    console.error("  O servidor vai subir, mas telas que dependem do schema novo");
+    console.error("  podem apresentar erro. Resolva a migração antes de usar.\n");
+  }
+}
+
+if (producao) {
+  exigirConfiguracaoDeProducao();
+  aplicarMigracoes();
+}
 
 const ip = ipDaRede();
 const url = process.env.NEXTAUTH_URL || `http://${ip}:${porta}`;

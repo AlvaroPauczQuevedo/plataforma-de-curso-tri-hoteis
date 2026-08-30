@@ -8,51 +8,111 @@ import { Badge } from "@/components/ui/badge";
 export default async function RelatoriosPage() {
   await requireAdmin();
 
-  const courses = await db.course.findMany({
-    include: {
-      enrollments: true,
-      _count: { select: { enrollments: true } },
-    },
-    orderBy: { title: "asc" },
-  });
-
-  const progresses = await db.courseProgress.findMany();
   const now = new Date();
 
-  const courseReport = courses.map((course) => {
-    const courseProgresses = progresses.filter((p) => p.courseId === course.id);
-    const total = course.enrollments.length;
-    const completed = courseProgresses.filter((p) => p.percent >= 100).length;
-    const inProgress = courseProgresses.filter((p) => p.percent > 0 && p.percent < 100).length;
-    const overdue = course.enrollments.filter((e) => {
-      const progress = courseProgresses.find((p) => p.userId === e.userId);
-      return e.dueDate && (!progress || progress.percent < 100) && new Date(e.dueDate) < now;
-    }).length;
-    const avgPercent =
-      courseProgresses.length === 0
-        ? 0
-        : Math.round(courseProgresses.reduce((sum, p) => sum + p.percent, 0) / courseProgresses.length);
+  /*
+    Esta tela é uma consolidação: ela resume a plataforma inteira, então não há
+    o que paginar. O que dava para corrigir era COMO os números são obtidos —
+    antes, cada abertura trazia todas as matrículas e todos os registros de
+    progresso para somar em memória. Agora a soma acontece no banco, e só duas
+    listas pequenas vêm inteiras: os pares já concluídos e os com prazo
+    vencido, necessários para cruzar as duas tabelas.
+  */
+  const [courses, matriculasPorCurso, progressoPorCurso, emAndamentoPorCurso, concluidos, comPrazoVencido] =
+    await Promise.all([
+      db.course.findMany({ orderBy: { title: "asc" } }),
+      db.enrollment.groupBy({ by: ["courseId"], _count: { _all: true } }),
+      db.courseProgress.groupBy({
+        by: ["courseId"],
+        _avg: { percent: true },
+        _count: { _all: true },
+      }),
+      db.courseProgress.groupBy({
+        by: ["courseId"],
+        where: { percent: { gt: 0, lt: 100 } },
+        _count: { _all: true },
+      }),
+      db.courseProgress.findMany({
+        where: { percent: { gte: 100 } },
+        select: { userId: true, courseId: true },
+      }),
+      db.enrollment.findMany({
+        where: { dueDate: { lt: now } },
+        select: { userId: true, courseId: true },
+      }),
+    ]);
 
-    return { course, total, completed, inProgress, overdue, avgPercent };
-  });
+  const chaveDe = (p: { userId: string; courseId: string }) => `${p.userId}:${p.courseId}`;
+  const jaConcluiu = new Set(concluidos.map(chaveDe));
 
-  const departments = await db.department.findMany({
-    include: {
-      users: {
-        where: { role: "EMPLOYEE" },
-        include: { courseProgress: true },
-      },
-    },
-    orderBy: { name: "asc" },
-  });
+  const matriculas = new Map(matriculasPorCurso.map((m) => [m.courseId, m._count._all]));
+  const progresso = new Map(progressoPorCurso.map((p) => [p.courseId, p]));
+  const emAndamento = new Map(emAndamentoPorCurso.map((p) => [p.courseId, p._count._all]));
+
+  const concluidosPorCurso = new Map<string, number>();
+  for (const c of concluidos) {
+    concluidosPorCurso.set(c.courseId, (concluidosPorCurso.get(c.courseId) ?? 0) + 1);
+  }
+
+  // Atrasado é prazo vencido sem conclusão — o cruzamento que o banco não faz.
+  const atrasadosPorCurso = new Map<string, number>();
+  for (const e of comPrazoVencido) {
+    if (jaConcluiu.has(chaveDe(e))) continue;
+    atrasadosPorCurso.set(e.courseId, (atrasadosPorCurso.get(e.courseId) ?? 0) + 1);
+  }
+
+  const courseReport = courses.map((course) => ({
+    course,
+    total: matriculas.get(course.id) ?? 0,
+    completed: concluidosPorCurso.get(course.id) ?? 0,
+    inProgress: emAndamento.get(course.id) ?? 0,
+    overdue: atrasadosPorCurso.get(course.id) ?? 0,
+    avgPercent: Math.round(progresso.get(course.id)?._avg.percent ?? 0),
+  }));
+
+  /*
+    Antes, esta consulta trazia cada funcionário com TODO o progresso dele
+    aninhado, só para tirar uma média. Agora vêm duas listas rasas — o
+    departamento de cada funcionário e o percentual de cada progresso — e a
+    média é montada com uma passada em cada.
+  */
+  const [departments, funcionarios, todoProgresso] = await Promise.all([
+    db.department.findMany({ orderBy: { name: "asc" } }),
+    db.user.findMany({
+      where: { role: "EMPLOYEE" },
+      select: { id: true, departmentId: true },
+    }),
+    db.courseProgress.findMany({ select: { userId: true, percent: true } }),
+  ]);
+
+  const departamentoDoUsuario = new Map(funcionarios.map((u) => [u.id, u.departmentId]));
+
+  const somaPorDepartamento = new Map<string, { soma: number; itens: number }>();
+  for (const p of todoProgresso) {
+    const dep = departamentoDoUsuario.get(p.userId);
+    if (!dep) continue; // administrador ou funcionário sem departamento
+    const atual = somaPorDepartamento.get(dep) ?? { soma: 0, itens: 0 };
+    atual.soma += p.percent;
+    atual.itens += 1;
+    somaPorDepartamento.set(dep, atual);
+  }
+
+  const funcionariosPorDepartamento = new Map<string, number>();
+  for (const u of funcionarios) {
+    if (!u.departmentId) continue;
+    funcionariosPorDepartamento.set(
+      u.departmentId,
+      (funcionariosPorDepartamento.get(u.departmentId) ?? 0) + 1
+    );
+  }
 
   const departmentReport = departments.map((dept) => {
-    const allProgress = dept.users.flatMap((u) => u.courseProgress);
-    const avgPercent =
-      allProgress.length === 0
-        ? 0
-        : Math.round(allProgress.reduce((sum, p) => sum + p.percent, 0) / allProgress.length);
-    return { department: dept, totalEmployees: dept.users.length, avgPercent };
+    const acumulado = somaPorDepartamento.get(dept.id);
+    return {
+      department: dept,
+      totalEmployees: funcionariosPorDepartamento.get(dept.id) ?? 0,
+      avgPercent: acumulado ? Math.round(acumulado.soma / acumulado.itens) : 0,
+    };
   });
 
   return (
