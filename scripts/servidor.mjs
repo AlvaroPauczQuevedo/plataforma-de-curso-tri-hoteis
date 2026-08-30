@@ -96,6 +96,15 @@ function exigirConfiguracaoDeProducao() {
  * aconteceu duas vezes aqui, e o intervalo entre uma coisa e outra é tempo de
  * site fora do ar.
  *
+ * Vale só para quem sobe com `npm start` em servidor próprio. Hospedagem que
+ * constrói em modo `standalone` nunca chega aqui: o Next gera o próprio
+ * `server.js`, este script não é chamado, e o CLI do Prisma nem entra no
+ * `node_modules` podado. Esse caso é coberto por `scripts/pos-instalacao.mjs`,
+ * que migra durante a instalação de dependências — o único ponto do ciclo em
+ * que o CLI existe. Manter os dois é de propósito: eles cobrem cenários
+ * diferentes e nenhum atrapalha o outro, porque `migrate deploy` não faz nada
+ * quando não há pendência.
+ *
  * `migrate deploy` só aplica migrações já versionadas no repositório: nunca
  * gera migração nova nem apaga dados, e não faz nada quando não há pendência.
  *

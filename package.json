@@ -14,7 +14,7 @@
     "start:local": "next start",
     "backup": "tsx prisma/backup.ts",
     "test": "node --import tsx --test tests/*.test.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "node scripts/pos-instalacao.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

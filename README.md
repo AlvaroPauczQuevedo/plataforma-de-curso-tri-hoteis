@@ -345,18 +345,65 @@ npm start
 
 Copie `.env.example` para `.env` e ajuste — ele documenta cada variável.
 
-**As migrações se aplicam sozinhas.** Com `NODE_ENV=production`,
-`scripts/servidor.mjs` roda `prisma migrate deploy` antes de subir o servidor.
-Isso existe porque o contrário já custou caro duas vezes: publicar código que
+**As migrações se aplicam na instalação de dependências.** O `postinstall`
+chama `scripts/pos-instalacao.mjs`, que roda `prisma generate` sempre e
+`prisma migrate deploy` quando `NODE_ENV=production` — ou quando
+`MIGRAR_NA_INSTALACAO=1` está definida, para hospedagens que não definem
+`NODE_ENV` durante a instalação.
+
+Isso existe porque o contrário já custou caro três vezes: publicar código que
 espera uma coluna nova deixa o site quebrado até alguém lembrar de rodar a
 migração à mão, e o intervalo entre uma coisa e outra é tempo fora do ar.
 
 `migrate deploy` só aplica migrações já versionadas no repositório — nunca gera
 migração nova, nunca apaga dados, e não faz nada quando não há pendência.
 
-Falhando, o servidor **sobe assim mesmo**, com aviso destacado no log. Recusar a
-subida trocaria "algumas telas com erro" por "site inteiro fora do ar", que é
-pior — mas nesse estado a plataforma precisa de atenção imediata.
+Fora de produção nada é aplicado, de propósito: quem desenvolve usa
+`prisma migrate dev`, e um `deploy` disparado por `npm install` atropelaria
+esse fluxo sem aviso.
+
+#### Por que na instalação, e não na subida do servidor
+
+Foi a primeira tentativa, e ela não funciona em hospedagem que constrói em modo
+`standalone` — o caso desta aqui. Nesse modo o Next gera o próprio
+`server.js` e monta um `node_modules` podado, só com o que rastreou como
+necessário em execução. O CLI do Prisma não é dependência de execução, então não
+entra; e o `scripts/servidor.mjs` sequer é chamado, porque quem sobe o site é o
+`server.js` gerado. Qualquer automação colocada na inicialização simplesmente
+não roda.
+
+A instalação de dependências é o oposto: acontece antes da poda, com o
+`node_modules` completo. É o único ponto do ciclo de publicação em que dá para
+migrar sem depender de alguém lembrar.
+
+`scripts/servidor.mjs` mantém a mesma migração para quem sobe com `npm start`
+em servidor próprio, onde ela funciona.
+
+**Falhando, a publicação segue**, com aviso destacado no log (procure por
+`[migracao]`). Recusar trocaria "algumas telas com erro" por "site inteiro fora
+do ar", que é pior — mas nesse estado a plataforma precisa de atenção imediata.
+`prisma generate` é a exceção: falhando, a instalação para, porque sem o
+cliente gerado a aplicação nem sobe.
+
+#### Aplicar à mão, se precisar
+
+Da pasta com o código-fonte do build, uma linha por vez:
+
+```bash
+export PATH=/opt/alt/alt-nodejs22/root/usr/bin:$PATH
+export DATABASE_URL=file:/caminho/para/o/banco.db
+npx prisma@6.19.3 migrate deploy
+```
+
+Fixe a versão. `npx prisma` sem versão baixa a `latest`, que pode ser uma
+candidata a lançamento incompatível com o schema — e ela falha sem aplicar nada.
+
+Para conferir o que está aplicado sem depender do Prisma, basta ler o arquivo do
+banco:
+
+```bash
+grep -ao "20260[0-9]*_[a-z_]*" /caminho/para/o/banco.db | sort -u
+```
 
 ### Variáveis obrigatórias em produção
 
