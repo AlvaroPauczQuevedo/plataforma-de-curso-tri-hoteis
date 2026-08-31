@@ -22,9 +22,21 @@ export default async function MatriculasPage({
 
   const page = Math.max(1, Number(searchParams.page ?? 1));
 
+  /*
+    A lista traz TODA conta ativa, administradores inclusive.
+
+    Administrador também é aluno: precisa fazer o treinamento obrigatório do
+    setor dele e, principalmente, o curso sobre a própria plataforma. Filtrar
+    por perfil obrigaria a criar uma segunda conta para a mesma pessoa, com o
+    histórico partido em duas e dois certificados em nomes diferentes.
+
+    A matrícula automática por departamento continua alcançando apenas
+    funcionários — mudá-la alteraria os números de conformidade, e essa é uma
+    decisão separada desta.
+  */
   const [employees, courses] = await Promise.all([
     db.user.findMany({
-      where: { role: "EMPLOYEE", active: true },
+      where: { active: true },
       include: { department: true },
       orderBy: { name: "asc" },
     }),

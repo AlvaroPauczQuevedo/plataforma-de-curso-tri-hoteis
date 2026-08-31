@@ -6,7 +6,13 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { enrollUsers } from "@/lib/actions/enrollments";
 
-type Employee = { id: string; name: string; email: string; department?: { name: string } | null };
+type Employee = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  department?: { name: string } | null;
+};
 type Course = { id: string; title: string };
 
 export function BulkEnrollForm({ employees, courses }: { employees: Employee[]; courses: Course[] }) {
@@ -45,7 +51,7 @@ export function BulkEnrollForm({ employees, courses }: { employees: Employee[]; 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!courseId || selected.size === 0) {
-      setResult({ ok: false, error: "Selecione um curso e ao menos um funcionário." });
+      setResult({ ok: false, error: "Selecione um curso e ao menos uma pessoa." });
       return;
     }
     startTransition(async () => {
@@ -109,7 +115,7 @@ export function BulkEnrollForm({ employees, courses }: { employees: Employee[]; 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <label className="text-sm font-medium text-ink-900">
-            Funcionários ({selected.size} selecionado(s))
+            Pessoas ({selected.size} selecionado(s))
           </label>
           <button type="button" onClick={toggleAll} className="text-xs font-medium text-brand-700 hover:underline">
             {selected.size === filtered.length ? "Desmarcar todos" : "Selecionar todos"}
@@ -118,7 +124,7 @@ export function BulkEnrollForm({ employees, courses }: { employees: Employee[]; 
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar funcionário..."
+          placeholder="Buscar por nome ou e-mail..."
           className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
         />
         <div className="max-h-64 overflow-y-auto rounded-xl border border-border">
@@ -133,12 +139,19 @@ export function BulkEnrollForm({ employees, courses }: { employees: Employee[]; 
                 onChange={() => toggle(emp.id)}
                 className="h-4 w-4 rounded border-border"
               />
-              <span className="flex-1 text-ink-900">{emp.name}</span>
-              <span className="text-xs text-ink-700/50">{emp.department?.name ?? "-"}</span>
+              <span className="flex-1 truncate text-ink-900">{emp.name}</span>
+              {/* O perfil aparece porque a lista mistura os dois: sem a marca,
+                  matricular um administrador por engano seria fácil demais. */}
+              {emp.role === "ADMIN" && (
+                <span className="shrink-0 rounded-md bg-ink-900/5 px-1.5 py-0.5 text-[11px] font-medium text-ink-700/70">
+                  Administrador
+                </span>
+              )}
+              <span className="shrink-0 text-xs text-ink-700/50">{emp.department?.name ?? "-"}</span>
             </label>
           ))}
           {filtered.length === 0 && (
-            <p className="px-3.5 py-4 text-center text-sm text-ink-700/50">Nenhum funcionário encontrado.</p>
+            <p className="px-3.5 py-4 text-center text-sm text-ink-700/50">Nenhuma pessoa encontrada.</p>
           )}
         </div>
       </div>
