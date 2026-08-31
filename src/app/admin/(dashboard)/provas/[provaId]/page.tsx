@@ -5,10 +5,11 @@ import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import { motivoDeBloqueioDeProva } from "@/lib/permissoes-usuario";
 import { motivoParaNaoPublicar } from "@/lib/prova";
-import { deleteProva, deleteQuestao, setProvaPublicada } from "@/lib/actions/provas";
+import { deleteQuestao } from "@/lib/actions/provas";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { ActionButton } from "@/components/shared/action-button";
+import { ProvaActions } from "@/components/admin/prova-actions";
 import { ProvaForm } from "@/components/admin/prova-form";
 import { QuestaoForm } from "@/components/admin/questao-form";
 
@@ -65,33 +66,12 @@ export default async function ProvaPage({ params }: { params: { provaId: string 
         <Alert tone="warning">{motivo}</Alert>
       ) : (
         <>
-          <div className="flex flex-wrap gap-2">
-            {prova.publicada ? (
-              <ActionButton
-                action={setProvaPublicada.bind(null, prova.id, false)}
-                variant="secondary"
-                confirmMessage="Despublicar? A prova sai da lista dos funcionários."
-              >
-                Mover para rascunho
-              </ActionButton>
-            ) : (
-              <ActionButton
-                action={setProvaPublicada.bind(null, prova.id, true)}
-                variant="primary"
-              >
-                Publicar prova
-              </ActionButton>
-            )}
-
-            <ActionButton
-              action={deleteProva.bind(null, prova.id)}
-              variant="danger"
-              confirmMessage={`Excluir a prova "${prova.titulo}"?`}
-            >
-              <Trash2 className="h-4 w-4" />
-              Excluir
-            </ActionButton>
-          </div>
+          <ProvaActions
+            provaId={prova.id}
+            titulo={prova.titulo}
+            publicada={prova.publicada}
+            tentativas={prova._count.tentativas}
+          />
 
           {!prova.publicada && impedimentoParaPublicar && (
             <Alert tone="warning">{impedimentoParaPublicar}</Alert>
