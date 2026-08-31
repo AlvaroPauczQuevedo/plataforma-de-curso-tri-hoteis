@@ -13,7 +13,9 @@ import { db } from "@/lib/db";
 import {
   motivoDeBloqueio,
   motivoDeBloqueioDeCurso,
+  motivoDeBloqueioDeProva,
   motivoDeVinculoDeCursoInvalido,
+  motivoDeVinculoDeProvaInvalido,
   motivoDeVinculoInvalido,
 } from "@/lib/permissoes-usuario";
 
@@ -144,4 +146,51 @@ export async function departamentoDoAtor(atorId: string): Promise<string | null>
 export async function ehProprietario(atorId: string): Promise<boolean> {
   const ator = await db.user.findUnique({ where: { id: atorId }, select: CAMPOS });
   return ator?.protegido === true;
+}
+
+/* ------------------------------------------------------------------ provas */
+
+/** `null` se o administrador pode alterar esta prova. */
+export async function bloqueioDeProva(
+  provaId: string,
+  atorId: string
+): Promise<Recusa | null> {
+  const [prova, ator] = await Promise.all([
+    db.prova.findUnique({
+      where: { id: provaId },
+      select: { titulo: true, departmentId: true },
+    }),
+    db.user.findUnique({ where: { id: atorId }, select: CAMPOS }),
+  ]);
+
+  if (!prova) return { ok: false, error: "Prova não encontrada." };
+  if (!ator) return { ok: false, error: "Sessão inválida." };
+
+  const motivo = motivoDeBloqueioDeProva(prova, ator);
+  return motivo ? { ok: false, error: motivo } : null;
+}
+
+/** Idem, a partir de uma questão — sobe até a prova dona. */
+export async function bloqueioDeQuestao(
+  questaoId: string,
+  atorId: string
+): Promise<Recusa | null> {
+  const questao = await db.questaoProva.findUnique({
+    where: { id: questaoId },
+    select: { provaId: true },
+  });
+  if (!questao) return { ok: false, error: "Questão não encontrada." };
+  return bloqueioDeProva(questao.provaId, atorId);
+}
+
+/** `null` se o administrador pode criar uma prova neste departamento. */
+export async function bloqueioDeVinculoDeProva(
+  atorId: string,
+  departmentId: string | null
+): Promise<Recusa | null> {
+  const ator = await db.user.findUnique({ where: { id: atorId }, select: CAMPOS });
+  if (!ator) return { ok: false, error: "Sessão inválida." };
+
+  const motivo = motivoDeVinculoDeProvaInvalido(ator, departmentId);
+  return motivo ? { ok: false, error: motivo } : null;
 }

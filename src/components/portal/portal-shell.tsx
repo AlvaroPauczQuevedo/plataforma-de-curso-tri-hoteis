@@ -1,6 +1,6 @@
 "use client";
 
-import { Award, BookOpen, History, Home, User } from "lucide-react";
+import { Award, BookOpen, FileQuestion, History, Home, User } from "lucide-react";
 import { AppShell, type GrupoMenu, type ItemMenu } from "@/components/shell/app-shell";
 
 const GRUPOS: GrupoMenu[] = [
@@ -8,6 +8,7 @@ const GRUPOS: GrupoMenu[] = [
     itens: [
       { href: "/", label: "Início", icon: Home, exato: true },
       { href: "/meus-cursos", label: "Meus cursos", icon: BookOpen },
+      { href: "/provas", label: "Provas", icon: FileQuestion },
     ],
   },
   {
@@ -23,7 +24,7 @@ const GRUPOS: GrupoMenu[] = [
 const CELULAR: ItemMenu[] = [
   { href: "/", label: "Início", icon: Home, exato: true },
   { href: "/meus-cursos", label: "Cursos", icon: BookOpen },
-  { href: "/certificados", label: "Certificados", icon: Award },
+  { href: "/provas", label: "Provas", icon: FileQuestion },
   { href: "/perfil", label: "Perfil", icon: User },
 ];
 

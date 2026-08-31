@@ -133,3 +133,40 @@ export function motivoDeVinculoDeCursoInvalido(
 
   return null;
 }
+
+/**
+ * Prova segue exatamente a regra do curso: o departamento é o dono, e prova
+ * sem departamento pertence ao proprietário.
+ *
+ * As funções são separadas das de curso apenas pelo texto da recusa. A regra é
+ * a mesma de propósito — se um dia divergirem, será por decisão, não por
+ * descuido de quem mexeu só num dos dois.
+ */
+export type ProvaComDono = {
+  titulo: string;
+  departmentId: string | null;
+};
+
+export function motivoDeBloqueioDeProva(
+  prova: ProvaComDono,
+  ator: Ator
+): string | null {
+  return motivoDeBloqueioDeCurso(
+    { title: prova.titulo, departmentId: prova.departmentId },
+    ator
+  );
+}
+
+export function motivoDeVinculoDeProvaInvalido(
+  ator: Ator,
+  departmentId: string | null
+): string | null {
+  if (ator.protegido) return null;
+  if (!ator.departmentId) return SEM_DEPARTAMENTO_CONTEUDO;
+
+  if (departmentId !== ator.departmentId) {
+    return "Você só pode criar provas no seu próprio departamento.";
+  }
+
+  return null;
+}

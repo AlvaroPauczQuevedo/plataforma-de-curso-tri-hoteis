@@ -46,6 +46,7 @@ model Department {
   users     User[]
   courses   Course[]
   obrigatorios CursoObrigatorio[]
+  provas    Prova[]
 }
 
 model User {
@@ -99,6 +100,8 @@ model User {
   accessLogs        AccessLog[]
   adminActivity     AdminActivityLog[]
   uploadedFiles     FileAsset[]
+  provasCriadas     Prova[]            @relation("ProvaCriadaPor")
+  tentativasProva   TentativaProva[]
 }
 
 model Category {
@@ -332,4 +335,89 @@ model AdminActivityLog {
   createdAt  DateTime @default(now())
 
   @@index([adminId])
+}
+
+/// Prova: avaliação de conhecimento, independente de curso.
+///
+/// Segue o mesmo dono que o curso — o departamento — porque a regra de quem
+/// pode criar, editar e excluir precisa ser a mesma da plataforma inteira.
+/// Prova sem departamento fica reservada ao proprietário, exatamente como um
+/// curso sem departamento.
+model Prova {
+  id           String      @id @default(cuid())
+  titulo       String
+  descricao    String?
+
+  /// Dono da prova. Nulo = só o proprietário altera.
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  /// Percentual de acerto exigido para aprovação.
+  notaMinima   Int         @default(70)
+
+  /// Rascunho não aparece para o funcionário. Mesma lógica do curso: a prova
+  /// é montada aos poucos e só fica visível quando quem escreveu decide.
+  publicada    Boolean     @default(false)
+
+  createdById  String
+  createdBy    User        @relation("ProvaCriadaPor", fields: [createdById], references: [id])
+
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  questoes     QuestaoProva[]
+  tentativas   TentativaProva[]
+
+  @@index([departmentId])
+}
+
+model QuestaoProva {
+  id           String   @id @default(cuid())
+  provaId      String
+  prova        Prova    @relation(fields: [provaId], references: [id], onDelete: Cascade)
+  enunciado    String
+  ordem        Int      @default(0)
+  alternativas AlternativaProva[]
+
+  @@index([provaId])
+}
+
+model AlternativaProva {
+  id        String       @id @default(cuid())
+  questaoId String
+  questao   QuestaoProva @relation(fields: [questaoId], references: [id], onDelete: Cascade)
+  texto     String
+  correta   Boolean      @default(false)
+  ordem     Int          @default(0)
+
+  @@index([questaoId])
+}
+
+/// Uma realização da prova por um funcionário.
+///
+/// Guarda o resultado JÁ CALCULADO — nota, acertos e total — em vez de
+/// recalcular a partir das respostas quando alguém consulta. A razão é que a
+/// prova muda: questão corrigida, alternativa reescrita, prova reformulada.
+/// Recalcular depois daria uma nota diferente da que a pessoa recebeu na hora,
+/// e a nota registrada é o que vale para conformidade.
+model TentativaProva {
+  id        String   @id @default(cuid())
+  provaId   String
+  prova     Prova    @relation(fields: [provaId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  nota      Int
+  acertos   Int
+  total     Int
+  aprovado  Boolean
+  /// Congela o gabarito daquele momento: questão, alternativa escolhida e se
+  /// estava certa. Sem isso não há como mostrar ao funcionário o que ele errou
+  /// depois que a prova for editada.
+  respostas String
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, provaId])
+  @@index([provaId])
 }

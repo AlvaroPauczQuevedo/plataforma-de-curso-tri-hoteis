@@ -4,6 +4,7 @@ import {
   BarChart3,
   BookOpen,
   ClipboardList,
+  FileQuestion,
   History,
   ShieldCheck,
   KeyRound,
@@ -54,7 +55,10 @@ function menuDe(proprietario: boolean): GrupoMenu[] {
     },
     {
       titulo: "Conteúdo",
-      itens: [{ href: "/admin/cursos", label: "Cursos", icon: BookOpen }],
+      itens: [
+        { href: "/admin/cursos", label: "Cursos", icon: BookOpen },
+        { href: "/admin/provas", label: "Provas", icon: FileQuestion },
+      ],
     },
     {
       titulo: "Administração",
