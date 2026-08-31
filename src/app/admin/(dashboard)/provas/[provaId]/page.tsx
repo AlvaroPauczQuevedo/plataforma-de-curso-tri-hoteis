@@ -68,7 +68,7 @@ export default async function ProvaPage({ params }: { params: { provaId: string 
           <div className="flex flex-wrap gap-2">
             {prova.publicada ? (
               <ActionButton
-                action={() => setProvaPublicada(prova.id, false)}
+                action={setProvaPublicada.bind(null, prova.id, false)}
                 variant="secondary"
                 confirmMessage="Despublicar? A prova sai da lista dos funcionários."
               >
@@ -76,7 +76,7 @@ export default async function ProvaPage({ params }: { params: { provaId: string 
               </ActionButton>
             ) : (
               <ActionButton
-                action={() => setProvaPublicada(prova.id, true)}
+                action={setProvaPublicada.bind(null, prova.id, true)}
                 variant="primary"
               >
                 Publicar prova
@@ -84,7 +84,7 @@ export default async function ProvaPage({ params }: { params: { provaId: string 
             )}
 
             <ActionButton
-              action={() => deleteProva(prova.id)}
+              action={deleteProva.bind(null, prova.id)}
               variant="danger"
               confirmMessage={`Excluir a prova "${prova.titulo}"?`}
             >
@@ -126,7 +126,7 @@ export default async function ProvaPage({ params }: { params: { provaId: string 
                         {i + 1}. {q.enunciado}
                       </p>
                       <ActionButton
-                        action={() => deleteQuestao(q.id)}
+                        action={deleteQuestao.bind(null, q.id)}
                         variant="ghost"
                         size="sm"
                         confirmMessage="Excluir esta questão?"
