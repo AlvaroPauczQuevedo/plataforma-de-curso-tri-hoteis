@@ -6,10 +6,7 @@ import { requireAdmin } from "@/lib/session";
 import { logAdminActivity } from "@/lib/activity-log";
 import type { ActionResult } from "@/lib/actions/employees";
 import { recalculateCourseProgress } from "@/lib/progress";
-import {
-  bloqueioDeAlteracao,
-  bloqueioDeAlteracaoEmLote,
-} from "@/lib/alcance-admin";
+import { bloqueioDeCurso } from "@/lib/alcance-admin";
 
 export async function enrollUsers(params: {
   courseId: string;
@@ -20,8 +17,19 @@ export async function enrollUsers(params: {
   const admin = await requireAdmin();
   const { courseId, userIds, mandatory, dueDate } = params;
 
-  // Matricular altera o histórico da pessoa: vale o mesmo alcance do cadastro.
-  const bloqueio = await bloqueioDeAlteracaoEmLote(userIds, admin.id);
+  /*
+    A trava é sobre o CURSO, não sobre as pessoas.
+
+    Quem responde por um treinamento precisa poder convocar quem ele quiser —
+    um curso de segurança do trabalho serve à empresa inteira, não só ao setor
+    de quem o escreveu. Exigir que o aluno fosse do mesmo departamento
+    obrigaria a duplicar o mesmo curso em cada setor.
+
+    O que continua barrado é editar a PESSOA: cadastro, senha, departamento e
+    ativação seguem restritos a quem administra o setor dela. Matricular
+    concede acesso a um conteúdo; não altera dado de ninguém.
+  */
+  const bloqueio = await bloqueioDeCurso(courseId, admin.id);
   if (bloqueio) return bloqueio;
 
   if (userIds.length === 0) {
@@ -70,8 +78,15 @@ export async function enrollUsers(params: {
 export async function removeEnrollment(userId: string, courseId: string): Promise<ActionResult> {
   const admin = await requireAdmin();
 
-  // Remover apaga progresso e certificado — mais destrutivo que editar o cadastro.
-  const bloqueio = await bloqueioDeAlteracao(userId, admin.id);
+  /*
+    Mesma trava da matrícula, pelo mesmo motivo: quem pode convocar precisa
+    poder desconvocar, senão um engano vira permanente.
+
+    Vale o alerta, porém: remover apaga progresso e certificado daquela pessoa
+    neste curso. É a ação mais destrutiva que um administrador de departamento
+    alcança fora do próprio setor.
+  */
+  const bloqueio = await bloqueioDeCurso(courseId, admin.id);
   if (bloqueio) return bloqueio;
 
   await db.enrollment.deleteMany({ where: { userId, courseId } });

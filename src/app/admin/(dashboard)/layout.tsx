@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import { AdminShell } from "@/components/admin/shell";
+import { ehProprietario } from "@/lib/alcance-admin";
 
 export default async function AdminDashboardLayout({
   children,
@@ -26,5 +27,16 @@ export default async function AdminDashboardLayout({
     redirect("/trocar-senha");
   }
 
-  return <AdminShell adminName={admin.name ?? "Administrador"}>{children}</AdminShell>;
+  /*
+    O alcance é resolvido aqui, uma vez por navegação, e desce para a casca.
+    Cada página restrita repete a checagem por conta própria — esta serve para
+    montar o menu, não para proteger nada.
+  */
+  const proprietario = await ehProprietario(admin.id);
+
+  return (
+    <AdminShell adminName={admin.name ?? "Administrador"} proprietario={proprietario}>
+      {children}
+    </AdminShell>
+  );
 }

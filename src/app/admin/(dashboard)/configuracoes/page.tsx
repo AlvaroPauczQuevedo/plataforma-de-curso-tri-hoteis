@@ -1,16 +1,37 @@
 import { Building2, Tags, ShieldCheck } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
+import { notFound } from "next/navigation";
 import { QuickAddForm } from "@/components/admin/quick-add-form";
+import { DepartmentList } from "@/components/admin/department-list";
 import { createDepartment } from "@/lib/actions/employees";
+import { ehProprietario } from "@/lib/alcance-admin";
 import { createCategory } from "@/lib/actions/courses";
 
 export default async function ConfiguracoesPage() {
   const admin = await requireAdmin();
 
-  const [departments, categories] = await Promise.all([
+  /*
+    Tela da conta proprietária. Relatórios e Atividades mostram a plataforma
+    inteira — progresso e histórico de ação de todos os departamentos —, e
+    Configurações decide a estrutura que governa o alcance de todo mundo.
+
+    Devolve página inexistente em vez de uma tela de recusa: para quem não a
+    alcança, a rota simplesmente não existe.
+  */
+  if (!(await ehProprietario(admin.id))) notFound();
+
+  /*
+    Os três contadores vêm juntos porque a tela precisa dizer POR QUE um
+    departamento não pode ser excluído. Contar só usuários esconderia metade
+    dos impedimentos e transformaria a recusa em surpresa.
+  */
+  const [proprietario, departments, categories] = await Promise.all([
+    ehProprietario(admin.id),
     db.department.findMany({
-      include: { _count: { select: { users: true } } },
+      include: {
+        _count: { select: { users: true, courses: true, obrigatorios: true } },
+      },
       orderBy: { name: "asc" },
     }),
     db.category.findMany({
@@ -31,15 +52,26 @@ export default async function ConfiguracoesPage() {
           <Building2 className="h-5 w-5 text-brand-700" />
           <h2 className="font-semibold text-ink-900">Departamentos</h2>
         </div>
-        <QuickAddForm action={createDepartment} placeholder="Nome do novo departamento" />
-        <ul className="divide-y divide-border">
-          {departments.map((d) => (
-            <li key={d.id} className="flex items-center justify-between py-2.5 text-sm">
-              <span className="text-ink-900">{d.name}</span>
-              <span className="text-xs text-ink-700/50">{d._count.users} funcionário(s)</span>
-            </li>
-          ))}
-        </ul>
+        {proprietario && (
+          <QuickAddForm action={createDepartment} placeholder="Nome do novo departamento" />
+        )}
+        <DepartmentList
+          podeExcluir={proprietario}
+          departamentos={departments.map((d) => ({
+            id: d.id,
+            name: d.name,
+            usuarios: d._count.users,
+            cursos: d._count.courses,
+            obrigatorios: d._count.obrigatorios,
+          }))}
+        />
+        {proprietario && (
+          <p className="text-xs leading-relaxed text-ink-700/60">
+            Departamento define o alcance de cada administrador, por isso criar e
+            excluir são ações da conta proprietária. Só é possível excluir um
+            departamento vazio — mova os vínculos antes.
+          </p>
+        )}
       </section>
 
       <section className="space-y-4 rounded-2xl border border-border bg-white p-6">

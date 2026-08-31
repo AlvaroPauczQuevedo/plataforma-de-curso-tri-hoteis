@@ -1,5 +1,7 @@
 import { Users, UserCheck, BookOpenCheck, ClipboardList, AlarmClock, TrendingUp } from "lucide-react";
 import { getDashboardStats } from "@/lib/admin-data";
+import { requireAdmin } from "@/lib/session";
+import { ehProprietario } from "@/lib/alcance-admin";
 import { StatCard } from "@/components/admin/stat-card";
 import { StatusPieChart, DepartmentBarChart } from "@/components/admin/charts";
 import { formatDateTime } from "@/lib/utils";
@@ -25,7 +27,21 @@ const actionLabels: Record<string, string> = {
 };
 
 export default async function AdminDashboardPage() {
-  const stats = await getDashboardStats();
+  const admin = await requireAdmin();
+
+  /*
+    O painel é o mesmo para todos, com quatro blocos a menos para quem
+    administra um departamento: contagem de funcionários, distribuição por
+    departamento e atividades recentes falam da plataforma inteira, e a
+    plataforma inteira não é o alcance dessa pessoa.
+
+    O que sobra é sobre treinamento — matrículas, conclusões, atrasos e cursos
+    mais acessados —, que é o trabalho dela.
+  */
+  const [proprietario, stats] = await Promise.all([
+    ehProprietario(admin.id),
+    getDashboardStats(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -35,8 +51,12 @@ export default async function AdminDashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Funcionários cadastrados" value={stats.totalEmployees} icon={Users} tone="navy" />
-        <StatCard label="Funcionários ativos" value={stats.activeEmployees} icon={UserCheck} tone="accent" />
+        {proprietario && (
+          <>
+            <StatCard label="Funcionários cadastrados" value={stats.totalEmployees} icon={Users} tone="navy" />
+            <StatCard label="Funcionários ativos" value={stats.activeEmployees} icon={UserCheck} tone="accent" />
+          </>
+        )}
         <StatCard label="Cursos publicados" value={stats.publishedCourses} icon={BookOpenCheck} tone="accent" />
         <StatCard label="Total de matrículas" value={stats.totalEnrollments} icon={ClipboardList} tone="navy" />
         <StatCard label="Em andamento" value={stats.inProgress} icon={TrendingUp} tone="accent" />
@@ -50,18 +70,20 @@ export default async function AdminDashboardPage() {
         <StatCard label="Taxa média de conclusão" value={`${stats.avgCompletion}%`} icon={TrendingUp} tone="accent" />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className={proprietario ? "grid gap-4 lg:grid-cols-2" : "grid gap-4"}>
         <div className="rounded-2xl border border-border bg-white p-5">
           <h2 className="mb-3 font-semibold text-ink-900">Status das matrículas</h2>
           <StatusPieChart data={stats.statusBreakdown} />
         </div>
-        <div className="rounded-2xl border border-border bg-white p-5">
-          <h2 className="mb-3 font-semibold text-ink-900">Funcionários por departamento</h2>
-          <DepartmentBarChart data={stats.departmentCounts} />
-        </div>
+        {proprietario && (
+          <div className="rounded-2xl border border-border bg-white p-5">
+            <h2 className="mb-3 font-semibold text-ink-900">Funcionários por departamento</h2>
+            <DepartmentBarChart data={stats.departmentCounts} />
+          </div>
+        )}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className={proprietario ? "grid gap-4 lg:grid-cols-2" : "grid gap-4"}>
         <div className="rounded-2xl border border-border bg-white p-5">
           <h2 className="mb-3 font-semibold text-ink-900">Cursos mais acessados</h2>
           {stats.mostAccessed.length === 0 ? (
@@ -81,23 +103,25 @@ export default async function AdminDashboardPage() {
           )}
         </div>
 
-        <div className="rounded-2xl border border-border bg-white p-5">
-          <h2 className="mb-3 font-semibold text-ink-900">Atividades recentes</h2>
-          {stats.recentActivity.length === 0 ? (
-            <p className="py-8 text-center text-sm text-ink-700/50">Nenhuma atividade registrada ainda.</p>
-          ) : (
-            <ul className="space-y-3">
-              {stats.recentActivity.map((log) => (
-                <li key={log.id} className="text-sm">
-                  <span className="font-medium text-ink-900">{log.admin.name}</span>{" "}
-                  <span className="text-ink-700/70">{actionLabels[log.action] ?? log.action.toLowerCase()}</span>{" "}
-                  {log.details && <span className="text-ink-700/70">{log.details}</span>}
-                  <p className="text-xs text-ink-700/40">{formatDateTime(log.createdAt)}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        {proprietario && (
+          <div className="rounded-2xl border border-border bg-white p-5">
+            <h2 className="mb-3 font-semibold text-ink-900">Atividades recentes</h2>
+            {stats.recentActivity.length === 0 ? (
+              <p className="py-8 text-center text-sm text-ink-700/50">Nenhuma atividade registrada ainda.</p>
+            ) : (
+              <ul className="space-y-3">
+                {stats.recentActivity.map((log) => (
+                  <li key={log.id} className="text-sm">
+                    <span className="font-medium text-ink-900">{log.admin.name}</span>{" "}
+                    <span className="text-ink-700/70">{actionLabels[log.action] ?? log.action.toLowerCase()}</span>{" "}
+                    {log.details && <span className="text-ink-700/70">{log.details}</span>}
+                    <p className="text-xs text-ink-700/40">{formatDateTime(log.createdAt)}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

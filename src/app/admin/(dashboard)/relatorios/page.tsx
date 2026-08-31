@@ -1,12 +1,24 @@
 import { BarChart3 } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
+import { notFound } from "next/navigation";
+import { ehProprietario } from "@/lib/alcance-admin";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { Badge } from "@/components/ui/badge";
 
 export default async function RelatoriosPage() {
-  await requireAdmin();
+  const admin = await requireAdmin();
+
+  /*
+    Tela da conta proprietária. Relatórios e Atividades mostram a plataforma
+    inteira — progresso e histórico de ação de todos os departamentos —, e
+    Configurações decide a estrutura que governa o alcance de todo mundo.
+
+    Devolve página inexistente em vez de uma tela de recusa: para quem não a
+    alcança, a rota simplesmente não existe.
+  */
+  if (!(await ehProprietario(admin.id))) notFound();
 
   const now = new Date();
 
