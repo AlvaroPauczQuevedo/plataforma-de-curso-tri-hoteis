@@ -10,14 +10,19 @@ type LessonWithFiles = Lesson & {
   pdfFile?: { originalName: string } | null;
 };
 
+/** Provas que este administrador pode aplicar numa aula. */
+export type ProvaDisponivel = { id: string; titulo: string; publicada: boolean };
+
 export function LessonForm({
   action,
   lesson,
   onDone,
+  provas = [],
 }: {
   action: (formData: FormData) => Promise<{ ok: true; message?: string } | { ok: false; error: string }>;
   lesson?: LessonWithFiles;
   onDone?: () => void;
+  provas?: ProvaDisponivel[];
 }) {
   const [type, setType] = useState(lesson?.type ?? "VIDEO");
   const [videoSource, setVideoSource] = useState(lesson?.videoSource ?? "UPLOAD");
@@ -63,6 +68,7 @@ export function LessonForm({
           <option value="VIDEO">Vídeo</option>
           <option value="PDF">PDF</option>
           <option value="TEXT">Texto</option>
+          <option value="PROVA">Prova</option>
         </select>
       </div>
 
@@ -98,6 +104,39 @@ export function LessonForm({
                 className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
               />
             </div>
+          )}
+        </div>
+      )}
+
+      {type === "PROVA" && (
+        <div className="space-y-1.5 rounded-lg border border-border bg-white p-3">
+          <label htmlFor="provaId" className="text-xs font-medium text-ink-900">
+            Qual prova esta aula aplica
+          </label>
+          <select
+            id="provaId"
+            name="provaId"
+            defaultValue={lesson?.provaId ?? ""}
+            className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
+          >
+            <option value="">Selecione uma prova...</option>
+            {provas.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.titulo}
+                {p.publicada ? "" : " (rascunho)"}
+              </option>
+            ))}
+          </select>
+          {provas.length === 0 ? (
+            <p className="text-xs text-danger-600">
+              Nenhuma prova disponível. Crie a prova em Provas antes de usá-la numa aula.
+            </p>
+          ) : (
+            <p className="text-xs leading-relaxed text-ink-700/60">
+              A aula é concluída quando o funcionário for aprovado. Não há botão de
+              &quot;marcar como concluída&quot; — a nota é que conta. Se a aula for
+              obrigatória, quem não passar não conclui o curso nem recebe certificado.
+            </p>
           )}
         </div>
       )}

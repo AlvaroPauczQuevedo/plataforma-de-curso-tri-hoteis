@@ -32,6 +32,7 @@ enum LessonType {
   VIDEO
   PDF
   TEXT
+  PROVA
 }
 
 enum VideoSource {
@@ -219,6 +220,18 @@ model Lesson {
 
   textContent  String?
 
+  /// Aula do tipo PROVA aponta para uma prova já cadastrada.
+  ///
+  /// A aula não guarda questões próprias de propósito: a mesma prova pode
+  /// servir a mais de um curso, e duplicá-la faria as cópias divergirem na
+  /// primeira correção de gabarito.
+  ///
+  /// `onDelete: SetNull` e não Cascade: excluir a prova não deve apagar a
+  /// aula e, com ela, o progresso de quem já a concluiu. A aula fica sem prova
+  /// e a tela avisa — perda visível é melhor que perda silenciosa.
+  provaId      String?
+  prova        Prova?      @relation(fields: [provaId], references: [id], onDelete: SetNull)
+
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
@@ -367,6 +380,7 @@ model Prova {
 
   questoes     QuestaoProva[]
   tentativas   TentativaProva[]
+  aulas        Lesson[]
 
   @@index([departmentId])
 }

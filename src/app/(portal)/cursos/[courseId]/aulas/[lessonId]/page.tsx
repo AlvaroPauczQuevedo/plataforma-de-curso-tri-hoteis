@@ -1,16 +1,20 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, CheckCircle2, FileText, Video, BookOpen } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle2, FileText, Video, BookOpen, FileQuestion,
+  Download,
+} from "lucide-react";
 import { requireUser } from "@/lib/session";
+import { Badge } from "@/components/ui/badge";
+import { ProvaRunner } from "@/components/portal/prova-runner";
+import { formatDateTime } from "@/lib/utils";
 import { db } from "@/lib/db";
 import { userHasCourseAccess, isLessonUnlocked } from "@/lib/access";
 import { VideoPlayer } from "@/components/portal/video-player";
 import { PdfViewer } from "@/components/portal/pdf-viewer";
 import { MarkCompleteButton } from "@/components/portal/mark-complete-button";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-const lessonIcon = { VIDEO: Video, PDF: FileText, TEXT: BookOpen };
+const lessonIcon = { VIDEO: Video, PDF: FileText, TEXT: BookOpen, PROVA: FileQuestion };
 
 export default async function LessonPlayerPage({
   params,
@@ -43,8 +47,38 @@ export default async function LessonPlayerPage({
 
   const lessonWithRelations = await db.lesson.findUnique({
     where: { id: lessonId },
-    include: { videoFile: true, pdfFile: true },
+    include: {
+      videoFile: true,
+      pdfFile: true,
+      /*
+        As alternativas vêm SEM o campo `correta`: o gabarito não pode
+        trafegar até o navegador antes da entrega.
+      */
+      prova: {
+        include: {
+          questoes: {
+            select: {
+              id: true,
+              enunciado: true,
+              alternativas: {
+                select: { id: true, texto: true },
+                orderBy: { ordem: "asc" as const },
+              },
+            },
+            orderBy: { ordem: "asc" as const },
+          },
+        },
+      },
+    },
   });
+
+  const tentativasDaProva = lessonWithRelations?.prova
+    ? await db.tentativaProva.findMany({
+        where: { userId: user.id, provaId: lessonWithRelations.prova.id },
+        orderBy: { createdAt: "desc" },
+        take: 3,
+      })
+    : [];
 
   const progressRecords = await db.lessonProgress.findMany({
     where: { userId: user.id, lessonId: { in: allLessons.map((l) => l.id) } },
@@ -150,6 +184,75 @@ export default async function LessonPlayerPage({
           <div className="space-y-4">
             <PdfViewer src={`/api/files/${lessonWithRelations.pdfFile.id}`} allowDownload={course.allowDownload} />
             <MarkCompleteButton lessonId={lesson.id} completed={Boolean(currentProgress?.completed)} />
+          </div>
+        )}
+
+        {lesson.type === "PROVA" && (
+          <div className="space-y-4">
+            {!lessonWithRelations?.prova ? (
+              <div className="rounded-2xl border border-warning-600/30 bg-warning-100/50 p-5 text-sm text-ink-800">
+                Esta aula ainda não tem prova associada. Fale com quem administra
+                o treinamento.
+              </div>
+            ) : !lessonWithRelations.prova.publicada ? (
+              /*
+                Prova em rascunho não aceita entrega. Sem este aviso a pessoa
+                responderia tudo para só então descobrir que não conta.
+              */
+              <div className="rounded-2xl border border-warning-600/30 bg-warning-100/50 p-5 text-sm text-ink-800">
+                A prova desta aula ainda está em rascunho e não pode ser
+                respondida. Fale com quem administra o treinamento.
+              </div>
+            ) : (
+              <>
+                {currentProgress?.completed && (
+                  <div className="rounded-2xl border border-success-600/30 bg-success-100/50 p-5 text-sm text-ink-800">
+                    Você já foi aprovado nesta prova. Pode refazê-la para revisar —
+                    a conclusão da aula não se perde.
+                  </div>
+                )}
+
+                {tentativasDaProva.length > 0 && (
+                  <div className="rounded-2xl border border-border bg-white p-5">
+                    <h2 className="mb-3 font-semibold text-ink-900">
+                      Suas últimas {tentativasDaProva.length} tentativas
+                    </h2>
+                    <ul className="divide-y divide-border">
+                      {tentativasDaProva.map((t) => (
+                        <li key={t.id} className="flex flex-wrap items-center gap-3 py-2">
+                          <span className="flex-1 text-sm text-ink-700/70">
+                            {formatDateTime(t.createdAt)}
+                          </span>
+                          <span className="text-sm text-ink-700/60">
+                            {t.acertos}/{t.total}
+                          </span>
+                          <span className="text-sm font-semibold text-ink-900">
+                            {t.nota}%
+                          </span>
+                          <Badge tone={t.aprovado ? "success" : "danger"}>
+                            {t.aprovado ? "Aprovado" : "Reprovado"}
+                          </Badge>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <a
+                  href={`/api/provas/${lessonWithRelations.prova.id}/pdf`}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3.5 py-2 text-sm font-medium text-ink-700 transition hover:bg-surface-muted"
+                >
+                  <Download className="h-4 w-4" />
+                  Baixar a prova em PDF
+                </a>
+
+                <ProvaRunner
+                  provaId={lessonWithRelations.prova.id}
+                  notaMinima={lessonWithRelations.prova.notaMinima}
+                  questoes={lessonWithRelations.prova.questoes}
+                />
+              </>
+            )}
           </div>
         )}
 

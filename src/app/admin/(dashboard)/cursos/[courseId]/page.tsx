@@ -62,6 +62,17 @@ export default async function CourseEditorPage({
     ? todosDepartamentos
     : todosDepartamentos.filter((d) => d.id === ator.departmentId);
 
+  /*
+    Provas que podem ser aplicadas nas aulas deste curso: as gerais e as do
+    mesmo departamento do curso. Usar uma prova nao e edita-la, entao a regra
+    aqui e de publico-alvo, nao de permissao de escrita.
+  */
+  const provasDisponiveis = await db.prova.findMany({
+    where: { OR: [{ departmentId: null }, { departmentId: course.departmentId }] },
+    select: { id: true, titulo: true, publicada: true },
+    orderBy: { titulo: "asc" },
+  });
+
   const obrigatorios = await db.cursoObrigatorio.findMany({
     where: { courseId },
     include: { department: true },
@@ -179,7 +190,11 @@ export default async function CourseEditorPage({
             ))}
           </ul>
         ) : (
-          <ModuleLessonBuilder courseId={course.id} modules={course.modules} />
+          <ModuleLessonBuilder
+            courseId={course.id}
+            modules={course.modules}
+            provas={provasDisponiveis}
+          />
         )}
       </section>
     </div>

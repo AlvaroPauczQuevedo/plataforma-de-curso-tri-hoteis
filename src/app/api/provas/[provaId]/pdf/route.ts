@@ -48,10 +48,24 @@ export async function GET(
     departamento, ou prova geral.
   */
   const admin = conta?.role === "ADMIN";
-  const alcanca =
-    admin ||
-    (prova.publicada &&
-      (prova.departmentId === null || prova.departmentId === conta?.departmentId));
+
+  const porDepartamento =
+    prova.publicada &&
+    (prova.departmentId === null || prova.departmentId === conta?.departmentId);
+
+  // Mesma segunda porta da entrega: quem chega pela aula de um curso em que
+  // está matriculado também baixa o PDF.
+  const porCurso =
+    !admin &&
+    !porDepartamento &&
+    (await db.lesson.count({
+      where: {
+        provaId: params.provaId,
+        module: { course: { enrollments: { some: { userId: usuario.id } } } },
+      },
+    })) > 0;
+
+  const alcanca = admin || porDepartamento || porCurso;
 
   if (!alcanca) {
     return NextResponse.json({ error: "Acesso não autorizado." }, { status: 403 });

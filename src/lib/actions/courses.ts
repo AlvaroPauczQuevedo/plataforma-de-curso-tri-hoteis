@@ -235,6 +235,7 @@ export async function duplicateCourse(courseId: string): Promise<ActionResult & 
               videoDurationSeconds: l.videoDurationSeconds,
               pdfFileId: l.pdfFileId,
               textContent: l.textContent,
+              provaId: l.provaId,
             })),
           },
         })),
@@ -374,7 +375,7 @@ export async function reorderModules(courseId: string, orderedIds: string[]): Pr
 
 const lessonSchema = z.object({
   title: z.string().min(2, "Informe o título da aula."),
-  type: z.enum(["VIDEO", "PDF", "TEXT"]),
+  type: z.enum(["VIDEO", "PDF", "TEXT", "PROVA"]),
   required: z.coerce.boolean().default(true),
   videoSource: z.enum(["UPLOAD", "EMBED"]).optional(),
   videoEmbedUrl: z.string().optional(),
@@ -382,7 +383,20 @@ const lessonSchema = z.object({
   videoDurationSeconds: z.coerce.number().int().optional(),
   pdfFileId: z.string().optional(),
   textContent: z.string().optional(),
+  provaId: z.string().optional(),
 });
+
+/**
+ * Aula de prova sem prova escolhida não avalia nada, e a pessoa que a abrisse
+ * veria uma tela vazia sem entender por quê. A recusa é aqui, na gravação,
+ * porque depois o defeito só aparece para quem está estudando.
+ */
+function motivoDeAulaInvalida(dados: { type: string; provaId?: string }) {
+  if (dados.type === "PROVA" && !dados.provaId) {
+    return "Escolha qual prova esta aula vai aplicar.";
+  }
+  return null;
+}
 
 export async function createLesson(moduleId: string, formData: FormData): Promise<ActionResult> {
   const admin = await requireAdmin();
@@ -400,11 +414,15 @@ export async function createLesson(moduleId: string, formData: FormData): Promis
     videoDurationSeconds: formData.get("videoDurationSeconds") || undefined,
     pdfFileId: formData.get("pdfFileId") || undefined,
     textContent: formData.get("textContent") || undefined,
+    provaId: formData.get("provaId") || undefined,
   });
 
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0].message };
   }
+
+  const invalida = motivoDeAulaInvalida(parsed.data);
+  if (invalida) return { ok: false, error: invalida };
 
   const count = await db.lesson.count({ where: { moduleId } });
   const mod = await db.module.findUnique({ where: { id: moduleId } });
@@ -423,6 +441,7 @@ export async function createLesson(moduleId: string, formData: FormData): Promis
       videoDurationSeconds: parsed.data.videoDurationSeconds,
       pdfFileId: parsed.data.pdfFileId || null,
       textContent: parsed.data.textContent || null,
+      provaId: parsed.data.provaId || null,
     },
   });
 
@@ -446,11 +465,15 @@ export async function updateLesson(lessonId: string, formData: FormData): Promis
     videoDurationSeconds: formData.get("videoDurationSeconds") || undefined,
     pdfFileId: formData.get("pdfFileId") || undefined,
     textContent: formData.get("textContent") || undefined,
+    provaId: formData.get("provaId") || undefined,
   });
 
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0].message };
   }
+
+  const invalida = motivoDeAulaInvalida(parsed.data);
+  if (invalida) return { ok: false, error: invalida };
 
   const lesson = await db.lesson.update({
     where: { id: lessonId },
@@ -464,6 +487,7 @@ export async function updateLesson(lessonId: string, formData: FormData): Promis
       videoDurationSeconds: parsed.data.videoDurationSeconds,
       ...(parsed.data.pdfFileId ? { pdfFileId: parsed.data.pdfFileId } : {}),
       textContent: parsed.data.textContent || null,
+      provaId: parsed.data.provaId || null,
     },
     include: { module: true },
   });

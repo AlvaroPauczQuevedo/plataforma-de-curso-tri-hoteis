@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAdmin, requireUser } from "@/lib/session";
 import { logAdminActivity } from "@/lib/activity-log";
+import { recalculateCourseProgress } from "@/lib/progress";
 import type { ActionResult } from "@/lib/actions/employees";
 import {
   corrigir,
@@ -288,13 +289,36 @@ export async function submeterTentativa(
     select: { departmentId: true },
   });
 
-  const alcanca =
+  /*
+    Duas portas levam à mesma prova, e as duas valem:
+
+     - a prova é geral, ou é do departamento da pessoa;
+     - ou a prova é aula de um curso em que ela está matriculada.
+
+    A segunda existe porque matrícula atravessa departamento: um curso do
+    Trainee pode ter alunos de outro setor, e a prova daquele curso precisa
+    valer para eles. Sem isso, a pessoa veria a prova na aula e tomaria recusa
+    ao entregar.
+  */
+  const porDepartamento =
     prova.departmentId === null || prova.departmentId === conta?.departmentId;
-  if (!alcanca) return { ok: false, error: "Esta prova não é do seu departamento." };
+
+  const porCurso =
+    porDepartamento ||
+    (await db.lesson.count({
+      where: {
+        provaId,
+        module: { course: { enrollments: { some: { userId: usuario.id } } } },
+      },
+    })) > 0;
+
+  if (!porCurso) {
+    return { ok: false, error: "Esta prova não está liberada para você." };
+  }
 
   const resultado = corrigir(prova.questoes, respostas, prova.notaMinima);
 
-  await db.tentativaProva.create({
+  const tentativa = await db.tentativaProva.create({
     data: {
       provaId,
       userId: usuario.id,
@@ -305,6 +329,43 @@ export async function submeterTentativa(
       respostas: JSON.stringify(resultado.questoes),
     },
   });
+
+  /*
+    Aprovação conclui a aula de prova, onde quer que ela esteja.
+
+    A busca é pelas aulas que apontam para esta prova, e só nos cursos em que
+    a pessoa está matriculada. Assim tanto faz onde ela respondeu — pelo curso
+    ou pela lista de provas: passar é passar, e a aula não fica pendente por
+    causa do caminho que ela escolheu.
+
+    Reprovação não desfaz aprovação anterior de propósito. Quem já passou não
+    perde a conclusão por tentar de novo e ir pior.
+  */
+  if (resultado.aprovado) {
+    const aulas = await db.lesson.findMany({
+      where: {
+        provaId,
+        module: { course: { enrollments: { some: { userId: usuario.id } } } },
+      },
+      select: { id: true, module: { select: { courseId: true } } },
+    });
+
+    for (const aula of aulas) {
+      await db.lessonProgress.upsert({
+        where: { userId_lessonId: { userId: usuario.id, lessonId: aula.id } },
+        create: {
+          userId: usuario.id,
+          lessonId: aula.id,
+          completed: true,
+          completedAt: tentativa.createdAt,
+        },
+        update: { completed: true, completedAt: tentativa.createdAt },
+      });
+
+      await recalculateCourseProgress(usuario.id, aula.module.courseId);
+      revalidatePath(`/cursos/${aula.module.courseId}`);
+    }
+  }
 
   revalidatePath("/provas");
   revalidatePath(`/provas/${provaId}`);

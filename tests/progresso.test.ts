@@ -202,3 +202,38 @@ describe("Acesso ao curso", () => {
     assert.equal(await userHasCourseAccess(aluno.id, curso.id), true);
   });
 });
+
+describe("Aula do tipo prova", () => {
+  it("aula de prova obrigatória segura a conclusão até ser concluída", async () => {
+    const aluno = await criarFuncionario();
+    const { curso, aulas } = await criarCurso({
+      aulas: [{ tipo: "TEXT" }, { tipo: "PROVA" }],
+    });
+    await matricular(aluno.id, curso.id);
+
+    await concluirAula(aluno.id, aulas[0]!.id);
+    const parcial = await recalculateCourseProgress(aluno.id, curso.id);
+    assert.equal(parcial!.courseProgress.percent, 50);
+    assert.equal(parcial!.courseProgress.completedAt, null);
+
+    // É o que a aprovação na prova faz: marca a aula como concluída.
+    await concluirAula(aluno.id, aulas[1]!.id);
+    const final = await recalculateCourseProgress(aluno.id, curso.id);
+    assert.equal(final!.courseProgress.percent, 100);
+    assert.notEqual(final!.courseProgress.completedAt, null);
+  });
+
+  it("aula de prova opcional não impede a conclusão", async () => {
+    const aluno = await criarFuncionario();
+    const { curso, aulas } = await criarCurso({
+      aulas: [{ tipo: "TEXT" }, { tipo: "PROVA", obrigatoria: false }],
+    });
+    await matricular(aluno.id, curso.id);
+
+    await concluirAula(aluno.id, aulas[0]!.id);
+    const progresso = await recalculateCourseProgress(aluno.id, curso.id);
+
+    assert.equal(progresso!.courseProgress.percent, 100);
+    assert.notEqual(progresso!.courseProgress.completedAt, null);
+  });
+});

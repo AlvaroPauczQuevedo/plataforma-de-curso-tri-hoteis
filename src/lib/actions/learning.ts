@@ -28,6 +28,17 @@ export async function markLessonComplete(lessonId: string): Promise<ActionResult
     };
   }
 
+  /*
+    Aula de prova conclui por aprovação, nunca por clique. Permitir o botão
+    manual aqui esvaziaria a avaliação: bastaria abrir e marcar como feita.
+  */
+  if (lesson.type === "PROVA") {
+    return {
+      ok: false,
+      error: "Esta aula é concluída ao ser aprovado na prova.",
+    };
+  }
+
   const courseId = lesson.module.courseId;
 
   const enrollment = await db.enrollment.findUnique({

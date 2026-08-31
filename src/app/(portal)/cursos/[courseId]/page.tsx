@@ -9,6 +9,7 @@ import {
   FileText,
   Video,
   BookOpen,
+  FileQuestion,
 } from "lucide-react";
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
@@ -19,7 +20,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { formatDate, formatDuration, difficultyLabel } from "@/lib/utils";
 import { getNextLessonId } from "@/lib/portal-data";
 
-const lessonIcon = { VIDEO: Video, PDF: FileText, TEXT: BookOpen };
+const lessonIcon = { VIDEO: Video, PDF: FileText, TEXT: BookOpen, PROVA: FileQuestion };
 
 export default async function CourseDetailPage({
   params,
@@ -199,6 +200,8 @@ export default async function CourseDetailPage({
                           ? "Videoaula"
                           : lesson.type === "PDF"
                           ? "Material em PDF"
+                          : lesson.type === "PROVA"
+                          ? "Prova avaliativa"
                           : "Conteúdo em texto"}
                         {!lesson.required && " · Opcional"}
                       </p>

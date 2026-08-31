@@ -25,9 +25,10 @@ import {
   FileText,
   Video,
   BookOpen,
+  FileQuestion,
 } from "lucide-react";
 import type { Lesson, Module } from "@prisma/client";
-import { LessonForm } from "@/components/admin/lesson-form";
+import { LessonForm, type ProvaDisponivel } from "@/components/admin/lesson-form";
 import { ActionButton } from "@/components/shared/action-button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -47,14 +48,16 @@ type LessonWithFiles = Lesson & {
 };
 type ModuleWithLessons = Module & { lessons: LessonWithFiles[] };
 
-const lessonIcon = { VIDEO: Video, PDF: FileText, TEXT: BookOpen };
+const lessonIcon = { VIDEO: Video, PDF: FileText, TEXT: BookOpen, PROVA: FileQuestion };
 
 export function ModuleLessonBuilder({
   courseId,
   modules,
+  provas = [],
 }: {
   courseId: string;
   modules: ModuleWithLessons[];
+  provas?: ProvaDisponivel[];
 }) {
   const [order, setOrder] = useState(modules.map((m) => m.id));
   const [newModuleTitle, setNewModuleTitle] = useState("");
@@ -97,7 +100,13 @@ export function ModuleLessonBuilder({
         <SortableContext items={order} strategy={verticalListSortingStrategy}>
           <div className="space-y-4">
             {orderedModules.map((module, idx) => (
-              <SortableModuleCard key={module.id} module={module} index={idx} courseId={courseId} />
+              <SortableModuleCard
+                key={module.id}
+                module={module}
+                index={idx}
+                courseId={courseId}
+                provas={provas}
+              />
             ))}
           </div>
         </SortableContext>
@@ -128,10 +137,12 @@ function SortableModuleCard({
   module,
   index,
   courseId,
+  provas,
 }: {
   module: ModuleWithLessons;
   index: number;
   courseId: string;
+  provas: ProvaDisponivel[];
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: module.id,
@@ -180,11 +191,12 @@ function SortableModuleCard({
       </div>
 
       <div className="p-3">
-        <LessonList module={module} />
+        <LessonList module={module} provas={provas} />
 
         {showAddLesson ? (
           <div className="mt-3">
             <LessonForm
+              provas={provas}
               action={(fd) => createLesson(module.id, fd)}
               onDone={() => {
                 setShowAddLesson(false);
@@ -207,7 +219,13 @@ function SortableModuleCard({
   );
 }
 
-function LessonList({ module }: { module: ModuleWithLessons }) {
+function LessonList({
+  module,
+  provas,
+}: {
+  module: ModuleWithLessons;
+  provas: ProvaDisponivel[];
+}) {
   const [order, setOrder] = useState(module.lessons.map((l) => l.id));
   const router = useRouter();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
@@ -238,7 +256,7 @@ function LessonList({ module }: { module: ModuleWithLessons }) {
       <SortableContext items={order} strategy={verticalListSortingStrategy}>
         <ul className="space-y-1.5">
           {ordered.map((lesson) => (
-            <SortableLessonRow key={lesson.id} lesson={lesson} />
+            <SortableLessonRow key={lesson.id} lesson={lesson} provas={provas} />
           ))}
         </ul>
       </SortableContext>
@@ -246,7 +264,13 @@ function LessonList({ module }: { module: ModuleWithLessons }) {
   );
 }
 
-function SortableLessonRow({ lesson }: { lesson: LessonWithFiles }) {
+function SortableLessonRow({
+  lesson,
+  provas,
+}: {
+  lesson: LessonWithFiles;
+  provas: ProvaDisponivel[];
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: lesson.id,
   });
@@ -260,6 +284,7 @@ function SortableLessonRow({ lesson }: { lesson: LessonWithFiles }) {
       <li ref={setNodeRef} style={style}>
         <LessonForm
           lesson={lesson}
+          provas={provas}
           action={(fd) => updateLesson(lesson.id, fd)}
           onDone={() => {
             setEditing(false);

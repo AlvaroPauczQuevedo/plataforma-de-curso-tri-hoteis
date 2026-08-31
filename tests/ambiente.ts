@@ -110,7 +110,7 @@ export async function criarCurso(opcoes: {
   sequencial?: boolean;
   certificado?: boolean;
   limiarVideo?: number;
-  aulas: Array<{ tipo: "VIDEO" | "PDF" | "TEXT"; obrigatoria?: boolean }>;
+  aulas: Array<{ tipo: "VIDEO" | "PDF" | "TEXT" | "PROVA"; obrigatoria?: boolean }>;
 }) {
   const n = proximo();
   // O curso exige um autor; um administrador serve e é reaproveitado.
