@@ -55,15 +55,30 @@ export async function isLessonUnlocked(userId: string, lessonId: string) {
 export async function fileBelongsToAccessibleCourse(userId: string, fileId: string, isAdmin: boolean) {
   if (isAdmin) return true;
 
-  const lessonWithVideo = await db.lesson.findFirst({
-    where: { videoFileId: fileId },
-    include: { module: true },
-  });
-  const lessonWithPdf = await db.lesson.findFirst({
-    where: { pdfFileId: fileId },
-    include: { module: true },
-  });
-  const courseWithCover = await db.course.findFirst({ where: { coverFileId: fileId } });
+  /*
+    As três perguntas são independentes — o arquivo é vídeo de aula, PDF de
+    aula ou capa de curso — e eram feitas em fila. Esta função roda em CADA
+    requisição de /api/files, inclusive em cada Range request do player de
+    vídeo: eram três idas ao banco, uma esperando a outra, para responder uma
+    pergunta só. Juntas, custam a mais lenta das três.
+
+    Os selects também encolheram: o que se quer de cada resultado é o id do
+    curso, não a linha inteira da aula, do módulo e do curso.
+  */
+  const [lessonWithVideo, lessonWithPdf, courseWithCover] = await Promise.all([
+    db.lesson.findFirst({
+      where: { videoFileId: fileId },
+      select: { module: { select: { courseId: true } } },
+    }),
+    db.lesson.findFirst({
+      where: { pdfFileId: fileId },
+      select: { module: { select: { courseId: true } } },
+    }),
+    db.course.findFirst({
+      where: { coverFileId: fileId },
+      select: { id: true, status: true },
+    }),
+  ]);
 
   const lesson = lessonWithVideo ?? lessonWithPdf;
   if (lesson) {
@@ -77,7 +92,10 @@ export async function fileBelongsToAccessibleCourse(userId: string, fileId: stri
     return userHasCourseAccess(userId, courseWithCover.id);
   }
 
-  const file = await db.fileAsset.findUnique({ where: { id: fileId } });
+  const file = await db.fileAsset.findUnique({
+    where: { id: fileId },
+    select: { kind: true },
+  });
   if (file?.kind === "AVATAR") return true;
 
   return false;

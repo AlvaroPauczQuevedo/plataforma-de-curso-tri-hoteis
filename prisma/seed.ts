@@ -537,7 +537,7 @@ async function main() {
 
   console.log("Matriculando funcionários e simulando progresso...");
 
-  const [marina, joao, fernanda, carlos, beatriz, rafael, juliana, pedro] = employees;
+  const [marina, joao, fernanda, carlos, beatriz, rafael, juliana] = employees;
 
   // Marina: em andamento no curso de Segurança (50%), concluiu Atendimento (100%)
   await db.enrollment.create({

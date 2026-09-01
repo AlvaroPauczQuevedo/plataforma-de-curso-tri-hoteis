@@ -1,7 +1,6 @@
-import { randomInt } from "node:crypto";
 import path from "path";
 import { db } from "@/lib/db";
-import { hashPassword } from "@/lib/password";
+import { hashPassword, senhaProvisoria } from "@/lib/password";
 
 /**
  * Sincronização de funcionários com a intranet.
@@ -63,24 +62,6 @@ function chaveDepartamento(nome: string): string {
     .normalize("NFD")
     .replace(new RegExp("[\u0300-\u036f]", "g"), "")
     .toLowerCase();
-}
-
-/**
- * Senha provisória curta, fácil de ditar por telefone e sem caracteres
- * ambíguos (nada de O/0, I/1/l).
- *
- * Usa `randomInt` do node:crypto, e não `Math.random()`: esta senha dá acesso
- * a uma conta, e a sequência do Math.random é previsível a partir de alguns
- * valores observados — quem recebesse duas senhas conseguiria estimar as
- * seguintes.
- */
-function senhaProvisoria(): string {
-  const alfabeto = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let saida = "";
-  for (let i = 0; i < 8; i += 1) {
-    saida += alfabeto[randomInt(alfabeto.length)];
-  }
-  return `Tri-${saida}`;
 }
 
 /**

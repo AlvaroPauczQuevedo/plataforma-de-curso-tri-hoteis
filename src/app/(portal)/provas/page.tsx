@@ -5,6 +5,10 @@ import { requireUser } from "@/lib/session";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatDateTime } from "@/lib/utils";
+import {
+  departamentosDoUsuario,
+  filtroDeProvasDoUsuario,
+} from "@/lib/alcance-de-provas";
 
 /** Quantas notas o funcionário vê. Pedido do negócio, não limite técnico. */
 const ULTIMAS = 3;
@@ -12,19 +16,20 @@ const ULTIMAS = 3;
 export default async function ProvasPage() {
   const user = await requireUser();
 
-  const conta = await db.user.findUnique({
-    where: { id: user.id },
-    select: { departmentId: true },
-  });
+  const departamentos = await departamentosDoUsuario(user.id);
 
   /*
-    O funcionário alcança as provas publicadas do departamento dele e as provas
-    gerais — as que não têm departamento, escritas para a empresa toda.
+    O alcance é a regra compartilhada de lib/alcance-de-provas: prova geral,
+    prova de um dos departamentos da pessoa — principal ou adicional — ou prova
+    que é aula de um curso em que ela está matriculada.
+
+    `publicada` continua sendo exigência só desta tela: rascunho não aparece
+    para o funcionário, mas o administrador ainda o revisa pelo painel.
   */
   const provas = await db.prova.findMany({
     where: {
       publicada: true,
-      OR: [{ departmentId: null }, { departmentId: conta?.departmentId ?? "" }],
+      ...filtroDeProvasDoUsuario(user.id, departamentos),
     },
     include: {
       department: true,

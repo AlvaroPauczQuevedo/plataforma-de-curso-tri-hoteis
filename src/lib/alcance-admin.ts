@@ -236,6 +236,50 @@ export async function bloqueioDeProva(
   return motivo ? { ok: false, error: motivo } : null;
 }
 
+/**
+ * `null` se o administrador pode APLICAR esta prova numa aula do curso dele.
+ *
+ * É uma pergunta diferente da de `bloqueioDeProva`, que trata de ALTERAR a
+ * prova. Usar não é alterar, e as duas regras não podem ser a mesma: a prova
+ * geral — sem departamento, escrita pelo proprietário para a empresa toda —
+ * existe justamente para ser aplicada em qualquer curso, e `bloqueioDeProva`
+ * a recusaria, porque prova sem departamento só o proprietário edita.
+ *
+ * O que vale aqui é o ALCANCE, o mesmo do funcionário: prova geral, ou prova
+ * de um dos departamentos do administrador.
+ *
+ * Sem esta trava, um administrador anexava a prova de outro setor ao próprio
+ * curso e, pela porta "por curso" do alcance do funcionário, liberava a prova
+ * alheia para a equipe dele — sem nunca ter tido permissão de abri-la.
+ */
+export async function bloqueioDeUsoDeProva(
+  provaId: string,
+  atorId: string
+): Promise<Recusa | null> {
+  const [prova, ator] = await Promise.all([
+    db.prova.findUnique({
+      where: { id: provaId },
+      select: { titulo: true, departmentId: true },
+    }),
+    db.user.findUnique({ where: { id: atorId }, select: CAMPOS }),
+  ]);
+
+  if (!prova) return { ok: false, error: "Prova não encontrada." };
+  if (!ator) return { ok: false, error: "Sessão inválida." };
+
+  // Prova geral serve a qualquer curso: é para isso que ela é geral.
+  if (prova.departmentId === null) return null;
+
+  const alcance = comoAtor(ator);
+  if (alcance.protegido) return null;
+  if (alcance.departamentos.includes(prova.departmentId)) return null;
+
+  return {
+    ok: false,
+    error: `"${prova.titulo}" pertence a outro departamento. Você só aplica provas dos seus.`,
+  };
+}
+
 /** Idem, a partir de uma questão — sobe até a prova dona. */
 export async function bloqueioDeQuestao(
   questaoId: string,

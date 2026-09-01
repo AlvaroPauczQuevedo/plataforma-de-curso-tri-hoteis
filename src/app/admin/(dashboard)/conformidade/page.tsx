@@ -54,10 +54,17 @@ export default async function ConformidadePage({
             : {}),
         },
       },
-      include: {
-        user: { include: { department: true } },
-        course: { select: { id: true, title: true } },
-      },
+      /*
+        Rasa de propósito.
+
+        Os cartões de resumo obrigam a percorrer TODAS as obrigações: a
+        situação de cada uma depende do progresso, que mora em outra tabela, e
+        nenhum SQL daqui resolve o cruzamento sozinho. Mas nome, e-mail,
+        departamento e título do curso só aparecem nas 25 linhas em tela — e
+        vinham para todas. Era um usuário, um departamento e um curso
+        carregados por obrigação da empresa inteira para mostrar vinte e cinco.
+      */
+      select: { id: true, userId: true, courseId: true, dueDate: true },
       orderBy: [{ dueDate: "asc" }, { assignedAt: "asc" }],
     }),
     db.department.findMany({ orderBy: { name: "asc" } }),
@@ -111,6 +118,35 @@ export default async function ConformidadePage({
 
   const totalPages = Math.max(1, Math.ceil(filtradas.length / PAGE_SIZE));
   const pagina = filtradas.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  /*
+    Só agora, e só para o que está em tela, os dados de exibição. Duas
+    consultas de tamanho fixo, em vez de um include proporcional à base.
+  */
+  const [usuariosDaPagina, cursosDaPagina] = await Promise.all([
+    db.user.findMany({
+      where: { id: { in: [...new Set(pagina.map((l) => l.userId))] } },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        department: { select: { name: true } },
+      },
+    }),
+    db.course.findMany({
+      where: { id: { in: [...new Set(pagina.map((l) => l.courseId))] } },
+      select: { id: true, title: true },
+    }),
+  ]);
+
+  const usuarioPor = new Map(usuariosDaPagina.map((u) => [u.id, u]));
+  const cursoPor = new Map(cursosDaPagina.map((c) => [c.id, c]));
+
+  const linhasDaPagina = pagina.map((l) => ({
+    ...l,
+    user: usuarioPor.get(l.userId),
+    course: cursoPor.get(l.courseId),
+  }));
 
   const selo = {
     em_dia: <Badge tone="success">Em dia</Badge>,
@@ -186,26 +222,26 @@ export default async function ConformidadePage({
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {pagina.map((l) => (
+                {linhasDaPagina.map((l) => (
                   <tr key={l.id} className="hover:bg-surface-muted/40">
                     <td className="px-4 py-3">
                       <Link
                         href={`/admin/funcionarios/${l.userId}`}
                         className="font-medium text-ink-900 hover:text-brand-700"
                       >
-                        {l.user.name}
+                        {l.user?.name ?? "—"}
                       </Link>
-                      <p className="text-xs text-ink-700/50">{l.user.email}</p>
+                      <p className="text-xs text-ink-700/50">{l.user?.email}</p>
                     </td>
                     <td className="px-4 py-3 text-ink-700">
-                      {l.user.department?.name ?? "—"}
+                      {l.user?.department?.name ?? "—"}
                     </td>
                     <td className="px-4 py-3">
                       <Link
-                        href={`/admin/cursos/${l.course.id}`}
+                        href={`/admin/cursos/${l.courseId}`}
                         className="text-ink-700 hover:text-brand-700"
                       >
-                        {l.course.title}
+                        {l.course?.title ?? "—"}
                       </Link>
                     </td>
                     <td className="px-4 py-3">

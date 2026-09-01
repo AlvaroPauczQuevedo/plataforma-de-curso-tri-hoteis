@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sessaoDeApi } from "@/lib/session";
 import { gerarProvaPdf } from "@/lib/prova-pdf";
+import { usuarioAlcancaProva } from "@/lib/alcance-de-provas";
 
 /**
  * Baixa a prova em PDF, sem gabarito.
@@ -37,35 +38,24 @@ export async function GET(
     return NextResponse.json({ error: "Prova não encontrada." }, { status: 404 });
   }
 
+  /*
+    O papel é relido do banco, e não tirado do token: a sessão dura 8 horas e
+    não acompanha um rebaixamento de administrador feito nesse intervalo.
+  */
   const conta = await db.user.findUnique({
     where: { id: usuario.id },
-    select: { departmentId: true, role: true },
+    select: { role: true },
   });
 
   /*
     Administrador baixa qualquer prova, publicada ou não — ele precisa revisar
-    o material antes de liberar. Funcionário só alcança prova publicada do seu
-    departamento, ou prova geral.
+    o material antes de liberar. Funcionário só baixa prova publicada, e só a
+    que alcança pela regra compartilhada de lib/alcance-de-provas.
   */
   const admin = conta?.role === "ADMIN";
 
-  const porDepartamento =
-    prova.publicada &&
-    (prova.departmentId === null || prova.departmentId === conta?.departmentId);
-
-  // Mesma segunda porta da entrega: quem chega pela aula de um curso em que
-  // está matriculado também baixa o PDF.
-  const porCurso =
-    !admin &&
-    !porDepartamento &&
-    (await db.lesson.count({
-      where: {
-        provaId: params.provaId,
-        module: { course: { enrollments: { some: { userId: usuario.id } } } },
-      },
-    })) > 0;
-
-  const alcanca = admin || porDepartamento || porCurso;
+  const alcanca =
+    admin || (prova.publicada && (await usuarioAlcancaProva(usuario.id, prova)));
 
   if (!alcanca) {
     return NextResponse.json({ error: "Acesso não autorizado." }, { status: 403 });

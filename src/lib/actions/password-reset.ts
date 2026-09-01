@@ -97,11 +97,23 @@ export async function resetPassword(token: string, formData: FormData): Promise<
   const passwordHash = await hashPassword(parsed.data.password);
 
   await db.$transaction([
-    // A pessoa escolheu a própria senha: a exigência de troca deixa de fazer
-    // sentido, senão o primeiro acesso pediria a troca de novo.
+    /*
+      A pessoa escolheu a própria senha: a exigência de troca deixa de fazer
+      sentido, senão o primeiro acesso pediria a troca de novo.
+
+      O contador de tentativas zera junto. O bloqueio por tentativas seguidas
+      é conferido antes da comparação da senha (lib/login-guard), então sem
+      isto quem foi bloqueado e redefiniu a senha continuava barrado por até
+      quinze minutos, com a senha certa em mãos e nenhuma explicação na tela.
+    */
     db.user.update({
       where: { id: resetToken.userId },
-      data: { passwordHash, mustChangePassword: false },
+      data: {
+        passwordHash,
+        mustChangePassword: false,
+        failedAttempts: 0,
+        lockedUntil: null,
+      },
     }),
     db.passwordResetToken.update({ where: { id: resetToken.id }, data: { usedAt: new Date() } }),
   ]);

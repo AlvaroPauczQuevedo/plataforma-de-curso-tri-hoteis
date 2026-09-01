@@ -14,6 +14,7 @@ import {
   type Resultado,
   comoMostrarAoAluno,
 } from "@/lib/prova";
+import { usuarioAlcancaProva } from "@/lib/alcance-de-provas";
 import {
   bloqueioDeProva,
   bloqueioDeQuestao,
@@ -386,40 +387,14 @@ export async function submeterTentativa(
   if (!prova.publicada) return { ok: false, error: "Esta prova não está disponível." };
 
   /*
-    Alcance do funcionário: prova do departamento dele, ou prova sem
-    departamento — que é a prova geral, escrita pelo proprietário para toda a
-    empresa. Sem esta checagem, bastaria conhecer o endereço para responder a
-    prova de outro setor.
+    Alcance do funcionário: a regra compartilhada de lib/alcance-de-provas —
+    prova geral, prova de um dos departamentos dele (principal ou adicional),
+    ou prova que é aula de um curso em que ele está matriculado.
+
+    Sem esta checagem, bastaria conhecer o endereço para responder a prova de
+    outro setor.
   */
-  const conta = await db.user.findUnique({
-    where: { id: usuario.id },
-    select: { departmentId: true },
-  });
-
-  /*
-    Duas portas levam à mesma prova, e as duas valem:
-
-     - a prova é geral, ou é do departamento da pessoa;
-     - ou a prova é aula de um curso em que ela está matriculada.
-
-    A segunda existe porque matrícula atravessa departamento: um curso do
-    Trainee pode ter alunos de outro setor, e a prova daquele curso precisa
-    valer para eles. Sem isso, a pessoa veria a prova na aula e tomaria recusa
-    ao entregar.
-  */
-  const porDepartamento =
-    prova.departmentId === null || prova.departmentId === conta?.departmentId;
-
-  const porCurso =
-    porDepartamento ||
-    (await db.lesson.count({
-      where: {
-        provaId,
-        module: { course: { enrollments: { some: { userId: usuario.id } } } },
-      },
-    })) > 0;
-
-  if (!porCurso) {
+  if (!(await usuarioAlcancaProva(usuario.id, prova))) {
     return { ok: false, error: "Esta prova não está liberada para você." };
   }
 

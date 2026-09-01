@@ -8,9 +8,11 @@ import { requireAdmin } from "@/lib/session";
 import { logAdminActivity } from "@/lib/activity-log";
 import type { ActionResult } from "@/lib/actions/employees";
 import {
+  type Recusa,
   bloqueioDeAula,
   bloqueioDeCurso,
   bloqueioDeModulo,
+  bloqueioDeUsoDeProva,
   bloqueioDeVinculoDeCurso,
   departamentoDoAtor,
   ehProprietario,
@@ -400,6 +402,64 @@ function motivoDeAulaInvalida(dados: { type: string; provaId?: string }) {
   return null;
 }
 
+/**
+ * O arquivo existe, e é do tipo que a aula espera?
+ *
+ * Os ids de arquivo chegam pelo formulário, e nada os conferia: bastava
+ * forjar a requisição para pendurar um avatar no lugar do vídeo da aula, ou
+ * um id que já não existe. O primeiro caso serve o arquivo errado ao aluno; o
+ * segundo grava uma chave estrangeira apontando para o nada e quebra a tela
+ * dele na hora de assistir.
+ *
+ * Não confere DONO do arquivo, e não dá: `FileAsset` não guarda departamento.
+ * Fecha o que dá para fechar sem mudar o schema — id inexistente e tipo
+ * trocado, que são os dois jeitos de a aula nascer quebrada.
+ */
+async function bloqueioDeArquivo(
+  fileId: string | undefined,
+  esperado: "VIDEO" | "PDF"
+): Promise<Recusa | null> {
+  if (!fileId) return null;
+
+  const arquivo = await db.fileAsset.findUnique({
+    where: { id: fileId },
+    select: { kind: true },
+  });
+  if (!arquivo) {
+    return { ok: false, error: "O arquivo escolhido não foi encontrado. Envie-o novamente." };
+  }
+  if (arquivo.kind !== esperado) {
+    return {
+      ok: false,
+      error: `O arquivo escolhido não é ${esperado === "VIDEO" ? "um vídeo" : "um PDF"}.`,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Travas comuns à criação e à edição de aula.
+ *
+ * As duas actions montam a aula com os mesmos campos vindos do mesmo
+ * formulário; separar as conferências faria uma delas ficar para trás na
+ * próxima vez que um campo fosse acrescentado.
+ */
+async function bloqueioDoConteudoDaAula(
+  dados: { provaId?: string; videoFileId?: string; pdfFileId?: string },
+  atorId: string
+): Promise<Recusa | null> {
+  if (dados.provaId) {
+    const uso = await bloqueioDeUsoDeProva(dados.provaId, atorId);
+    if (uso) return uso;
+  }
+
+  return (
+    (await bloqueioDeArquivo(dados.videoFileId, "VIDEO")) ??
+    (await bloqueioDeArquivo(dados.pdfFileId, "PDF"))
+  );
+}
+
 export async function createLesson(moduleId: string, formData: FormData): Promise<ActionResult> {
   const admin = await requireAdmin();
 
@@ -425,6 +485,9 @@ export async function createLesson(moduleId: string, formData: FormData): Promis
 
   const invalida = motivoDeAulaInvalida(parsed.data);
   if (invalida) return { ok: false, error: invalida };
+
+  const conteudo = await bloqueioDoConteudoDaAula(parsed.data, admin.id);
+  if (conteudo) return conteudo;
 
   const count = await db.lesson.count({ where: { moduleId } });
   const mod = await db.module.findUnique({ where: { id: moduleId } });
@@ -477,6 +540,9 @@ export async function updateLesson(lessonId: string, formData: FormData): Promis
 
   const invalida = motivoDeAulaInvalida(parsed.data);
   if (invalida) return { ok: false, error: invalida };
+
+  const conteudo = await bloqueioDoConteudoDaAula(parsed.data, admin.id);
+  if (conteudo) return conteudo;
 
   const lesson = await db.lesson.update({
     where: { id: lessonId },

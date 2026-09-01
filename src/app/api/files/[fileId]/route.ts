@@ -8,9 +8,9 @@ import { Readable } from "stream";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ fileId: string }> }
+  { params }: { params: { fileId: string } }
 ) {
-  const { fileId } = await params;
+  const { fileId } = params;
 
   const usuario = await sessaoDeApi();
   if (!usuario) {
@@ -52,8 +52,27 @@ export async function GET(
 
   if (range && file.mimeType.startsWith("video/")) {
     const match = /bytes=(\d+)-(\d*)/.exec(range);
-    const start = match ? parseInt(match[1], 10) : 0;
-    const end = match && match[2] ? parseInt(match[2], 10) : stat.size - 1;
+    const pedidoInicio = match ? parseInt(match[1], 10) : 0;
+    const pedidoFim = match && match[2] ? parseInt(match[2], 10) : stat.size - 1;
+
+    /*
+      O intervalo é escrito pelo cliente e ia direto para o createReadStream.
+      Um pedido além do fim do arquivo produzia um 206 com Content-Length
+      negativo e corpo vazio — resposta que nenhum player sabe interpretar, e
+      que o navegador trata como vídeo corrompido. A faixa válida vai do byte
+      zero ao último; fora dela a resposta certa é 416, informando o tamanho
+      real para o cliente se reposicionar.
+    */
+    const start = Math.max(0, pedidoInicio);
+    const end = Math.min(pedidoFim, stat.size - 1);
+
+    if (Number.isNaN(start) || Number.isNaN(end) || start > end || start >= stat.size) {
+      return new NextResponse(null, {
+        status: 416,
+        headers: { "Content-Range": `bytes */${stat.size}` },
+      });
+    }
+
     const chunkSize = end - start + 1;
 
     headers.set("Content-Range", `bytes ${start}-${end}/${stat.size}`);

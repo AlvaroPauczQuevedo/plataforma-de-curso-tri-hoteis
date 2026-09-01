@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
-import { hashPassword } from "@/lib/password";
+import { hashPassword, senhaProvisoria } from "@/lib/password";
 import { logAdminActivity } from "@/lib/activity-log";
 import { randomUUID } from "crypto";
 import { emailDeBoasVindas, emailDeRedefinicao, enviarEmail } from "@/lib/email";
@@ -97,7 +97,7 @@ export async function createEmployee(formData: FormData): Promise<ActionResult> 
     return { ok: false, error: "Já existe um usuário com este e-mail." };
   }
 
-  const tempPassword = randomUUID().slice(0, 10);
+  const tempPassword = senhaProvisoria();
   const passwordHash = await hashPassword(tempPassword);
 
   const user = await db.user.create({
@@ -118,7 +118,16 @@ export async function createEmployee(formData: FormData): Promise<ActionResult> 
     action: "CRIAR_FUNCIONARIO",
     targetType: "User",
     targetId: user.id,
-    details: `Funcionário ${user.name} cadastrado. Senha temporária: ${tempPassword}`,
+    /*
+      A senha provisória NÃO entra aqui.
+
+      O histórico é permanente e vai para todo backup; a senha é de uso único
+      e já é exibida na tela para quem cadastrou entregar. Gravá-la deixava a
+      senha inicial de cada funcionário legível para sempre, muito depois de
+      ter deixado de valer. `resetEmployeePassword` já não gravava — a
+      diferença entre as duas era descuido, não decisão.
+    */
+    details: `Funcionário ${user.name} cadastrado.`,
   });
 
   const recusaExtras = await salvarExtras(
@@ -282,12 +291,26 @@ export async function resetEmployeePassword(userId: string): Promise<ActionResul
   const bloqueio = await bloqueioDeAlteracao(userId, admin.id);
   if (bloqueio) return bloqueio;
 
-  const tempPassword = randomUUID().slice(0, 10);
+  const tempPassword = senhaProvisoria();
   const passwordHash = await hashPassword(tempPassword);
 
+  /*
+    Redefinir a senha destrava a conta.
+
+    O bloqueio por tentativas seguidas é conferido ANTES da comparação da
+    senha (lib/login-guard), então uma conta bloqueada continuava recusando o
+    acesso mesmo com a senha nova — e este é justamente o caminho que a pessoa
+    toma depois de errar a senha cinco vezes: pedir ao administrador uma nova.
+    Ela recebia a senha e ainda assim não entrava, sem nada na tela explicando.
+  */
   const alvo = await db.user.update({
     where: { id: userId },
-    data: { passwordHash, mustChangePassword: true },
+    data: {
+      passwordHash,
+      mustChangePassword: true,
+      failedAttempts: 0,
+      lockedUntil: null,
+    },
   });
 
   await logAdminActivity({

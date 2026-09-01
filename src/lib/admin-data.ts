@@ -1,5 +1,19 @@
 import { db } from "@/lib/db";
 
+/**
+ * Os números do painel administrativo.
+ *
+ * Três destes indicadores saíam de um `courseProgress.findMany()` sem filtro:
+ * a tabela inteira vinha para a memória do servidor para virar duas contagens
+ * e uma média. Pior, o cruzamento de atrasados fazia um `find()` nessa lista
+ * DENTRO do laço das matrículas vencidas — custo do produto das duas, na
+ * primeira tela que todo administrador abre.
+ *
+ * Agora cada número é uma agregação feita pelo banco, e o único cruzamento que
+ * o SQL não resolve sozinho — prazo vencido de um lado, conclusão do outro, em
+ * tabelas sem relação declarada entre si — carrega apenas os pares
+ * (usuário, curso) de que precisa e encontra por conjunto.
+ */
 export async function getDashboardStats() {
   const now = new Date();
 
@@ -8,14 +22,18 @@ export async function getDashboardStats() {
     activeEmployees,
     publishedCourses,
     totalEnrollments,
-    courseProgressAll,
+    inProgress,
+    completed,
+    mediaGeral,
     recentActivity,
   ] = await Promise.all([
     db.user.count({ where: { role: "EMPLOYEE" } }),
     db.user.count({ where: { role: "EMPLOYEE", active: true } }),
     db.course.count({ where: { status: "PUBLISHED" } }),
     db.enrollment.count(),
-    db.courseProgress.findMany(),
+    db.courseProgress.count({ where: { percent: { gt: 0, lt: 100 } } }),
+    db.courseProgress.count({ where: { percent: { gte: 100 } } }),
+    db.courseProgress.aggregate({ _avg: { percent: true } }),
     db.adminActivityLog.findMany({
       orderBy: { createdAt: "desc" },
       take: 8,
@@ -23,45 +41,59 @@ export async function getDashboardStats() {
     }),
   ]);
 
-  const inProgress = courseProgressAll.filter((p) => p.percent > 0 && p.percent < 100).length;
-  const completed = courseProgressAll.filter((p) => p.percent >= 100).length;
+  // Sem nenhum progresso registrado, `_avg` vem nulo — e a média de nada é 0.
+  const avgCompletion = Math.round(mediaGeral._avg.percent ?? 0);
 
-  const overdueEnrollments = await db.enrollment.findMany({
-    where: {
-      dueDate: { lt: now },
-    },
-    include: { course: true, user: true },
-  });
-  const overdueUserIds = new Set<string>();
-  for (const e of overdueEnrollments) {
-    const progress = courseProgressAll.find((p) => p.userId === e.userId && p.courseId === e.courseId);
-    if (!progress || progress.percent < 100) {
-      overdueUserIds.add(e.userId);
-    }
-  }
+  /*
+    Atrasado é prazo vencido SEM conclusão, e esse cruzamento o banco não faz:
+    Enrollment e CourseProgress não têm relação declarada entre si. As duas
+    listas vêm rasas — só os pares (usuário, curso) — e o encontro é por
+    conjunto, não por varredura aninhada.
 
-  const avgCompletion =
-    courseProgressAll.length === 0
-      ? 0
-      : Math.round(
-          courseProgressAll.reduce((sum, p) => sum + p.percent, 0) / courseProgressAll.length
-        );
+    O indicador conta PESSOAS, e não matrículas: quem está atrasado em três
+    cursos é uma pessoa atrasada, que é como quem lê o painel entende o número.
+  */
+  const [vencidas, concluidos] = await Promise.all([
+    db.enrollment.findMany({
+      where: { dueDate: { lt: now } },
+      select: { userId: true, courseId: true },
+    }),
+    db.courseProgress.findMany({
+      where: { percent: { gte: 100 } },
+      select: { userId: true, courseId: true },
+    }),
+  ]);
 
+  const chave = (p: { userId: string; courseId: string }) => `${p.userId}:${p.courseId}`;
+  const jaConcluiu = new Set(concluidos.map(chave));
+
+  const overdueUserIds = new Set(
+    vencidas.filter((e) => !jaConcluiu.has(chave(e))).map((e) => e.userId)
+  );
+
+  /*
+    Os cinco cursos com mais matrículas. A ordenação e o corte acontecem no
+    banco: antes vinham todos os cursos com ao menos uma matrícula, inteiros,
+    para o JavaScript descartar tudo menos cinco.
+  */
   const enrollmentsByCourse = await db.enrollment.groupBy({
     by: ["courseId"],
     _count: { courseId: true },
+    orderBy: { _count: { courseId: "desc" } },
+    take: 5,
   });
-  const courses = await db.course.findMany({
+
+  const cursosDoTopo = await db.course.findMany({
     where: { id: { in: enrollmentsByCourse.map((e) => e.courseId) } },
+    // A lista mostra posição, título e contagem. Mais que isso é peso à toa.
+    select: { id: true, title: true },
   });
-  const mostAccessed = enrollmentsByCourse
-    .map((e) => ({
-      course: courses.find((c) => c.id === e.courseId)!,
-      count: e._count.courseId,
-    }))
-    .filter((e) => e.course)
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
+  const cursoPorId = new Map(cursosDoTopo.map((c) => [c.id, c]));
+
+  const mostAccessed = enrollmentsByCourse.flatMap((e) => {
+    const course = cursoPorId.get(e.courseId);
+    return course ? [{ course, count: e._count.courseId }] : [];
+  });
 
   const departmentCounts = await db.department.findMany({
     // Só funcionários: contar administradores faria o gráfico divergir do

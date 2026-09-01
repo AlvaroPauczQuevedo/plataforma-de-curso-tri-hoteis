@@ -104,7 +104,6 @@ export function ModuleLessonBuilder({
                 key={module.id}
                 module={module}
                 index={idx}
-                courseId={courseId}
                 provas={provas}
               />
             ))}
@@ -136,12 +135,10 @@ export function ModuleLessonBuilder({
 function SortableModuleCard({
   module,
   index,
-  courseId,
   provas,
 }: {
   module: ModuleWithLessons;
   index: number;
-  courseId: string;
   provas: ProvaDisponivel[];
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({

@@ -5,9 +5,9 @@ import { generateCertificatePdf } from "@/lib/certificate";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ certificateId: string }> }
+  { params }: { params: { certificateId: string } }
 ) {
-  const { certificateId } = await params;
+  const { certificateId } = params;
 
   const usuario = await sessaoDeApi();
   if (!usuario) {

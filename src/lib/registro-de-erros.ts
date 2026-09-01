@@ -56,12 +56,31 @@ export function digestDoTexto(texto: string): string | undefined {
   return texto.match(/digest[":\s]+['"]?(\d{6,})/i)?.[1];
 }
 
+/**
+ * Quando a poda rodou pela última vez nesta instância.
+ *
+ * A limpeza só acontecia na subida do processo, apesar de a documentação
+ * dizer "chamado ao gravar". Num servidor que fica semanas de pé, isso
+ * significa poda nenhuma: os arquivos passavam da janela e ficavam. Aqui ela
+ * volta a acontecer ao gravar, no máximo uma vez por dia — barato, e sem
+ * exigir tarefa agendada.
+ */
+let ultimaPoda = 0;
+const INTERVALO_DE_PODA_MS = 24 * 3_600_000;
+
 export async function gravarErro(entrada: ErroRegistrado): Promise<void> {
   try {
     await mkdir(ERROS_ROOT, { recursive: true });
     await appendFile(arquivoDoDia(), JSON.stringify(entrada) + "\n", "utf8");
   } catch {
     // Sem lugar para gravar, resta o console — e não vale derrubar nada.
+  }
+
+  // Depois de gravar, e sem esperar: a poda é manutenção, não faz parte da
+  // resposta, e já engole os próprios erros.
+  if (Date.now() - ultimaPoda > INTERVALO_DE_PODA_MS) {
+    ultimaPoda = Date.now();
+    void limparErrosAntigos();
   }
 }
 
@@ -101,7 +120,7 @@ export async function lerErrosRecentes(limite = 100): Promise<ErroRegistrado[]> 
   }
 }
 
-/** Apaga os arquivos além da janela guardada. Chamado ao gravar. */
+/** Apaga os arquivos além da janela guardada. Chamado ao gravar e na subida. */
 export async function limparErrosAntigos(): Promise<void> {
   try {
     const corte = new Date(Date.now() - DIAS_MANTIDOS * 86_400_000)

@@ -93,11 +93,15 @@ export async function trocarSenhaProvisoria(
   const confere = await verifyPassword(parsed.data.senhaAtual, registro.passwordHash);
   if (!confere) return { ok: false, error: "A senha atual não confere." };
 
+  // Destrava a conta junto, pelo mesmo motivo das outras trocas de senha: o
+  // bloqueio por tentativas é conferido antes da senha, e sobreviveria à troca.
   await db.user.update({
     where: { id: registro.id },
     data: {
       passwordHash: await hashPassword(parsed.data.novaSenha),
       mustChangePassword: false,
+      failedAttempts: 0,
+      lockedUntil: null,
     },
   });
 

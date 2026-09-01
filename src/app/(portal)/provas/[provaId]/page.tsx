@@ -7,6 +7,7 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ProvaRunner } from "@/components/portal/prova-runner";
 import { formatDateTime } from "@/lib/utils";
+import { usuarioAlcancaProva } from "@/lib/alcance-de-provas";
 
 const ULTIMAS = 3;
 
@@ -42,14 +43,12 @@ export default async function FazerProvaPage({
 
   if (!prova || !prova.publicada) notFound();
 
-  const conta = await db.user.findUnique({
-    where: { id: user.id },
-    select: { departmentId: true },
-  });
-
-  const alcanca =
-    prova.departmentId === null || prova.departmentId === conta?.departmentId;
-  if (!alcanca) notFound();
+  /*
+    A MESMA regra da entrega e do PDF. Antes esta tela conferia só o
+    departamento principal, e recusava quem chegava pela aula de um curso de
+    outro setor — a pessoa via a prova na aula, abria por aqui e tomava 404.
+  */
+  if (!(await usuarioAlcancaProva(user.id, prova))) notFound();
 
   const anteriores = await db.tentativaProva.findMany({
     where: { userId: user.id, provaId: prova.id },

@@ -10,11 +10,48 @@ import { registrarErro } from "@/lib/monitoramento";
  * a falha ficaria parada no log até alguém reclamar.
  *
  * Sem autenticação de propósito: a tela pode ter quebrado justamente no
- * caminho de sessão. Em compensação nada daqui é gravado em banco e o corpo é
- * truncado, então o pior que alguém consegue é gerar avisos repetidos — que o
- * agrupamento por assinatura já contém.
+ * caminho de sessão. Em compensação nada daqui é gravado em banco, o corpo é
+ * truncado e há teto por janela — sem ele, um laço de requisições enchia o
+ * disco do servidor com o registro de erros, que é arquivo e não tem limite
+ * próprio. O agrupamento por assinatura contém o e-mail; o teto contém o disco.
  */
+
+/** Avisos de navegador aceitos por minuto, somando todos os visitantes. */
+const TETO_POR_MINUTO = Number(process.env.ERROS_CLIENTE_LIMITE ?? 60);
+const JANELA_MS = 60_000;
+
+let janelaComecouEm = 0;
+let recebidosNaJanela = 0;
+
+/**
+ * Consome uma vaga da janela. Devolve false quando o teto já estourou.
+ *
+ * Contagem global e em memória, como o agrupamento do monitoramento: não é
+ * por origem porque o objetivo aqui não é ser justo entre visitantes, é não
+ * deixar o disco encher.
+ */
+function dentroDoTeto(): boolean {
+  const agora = Date.now();
+
+  if (agora - janelaComecouEm > JANELA_MS) {
+    janelaComecouEm = agora;
+    recebidosNaJanela = 0;
+  }
+
+  recebidosNaJanela += 1;
+  return recebidosNaJanela <= TETO_POR_MINUTO;
+}
+
 export async function POST(request: Request) {
+  /*
+    Descartado em silêncio, com a mesma resposta de sempre: quem já viu uma
+    tela quebrada não ganha nada com um segundo erro, e a resposta não deve
+    revelar que existe um teto.
+  */
+  if (!dentroDoTeto()) {
+    return new NextResponse(null, { status: 204 });
+  }
+
   try {
     const corpo = (await request.json()) as { digest?: unknown; url?: unknown };
 
