@@ -13,7 +13,8 @@ import {
 } from "lucide-react";
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
-import { userHasCourseAccess, isLessonUnlocked } from "@/lib/access";
+import { userHasCourseAccess } from "@/lib/access";
+import { mapaDeLiberacao } from "@/lib/liberacao-de-aulas";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -74,12 +75,22 @@ export default async function CourseDetailPage({
 
   const nextLessonId = enrollment ? await getNextLessonId(user.id, courseId) : allLessons[0]?.id;
 
-  const lockedMap = new Map<string, boolean>();
-  if (course.sequential && enrollment) {
-    for (const lesson of allLessons) {
-      lockedMap.set(lesson.id, !(await isLessonUnlocked(user.id, lesson.id)));
-    }
-  }
+  /*
+    O bloqueio sai do que já está em memória: `allLessons` veio na ordem do
+    curso e `progressByLesson` traz o progresso de todas elas. Antes esta
+    tela perguntava ao banco uma vez por aula.
+  */
+  const concluidas = new Set(
+    allLessons.filter((l) => progressByLesson.get(l.id)?.completed).map((l) => l.id)
+  );
+  const liberadas = mapaDeLiberacao(
+    allLessons,
+    concluidas,
+    Boolean(course.sequential && enrollment)
+  );
+  const lockedMap = new Map(
+    allLessons.map((l) => [l.id, !liberadas.get(l.id)])
+  );
 
   return (
     <div className="space-y-6">

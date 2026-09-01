@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { mapaDeLiberacao } from "@/lib/liberacao-de-aulas";
 
 export async function userHasCourseAccess(userId: string, courseId: string) {
   const enrollment = await db.enrollment.findUnique({
@@ -8,9 +9,13 @@ export async function userHasCourseAccess(userId: string, courseId: string) {
 }
 
 /**
- * Verifica se uma aula está liberada para o usuário considerando a regra de
- * ordem obrigatória (sequential) do curso: todas as aulas anteriores do
- * curso (por módulo/ordem) precisam estar concluídas.
+ * Uma aula está liberada para esta pessoa?
+ *
+ * Guarda de servidor, para uma aula só: a tela do curso resolve o curso
+ * inteiro de uma vez com `mapaDeLiberacao`. As duas chamam a MESMA função de
+ * regra de propósito — se cada uma tivesse a sua, um dia discordariam, e o
+ * jeito que isso apareceria é o pior possível: a lista mostrando a aula
+ * aberta e o servidor recusando a entrada.
  */
 export async function isLessonUnlocked(userId: string, lessonId: string) {
   const lesson = await db.lesson.findUnique({
@@ -27,23 +32,24 @@ export async function isLessonUnlocked(userId: string, lessonId: string) {
     orderBy: { order: "asc" },
     include: { lessons: { orderBy: { order: "asc" } } },
   });
+  const aulasEmOrdem = modules.flatMap((m) => m.lessons);
 
-  const orderedLessons = modules.flatMap((m) => m.lessons);
-  const currentIndex = orderedLessons.findIndex((l) => l.id === lessonId);
-  if (currentIndex <= 0) return true;
-
-  const previousLessons = orderedLessons.slice(0, currentIndex).filter((l) => l.required);
-  if (previousLessons.length === 0) return true;
-
-  const completed = await db.lessonProgress.findMany({
+  const concluidas = await db.lessonProgress.findMany({
     where: {
       userId,
-      lessonId: { in: previousLessons.map((l) => l.id) },
+      lessonId: { in: aulasEmOrdem.map((l) => l.id) },
       completed: true,
     },
+    select: { lessonId: true },
   });
 
-  return completed.length === previousLessons.length;
+  const liberadas = mapaDeLiberacao(
+    aulasEmOrdem,
+    new Set(concluidas.map((p) => p.lessonId)),
+    true
+  );
+
+  return liberadas.get(lessonId) ?? false;
 }
 
 export async function fileBelongsToAccessibleCourse(userId: string, fileId: string, isAdmin: boolean) {

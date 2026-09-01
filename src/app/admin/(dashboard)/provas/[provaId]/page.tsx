@@ -1,15 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Trash2, CheckCircle2 } from "lucide-react";
+import { BarChart3, ChevronLeft } from "lucide-react";
 import { db } from "@/lib/db";
 import { carregarAtorOuFalhar } from "@/lib/alcance-admin";
 import { requireAdmin } from "@/lib/session";
 import { motivoDeBloqueioDeProva } from "@/lib/permissoes-usuario";
 import { motivoParaNaoPublicar } from "@/lib/prova";
-import { deleteQuestao } from "@/lib/actions/provas";
+import { QuestaoItem } from "@/components/admin/questao-item";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
-import { ActionButton } from "@/components/shared/action-button";
 import { ProvaActions } from "@/components/admin/prova-actions";
 import { ProvaForm } from "@/components/admin/prova-form";
 import { QuestaoForm } from "@/components/admin/questao-form";
@@ -58,6 +57,16 @@ export default async function ProvaPage({ params }: { params: { provaId: string 
           {prova.department?.name ?? "Geral"} · {prova.questoes.length} questão(ões) ·{" "}
           {prova._count.tentativas} realização(ões)
         </span>
+
+        {prova._count.tentativas > 0 && (
+          <Link
+            href={`/admin/provas/${prova.id}/resultados`}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-sm font-medium text-ink-700 transition hover:bg-surface-muted"
+          >
+            <BarChart3 className="h-4 w-4" />
+            Ver resultados
+          </Link>
+        )}
       </div>
 
       {motivo ? (
@@ -95,39 +104,20 @@ export default async function ProvaPage({ params }: { params: { provaId: string 
             ) : (
               <ol className="space-y-3">
                 {prova.questoes.map((q, i) => (
-                  <li
+                  <QuestaoItem
                     key={q.id}
-                    className="rounded-2xl border border-border bg-white p-4"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="text-sm font-medium text-ink-900">
-                        {i + 1}. {q.enunciado}
-                      </p>
-                      <ActionButton
-                        action={deleteQuestao.bind(null, q.id)}
-                        variant="ghost"
-                        size="sm"
-                        confirmMessage="Excluir esta questão?"
-                      >
-                        <Trash2 className="h-4 w-4 text-danger-600" />
-                      </ActionButton>
-                    </div>
-                    <ul className="mt-2 space-y-1">
-                      {q.alternativas.map((a) => (
-                        <li
-                          key={a.id}
-                          className="flex items-center gap-2 text-sm text-ink-700/80"
-                        >
-                          {a.correta ? (
-                            <CheckCircle2 className="h-4 w-4 shrink-0 text-success-600" />
-                          ) : (
-                            <span className="h-4 w-4 shrink-0 rounded-full border border-border" />
-                          )}
-                          {a.texto}
-                        </li>
-                      ))}
-                    </ul>
-                  </li>
+                    numero={i + 1}
+                    provaId={prova.id}
+                    questao={{
+                      id: q.id,
+                      enunciado: q.enunciado,
+                      alternativas: q.alternativas.map((a) => ({
+                        id: a.id,
+                        texto: a.texto,
+                        correta: a.correta,
+                      })),
+                    }}
+                  />
                 ))}
               </ol>
             )}

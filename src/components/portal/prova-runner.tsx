@@ -115,11 +115,22 @@ export function ProvaRunner({
                 <p className="mt-2 pl-6 text-sm text-ink-700/70">
                   Você marcou: {marcada?.texto ?? "nada"}
                 </p>
-                {!q.acertou && correta && (
-                  <p className="pl-6 text-sm text-success-600">
-                    Correta: {correta.texto}
-                  </p>
-                )}
+                {/*
+                  A resposta certa só aparece para quem foi aprovado — o
+                  servidor nem manda o gabarito na reprovação. Quem errou
+                  precisa saber O QUE errou para voltar ao material, não qual
+                  alternativa marcar da próxima vez.
+                */}
+                {!q.acertou &&
+                  (correta ? (
+                    <p className="pl-6 text-sm text-success-600">
+                      Correta: {correta.texto}
+                    </p>
+                  ) : (
+                    <p className="pl-6 text-sm text-ink-700/50">
+                      Revise esta parte do curso e tente de novo.
+                    </p>
+                  ))}
               </div>
             );
           })}

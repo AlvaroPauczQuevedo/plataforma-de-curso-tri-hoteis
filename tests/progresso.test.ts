@@ -336,3 +336,132 @@ describe("Mudança de estrutura do curso", () => {
     }
   });
 });
+
+describe("Certificado e mudança de exigência", () => {
+  it("concluir emite o certificado", async () => {
+    const aluno = await criarFuncionario();
+    const { curso, aulas } = await criarCurso({ aulas: [{ tipo: "TEXT" }] });
+    await matricular(aluno.id, curso.id);
+    await concluirAula(aluno.id, aulas[0]!.id);
+    await recalculateCourseProgress(aluno.id, curso.id);
+
+    const certificado = await db.certificate.findUnique({
+      where: { userId_courseId: { userId: aluno.id, courseId: curso.id } },
+    });
+    assert.notEqual(certificado, null);
+  });
+
+  it("aula obrigatória nova revoga o certificado de quem já havia concluído", async () => {
+    const aluno = await criarFuncionario();
+    const { curso, aulas } = await criarCurso({ aulas: [{ tipo: "TEXT" }] });
+    await matricular(aluno.id, curso.id);
+    await concluirAula(aluno.id, aulas[0]!.id);
+    await recalculateCourseProgress(aluno.id, curso.id);
+
+    const antes = await db.certificate.findUnique({
+      where: { userId_courseId: { userId: aluno.id, courseId: curso.id } },
+    });
+    assert.notEqual(antes, null, "o certificado existia");
+
+    await db.lesson.create({
+      data: {
+        moduleId: aulas[0]!.moduleId,
+        title: "Prova obrigatória nova",
+        order: 1,
+        type: "TEXT",
+        required: true,
+      },
+    });
+    await ressincronizarProgressoDoCurso(curso.id);
+
+    const depois = await db.certificate.findUnique({
+      where: { userId_courseId: { userId: aluno.id, courseId: curso.id } },
+    });
+    assert.equal(
+      depois,
+      null,
+      "certificado não pode atestar conclusão que deixou de valer"
+    );
+  });
+
+  it("concluir de novo emite certificado com código novo", async () => {
+    const aluno = await criarFuncionario();
+    const { curso, aulas } = await criarCurso({ aulas: [{ tipo: "TEXT" }] });
+    await matricular(aluno.id, curso.id);
+    await concluirAula(aluno.id, aulas[0]!.id);
+    await recalculateCourseProgress(aluno.id, curso.id);
+
+    const primeiro = await db.certificate.findUnique({
+      where: { userId_courseId: { userId: aluno.id, courseId: curso.id } },
+    });
+
+    const nova = await db.lesson.create({
+      data: {
+        moduleId: aulas[0]!.moduleId,
+        title: "Exigência nova",
+        order: 1,
+        type: "TEXT",
+        required: true,
+      },
+    });
+    await ressincronizarProgressoDoCurso(curso.id);
+
+    await concluirAula(aluno.id, nova.id);
+    await recalculateCourseProgress(aluno.id, curso.id);
+
+    const segundo = await db.certificate.findUnique({
+      where: { userId_courseId: { userId: aluno.id, courseId: curso.id } },
+    });
+
+    assert.notEqual(segundo, null, "concluir de novo emite certificado");
+    assert.notEqual(
+      segundo!.code,
+      primeiro!.code,
+      "o código revogado não volta a valer"
+    );
+  });
+});
+
+describe("Certificado desligado no curso", () => {
+  it("desligar a emissão não apaga o que já foi emitido", async () => {
+    const aluno = await criarFuncionario();
+    const { curso, aulas } = await criarCurso({
+      certificado: true,
+      aulas: [{ tipo: "TEXT" }],
+    });
+    await matricular(aluno.id, curso.id);
+    await concluirAula(aluno.id, aulas[0]!.id);
+    await recalculateCourseProgress(aluno.id, curso.id);
+
+    await db.course.update({
+      where: { id: curso.id },
+      data: { certificateEnabled: false },
+    });
+    await recalculateCourseProgress(aluno.id, curso.id);
+
+    const certificado = await db.certificate.findUnique({
+      where: { userId_courseId: { userId: aluno.id, courseId: curso.id } },
+    });
+    assert.notEqual(
+      certificado,
+      null,
+      "mudar configuração não pode revogar em massa"
+    );
+  });
+
+  it("curso sem certificado nunca emite", async () => {
+    const aluno = await criarFuncionario();
+    const { curso, aulas } = await criarCurso({
+      certificado: false,
+      aulas: [{ tipo: "TEXT" }],
+    });
+    await matricular(aluno.id, curso.id);
+    await concluirAula(aluno.id, aulas[0]!.id);
+    await recalculateCourseProgress(aluno.id, curso.id);
+
+    const certificado = await db.certificate.findUnique({
+      where: { userId_courseId: { userId: aluno.id, courseId: curso.id } },
+    });
+    assert.equal(certificado, null);
+  });
+});

@@ -105,6 +105,13 @@ model User {
   provasCriadas     Prova[]            @relation("ProvaCriadaPor")
   tentativasProva   TentativaProva[]
   departamentosExtras DepartamentoExtra[]
+
+  /// Quase toda consulta do painel filtra por departamento: alcance do
+  /// administrador, relatorios, conformidade e matricula automatica. Sem o
+  /// indice, cada uma dessas telas varre a tabela inteira.
+  @@index([departmentId])
+  /// Listagens separam funcionario de administrador e escondem inativo.
+  @@index([role, active])
 }
 
 model Category {
@@ -164,6 +171,9 @@ model Course {
   certificates    Certificate[]
 
   @@index([status])
+  /// Mesmo motivo do indice em User: o departamento decide quem enxerga e
+  /// quem altera o curso, entao ele entra em quase toda consulta de curso.
+  @@index([departmentId])
 }
 
 /// Curso obrigatorio para um departamento inteiro.

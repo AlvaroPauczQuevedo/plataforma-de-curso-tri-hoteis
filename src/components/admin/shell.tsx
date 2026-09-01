@@ -6,6 +6,7 @@ import {
   ClipboardList,
   FileQuestion,
   History,
+  ShieldAlert,
   ShieldCheck,
   KeyRound,
   LayoutDashboard,
@@ -34,6 +35,7 @@ function menuDe(proprietario: boolean): GrupoMenu[] {
     ...(proprietario
       ? [
           { href: "/admin/atividades", label: "Atividades", icon: History },
+          { href: "/admin/erros", label: "Erros", icon: ShieldAlert },
           { href: "/admin/configuracoes", label: "Configurações", icon: Settings },
         ]
       : []),

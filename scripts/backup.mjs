@@ -15,7 +15,16 @@
  * recentes (padrão 14). Só remove pastas com o formato de carimbo que ele
  * mesmo cria — nunca toca em nada que não tenha gerado.
  *
- * Uso: npx tsx prisma/backup.ts [destino]
+ * Escrito em JavaScript puro, e não em TypeScript, por um motivo operacional:
+ * em produção a aplicação roda no build `standalone` do Next, cujo
+ * `node_modules` contém apenas o que a aplicação importa. `tsx` não está lá,
+ * então um backup em .ts simplesmente não roda no servidor — e um backup que
+ * só funciona na máquina do desenvolvedor não é backup. Assim basta `node`,
+ * que existe em qualquer lugar onde a plataforma esteja no ar.
+ *
+ * A única dependência é `@prisma/client`, que a própria aplicação usa.
+ *
+ * Uso: node scripts/backup.mjs [destino]
  *
  * Sem argumento, grava em BACKUP_DIR ou em ./backups.
  */
@@ -27,7 +36,7 @@ import path from "node:path";
 const db = new PrismaClient();
 
 /** Caminho do arquivo SQLite a partir de DATABASE_URL. */
-function caminhoDoBanco(): string {
+function caminhoDoBanco() {
   const url = process.env.DATABASE_URL ?? "file:./dev.db";
   if (!url.startsWith("file:")) {
     throw new Error(
@@ -39,14 +48,14 @@ function caminhoDoBanco(): string {
   return path.isAbsolute(bruto) ? bruto : path.resolve(process.cwd(), "prisma", bruto);
 }
 
-function caminhoDosUploads(): string {
+function caminhoDosUploads() {
   return path.resolve(
     process.env.STORAGE_DIR || path.join(process.cwd(), "storage", "uploads")
   );
 }
 
 /** Soma recursiva do tamanho de uma pasta, para o relatório final. */
-async function tamanhoDe(dir: string): Promise<number> {
+async function tamanhoDe(dir) {
   let total = 0;
   for (const item of await readdir(dir, { withFileTypes: true })) {
     const completo = path.join(dir, item.name);
@@ -55,7 +64,7 @@ async function tamanhoDe(dir: string): Promise<number> {
   return total;
 }
 
-const emMB = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+const emMB = (bytes) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
 /** Nome de pasta que este script gera: 20260830-011500 */
 const CARIMBO = /^\d{8}-\d{6}$/;
@@ -67,7 +76,7 @@ const CARIMBO = /^\d{8}-\d{6}$/;
  * o disco estiver cheio e a gravação falhar, é melhor terminar com os backups
  * antigos intactos do que com nenhum.
  */
-async function limparAntigos(raiz: string, manter: number): Promise<string[]> {
+async function limparAntigos(raiz, manter) {
   const pastas = (await readdir(raiz, { withFileTypes: true }))
     .filter((d) => d.isDirectory() && CARIMBO.test(d.name))
     .map((d) => d.name)
@@ -133,7 +142,7 @@ async function main() {
 
 main()
   .catch((erro) => {
-    console.error(`\nFalha no backup: ${(erro as Error).message}\n`);
+    console.error(`\nFalha no backup: ${erro.message}\n`);
     process.exitCode = 1;
   })
   .finally(async () => {

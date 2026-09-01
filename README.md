@@ -496,12 +496,58 @@ Agendamento diário (ajuste o caminho da aplicação):
   DATABASE_URL="file:/home/usuario/dados-faculdade/dev.db" \
   STORAGE_DIR="/home/usuario/dados-faculdade/uploads" \
   BACKUP_DIR="/home/usuario/backups-faculdade" \
-  npx tsx prisma/backup.ts >> /home/usuario/backup.log 2>&1
+  node scripts/backup.mjs >> /home/usuario/backup.log 2>&1
 ```
 
-Em hospedagem CloudLinux (Hostinger, por exemplo), o `npx` não está no `PATH` do
+O script é **JavaScript puro, e não TypeScript**, por um motivo operacional:
+em produção a aplicação roda no build `standalone` do Next, cujo `node_modules`
+contém apenas o que a aplicação importa. O `tsx` não está lá, e um backup que só
+roda na máquina do desenvolvedor não é backup. Assim basta o `node`, que existe
+em qualquer lugar onde a plataforma esteja no ar.
+
+Em hospedagem CloudLinux (Hostinger, por exemplo), o `node` não está no `PATH` do
 cron — use o caminho completo, algo como
-`/opt/alt/alt-nodejs22/root/usr/bin/npx`.
+`/opt/alt/alt-nodejs22/root/usr/bin/node`.
+
+### Erros do servidor
+
+Quando uma tela quebra, o usuário vê *"Código para o suporte: 2268569496"*. Esse
+número é o `digest` do erro, e **/admin/erros** (só o proprietário) é onde ele
+vira uma pilha de chamadas com arquivo e linha.
+
+A tela existe por uma lacuna concreta: o `stderr` da hospedagem chegou **vazio**
+quando fomos procurar o rastro de uma quebra em produção, e o diagnóstico levou
+dois dias por falta desse arquivo. Agora a plataforma grava o próprio registro,
+em `ERROS_DIR`, fora da pasta publicada — publicar substitui a aplicação, e é
+justamente depois de publicar que se quer olhar.
+
+A captura acontece em `src/instrumentation.ts`, envolvendo `console.error`. É
+rústico, e é o preço de estar no Next 14: o gancho `onRequestError`, feito para
+isto, só existe a partir do 15.
+
+### Teste de fumaça
+
+```bash
+FUMACA_EMAIL=... FUMACA_SENHA=... npm run fumaca
+FUMACA_EMAIL=... FUMACA_SENHA=... npm run fumaca -- https://seu-dominio
+```
+
+Faz login e **navega por todas as telas**, exigindo que respondam. Não verifica
+conteúdo: verifica que a página renderiza.
+
+Parece pouco, e cobre exatamente o que os testes de unidade não alcançam. Eles
+são mais de cento e quarenta e **nenhum renderiza uma página** — todos exercitam
+regras puras. Por isso passou duas vezes o mesmo tipo de falha: erro de
+serialização entre componente de servidor e de cliente, que os tipos não pegam,
+o build não pega, e só aparece quando a tela é aberta.
+
+Ele **navega** em vez de percorrer uma lista fixa: as telas mais frágeis são as
+que dependem de dado real, e os endereços delas contêm ids que só existem no
+banco. Seguindo os links a partir das listagens, alcança curso, aula, prova e
+funcionário sem conhecer id nenhum — e cobre sozinho o que for criado depois.
+
+Rode contra produção depois de publicar. As credenciais vêm do ambiente e nunca
+ficam no arquivo.
 
 ### Prisma em Linux
 
@@ -572,3 +618,5 @@ Cada passo destrava o próximo:
    dados irrecuperáveis.
 5. **Preencha SMTP e alertas**, se quiser envio de e-mail e aviso de erro.
    Precisa das credenciais do domínio de vocês.
+6. **Rode o teste de fumaça** apontando para o domínio. Leva segundos e é o que
+   pega tela quebrada antes de o primeiro usuário encontrá-la.

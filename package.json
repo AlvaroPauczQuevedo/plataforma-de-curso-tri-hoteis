@@ -12,7 +12,8 @@
     "lint": "eslint",
     "dev:local": "next dev",
     "start:local": "next start",
-    "backup": "tsx prisma/backup.ts",
+    "backup": "node scripts/backup.mjs",
+    "fumaca": "node scripts/fumaca.mjs",
     "test": "node --import tsx --test tests/*.test.ts",
     "postinstall": "node scripts/pos-instalacao.mjs"
   },

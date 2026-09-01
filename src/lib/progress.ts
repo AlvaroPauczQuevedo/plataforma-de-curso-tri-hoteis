@@ -54,16 +54,41 @@ export async function recalculateCourseProgress(userId: string, courseId: string
     },
   });
 
-  if (isComplete && course.certificateEnabled) {
-    await db.certificate.upsert({
-      where: { userId_courseId: { userId, courseId } },
-      create: {
-        userId,
-        courseId,
-        code: randomCode("CERT"),
-      },
-      update: {},
-    });
+  if (isComplete) {
+    if (course.certificateEnabled) {
+      await db.certificate.upsert({
+        where: { userId_courseId: { userId, courseId } },
+        create: {
+          userId,
+          courseId,
+          code: randomCode("CERT"),
+        },
+        update: {},
+      });
+    }
+    /*
+      Curso concluído com certificado DESLIGADO não perde o que já emitiu.
+
+      Desligar a emissão vale daqui para a frente — quem não tem, não recebe.
+      Apagar o que já existe seria revogar em massa por uma mudança de
+      configuração, e não é isso que a revogação abaixo trata.
+    */
+  } else {
+    /*
+      Certificado só existe enquanto o curso está concluído.
+
+      Isto importa quando o curso GANHA uma exigência depois: acrescentar uma
+      prova obrigatória derruba o progresso de quem já havia terminado, e o
+      certificado dessa pessoa passaria a atestar uma conclusão que não vale
+      mais. Como é a peça que a auditoria olha, ele é revogado junto — a
+      validação pública do código passa a responder "não encontrado", que é a
+      resposta correta enquanto o curso estiver pendente.
+
+      Concluir de novo emite um certificado novo, com código novo. Um código
+      que já circulou não volta a valer depois de revogado, e é justamente
+      isso que se quer de uma revogação.
+    */
+    await db.certificate.deleteMany({ where: { userId, courseId } });
   }
 
   return {

@@ -22,6 +22,7 @@
  *   ALERTA_INTERVALO_MIN  minutos de silêncio por assinatura (padrão 30)
  */
 import { enviarEmail, envioDisponivel } from "@/lib/email";
+import { digestDoTexto, gravarErro } from "@/lib/registro-de-erros";
 
 const ultimoAviso = new Map<string, number>();
 
@@ -74,6 +75,22 @@ async function avisarPorWebhook(corpo: unknown): Promise<void> {
 export async function registrarErro(erro: unknown, contexto: string): Promise<void> {
   const e = erro as Error;
   console.error(`[erro] ${contexto}:`, e?.stack ?? erro);
+
+  /*
+    Gravado ANTES do agrupamento, de propósito.
+
+    O agrupamento existe para não inundar o e-mail de quem recebe o aviso, mas
+    o registro tem o objetivo oposto: quem abre /admin/erros para investigar
+    precisa ver todas as ocorrências, inclusive para saber se o problema
+    aconteceu uma vez ou trezentas.
+  */
+  await gravarErro({
+    quando: new Date().toISOString(),
+    contexto,
+    mensagem: e?.message ?? String(erro),
+    digest: digestDoTexto(`${e?.message ?? ""} ${e?.stack ?? ""}`),
+    stack: e?.stack,
+  });
 
   const chave = assinatura(erro, contexto);
   if (!devoAvisar(chave)) return;

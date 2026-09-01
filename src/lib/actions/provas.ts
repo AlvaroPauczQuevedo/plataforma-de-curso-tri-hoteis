@@ -12,6 +12,7 @@ import {
   motivoParaNaoPublicar,
   type Respostas,
   type Resultado,
+  comoMostrarAoAluno,
 } from "@/lib/prova";
 import {
   bloqueioDeProva,
@@ -241,6 +242,95 @@ export async function addQuestao(provaId: string, formData: FormData): Promise<A
   return { ok: true, message: "Questão adicionada." };
 }
 
+/**
+ * Corrige uma questão já cadastrada.
+ *
+ * Existe porque, sem ela, consertar uma única letra de gabarito exigia apagar
+ * a questão e escrevê-la de novo — e apagar é o caminho que destrói o
+ * histórico. Foi assim que um gabarito errado ficou dias no ar aqui.
+ *
+ * As alternativas são casadas por id, não recriadas: a tentativa guarda qual
+ * alternativa a pessoa marcou, e recriar tudo transformaria essas referências
+ * em ponteiros para o nada. A nota antiga não muda de qualquer forma — ela é
+ * gravada corrigida, não recalculada —, mas o registro de uma prova precisa
+ * continuar dizendo o que a pessoa respondeu.
+ *
+ * Alternativa que sumiu do formulário é apagada; a que chegou sem id é nova.
+ */
+export async function updateQuestao(
+  questaoId: string,
+  formData: FormData
+): Promise<ActionResult> {
+  const admin = await requireAdmin();
+
+  const bloqueio = await bloqueioDeQuestao(questaoId, admin.id);
+  if (bloqueio) return bloqueio;
+
+  // Os dois campos andam em paralelo: um id (vazio, se for nova) por texto.
+  const ids = formData.getAll("alternativaId").map((a) => String(a));
+  const textos = formData.getAll("alternativa").map((a) => String(a).trim());
+
+  const pares = textos
+    .map((texto, i) => ({ id: ids[i] ?? "", texto }))
+    .filter((par) => par.texto.length > 0);
+
+  const parsed = questaoSchema.safeParse({
+    enunciado: formData.get("enunciado"),
+    alternativas: pares.map((p) => p.texto),
+    corretaIndice: formData.get("corretaIndice") ?? 0,
+  });
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
+
+  if (parsed.data.corretaIndice >= pares.length) {
+    return { ok: false, error: "Marque qual alternativa é a correta." };
+  }
+
+  const atual = await db.questaoProva.findUnique({
+    where: { id: questaoId },
+    include: { alternativas: true },
+  });
+  if (!atual) return { ok: false, error: "Questão não encontrada." };
+
+  const mantidos = new Set(pares.map((p) => p.id).filter(Boolean));
+
+  await db.$transaction(async (tx) => {
+    await tx.questaoProva.update({
+      where: { id: questaoId },
+      data: { enunciado: parsed.data.enunciado },
+    });
+
+    await tx.alternativaProva.deleteMany({
+      where: { questaoId, id: { notIn: [...mantidos, "-"] } },
+    });
+
+    for (const [ordem, par] of pares.entries()) {
+      const correta = ordem === parsed.data.corretaIndice;
+
+      if (par.id && atual.alternativas.some((a) => a.id === par.id)) {
+        await tx.alternativaProva.update({
+          where: { id: par.id },
+          data: { texto: par.texto, ordem, correta },
+        });
+      } else {
+        await tx.alternativaProva.create({
+          data: { questaoId, texto: par.texto, ordem, correta },
+        });
+      }
+    }
+  });
+
+  await logAdminActivity({
+    adminId: admin.id,
+    action: "EDITAR_QUESTAO",
+    targetType: "Prova",
+    targetId: atual.provaId,
+    details: parsed.data.enunciado,
+  });
+
+  revalidatePath(`/admin/provas/${atual.provaId}`);
+  return { ok: true, message: "Questão atualizada." };
+}
+
 export async function deleteQuestao(questaoId: string): Promise<ActionResult> {
   const admin = await requireAdmin();
 
@@ -386,5 +476,7 @@ export async function submeterTentativa(
 
   revalidatePath("/provas");
   revalidatePath(`/provas/${provaId}`);
-  return { ok: true, resultado };
+
+  // Gravado por inteiro acima; devolvido sem o gabarito quando reprovado.
+  return { ok: true, resultado: comoMostrarAoAluno(resultado) };
 }

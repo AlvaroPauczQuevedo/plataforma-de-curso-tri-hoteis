@@ -77,15 +77,46 @@ export async function bloqueioDeAlteracao(
   return motivo ? { ok: false, error: motivo } : null;
 }
 
-/** Igual à anterior, para uma lista — usada na matrícula em massa. */
+/**
+ * Igual à anterior, para uma lista — usada na matrícula em massa.
+ *
+ * Duas consultas no total, e não duas por pessoa: antes isto chamava
+ * `bloqueioDeAlteracao` num laço, e cada volta recarregava o MESMO ator do
+ * banco. Matricular cinquenta pessoas custava cem consultas para responder
+ * uma pergunta que só muda de alvo.
+ *
+ * A recusa continua sendo a primeira encontrada, e a ordem de `alvoIds` é
+ * respeitada: quem dispara a ação precisa ver sempre a mesma mensagem para
+ * a mesma seleção.
+ */
 export async function bloqueioDeAlteracaoEmLote(
   alvoIds: string[],
   atorId: string
 ): Promise<Recusa | null> {
-  for (const alvoId of alvoIds) {
-    const recusa = await bloqueioDeAlteracao(alvoId, atorId);
-    if (recusa) return recusa;
+  const outros = alvoIds.filter((id) => id !== atorId);
+  if (outros.length === 0) return null;
+
+  const [alvos, ator] = await Promise.all([
+    db.user.findMany({
+      where: { id: { in: outros } },
+      select: { ...CAMPOS, name: true },
+    }),
+    db.user.findUnique({ where: { id: atorId }, select: CAMPOS }),
+  ]);
+
+  if (!ator) return { ok: false, error: "Sessão inválida." };
+
+  const porId = new Map(alvos.map((a) => [a.id, a]));
+  const comAlcance = comoAtor(ator);
+
+  for (const alvoId of outros) {
+    const alvo = porId.get(alvoId);
+    if (!alvo) return { ok: false, error: "Usuário não encontrado." };
+
+    const motivo = motivoDeBloqueio(alvo, comAlcance);
+    if (motivo) return { ok: false, error: motivo };
   }
+
   return null;
 }
 

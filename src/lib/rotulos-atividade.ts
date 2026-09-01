@@ -22,6 +22,7 @@ export const ROTULOS_DE_ATIVIDADE: Record<string, string> = {
   EXCLUIR_PROVA: "excluiu a prova",
   PUBLICAR_PROVA: "publicou a prova",
   DESPUBLICAR_PROVA: "moveu para rascunho a prova",
+  EDITAR_QUESTAO: "editou uma questão da prova",
   EXCLUIR_QUESTAO: "excluiu uma questão da prova",
 
   CRIAR_FUNCIONARIO: "cadastrou o funcionário",
