@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { ressincronizarProgressoDoCurso } from "@/lib/progress";
 import { requireAdmin } from "@/lib/session";
 import { logAdminActivity } from "@/lib/activity-log";
 import type { ActionResult } from "@/lib/actions/employees";
@@ -352,6 +353,7 @@ export async function deleteModule(moduleId: string): Promise<ActionResult> {
   if (bloqueio) return bloqueio;
 
   const mod = await db.module.delete({ where: { id: moduleId } });
+  await ressincronizarProgressoDoCurso(mod.courseId);
   revalidatePath(`/admin/cursos/${mod.courseId}`);
   return { ok: true };
 }
@@ -445,6 +447,7 @@ export async function createLesson(moduleId: string, formData: FormData): Promis
     },
   });
 
+  await ressincronizarProgressoDoCurso(mod.courseId);
   revalidatePath(`/admin/cursos/${mod.courseId}`);
   return { ok: true };
 }
@@ -492,6 +495,7 @@ export async function updateLesson(lessonId: string, formData: FormData): Promis
     include: { module: true },
   });
 
+  await ressincronizarProgressoDoCurso(lesson.module.courseId);
   revalidatePath(`/admin/cursos/${lesson.module.courseId}`);
   return { ok: true };
 }
@@ -503,6 +507,7 @@ export async function deleteLesson(lessonId: string): Promise<ActionResult> {
   if (bloqueio) return bloqueio;
 
   const lesson = await db.lesson.delete({ where: { id: lessonId }, include: { module: true } });
+  await ressincronizarProgressoDoCurso(lesson.module.courseId);
   revalidatePath(`/admin/cursos/${lesson.module.courseId}`);
   return { ok: true };
 }

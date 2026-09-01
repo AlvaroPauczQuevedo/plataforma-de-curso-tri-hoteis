@@ -249,6 +249,23 @@ export async function deleteQuestao(questaoId: string): Promise<ActionResult> {
 
   const questao = await db.questaoProva.delete({ where: { id: questaoId } });
 
+  /*
+    Excluir questão mexe na nota de todo mundo que ainda vai fazer a prova,
+    e antes disto sumia sem deixar rastro: o histórico registrava criar,
+    editar, publicar e excluir a prova, mas não o que ela pergunta. Quem
+    auditasse uma nota estranha não teria como saber que o gabarito mudou.
+
+    O enunciado vai no registro porque a questão já não existe para ser
+    consultada depois.
+  */
+  await logAdminActivity({
+    adminId: admin.id,
+    action: "EXCLUIR_QUESTAO",
+    targetType: "Prova",
+    targetId: questao.provaId,
+    details: questao.enunciado,
+  });
+
   revalidatePath(`/admin/provas/${questao.provaId}`);
   return { ok: true };
 }

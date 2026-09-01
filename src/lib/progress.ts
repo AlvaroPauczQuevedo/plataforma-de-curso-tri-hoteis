@@ -74,6 +74,35 @@ export async function recalculateCourseProgress(userId: string, courseId: string
   };
 }
 
+/**
+ * Refaz o progresso de todo mundo matriculado no curso.
+ *
+ * O percentual mora em CourseProgress e só era refeito quando alguém mexia
+ * numa aula. Mas mudar a ESTRUTURA do curso muda o denominador de quem já
+ * estava matriculado: acrescentar uma aula obrigatória, tornar opcional uma
+ * que era exigida, apagar um módulo inteiro. Sem esta varredura, essas
+ * pessoas ficam com o número antigo — alguém marcado "100% concluído", com
+ * certificado emitido, num curso que acabou de ganhar uma prova obrigatória
+ * que ele nunca fez. O certificado é a peça que a auditoria olha, então o
+ * número não pode ficar para trás da regra.
+ *
+ * Em série de propósito: são muitas escritas no SQLite e mudança de
+ * estrutura é rara, então vale mais não disputar o banco do que terminar
+ * alguns milissegundos antes.
+ */
+export async function ressincronizarProgressoDoCurso(courseId: string) {
+  const matriculados = await db.enrollment.findMany({
+    where: { courseId },
+    select: { userId: true },
+  });
+
+  for (const { userId } of matriculados) {
+    await recalculateCourseProgress(userId, courseId);
+  }
+
+  return matriculados.length;
+}
+
 export function courseCounters(
   allLessons: { id: string; required: boolean }[],
   completedLessonIds: Set<string>

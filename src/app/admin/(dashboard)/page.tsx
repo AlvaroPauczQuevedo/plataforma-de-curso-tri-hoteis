@@ -5,26 +5,7 @@ import { ehProprietario } from "@/lib/alcance-admin";
 import { StatCard } from "@/components/admin/stat-card";
 import { StatusPieChart, DepartmentBarChart } from "@/components/admin/charts";
 import { formatDateTime } from "@/lib/utils";
-
-const actionLabels: Record<string, string> = {
-  CRIAR_CURSO: "criou o curso",
-  EDITAR_CURSO: "editou o curso",
-  DUPLICAR_CURSO: "duplicou o curso",
-  EXCLUIR_CURSO: "excluiu o curso",
-  CURSO_PUBLISHED: "publicou o curso",
-  CURSO_DRAFT: "moveu para rascunho o curso",
-  CURSO_ARCHIVED: "arquivou o curso",
-  CRIAR_FUNCIONARIO: "cadastrou o funcionário",
-  EDITAR_FUNCIONARIO: "editou o funcionário",
-  ATIVAR_FUNCIONARIO: "ativou o acesso de",
-  DESATIVAR_FUNCIONARIO: "desativou o acesso de",
-  REDEFINIR_SENHA: "redefiniu a senha de",
-  MATRICULAR: "realizou matrícula(s):",
-  REMOVER_MATRICULA: "removeu matrícula de",
-  CRIAR_DEPARTAMENTO: "criou o departamento",
-  CRIAR_CATEGORIA: "criou a categoria",
-  CRIAR_MODULO: "criou um módulo em",
-};
+import { rotuloDaAtividade } from "@/lib/rotulos-atividade";
 
 export default async function AdminDashboardPage() {
   const admin = await requireAdmin();
@@ -113,7 +94,7 @@ export default async function AdminDashboardPage() {
                 {stats.recentActivity.map((log) => (
                   <li key={log.id} className="text-sm">
                     <span className="font-medium text-ink-900">{log.admin.name}</span>{" "}
-                    <span className="text-ink-700/70">{actionLabels[log.action] ?? log.action.toLowerCase()}</span>{" "}
+                    <span className="text-ink-700/70">{rotuloDaAtividade(log.action)}</span>{" "}
                     {log.details && <span className="text-ink-700/70">{log.details}</span>}
                     <p className="text-xs text-ink-700/40">{formatDateTime(log.createdAt)}</p>
                   </li>

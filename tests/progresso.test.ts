@@ -12,7 +12,10 @@ import {
 // Estes imports vêm DEPOIS de ./ambiente.ts de propósito: os módulos abaixo
 // carregam o cliente Prisma da aplicação, que lê DATABASE_URL ao ser avaliado.
 // O ambiente já apontou a variável para o banco temporário.
-import { recalculateCourseProgress } from "../src/lib/progress";
+import {
+  recalculateCourseProgress,
+  ressincronizarProgressoDoCurso,
+} from "../src/lib/progress";
 import { isLessonUnlocked, userHasCourseAccess } from "../src/lib/access";
 
 after(encerrar);
@@ -235,5 +238,101 @@ describe("Aula do tipo prova", () => {
 
     assert.equal(progresso!.courseProgress.percent, 100);
     assert.notEqual(progresso!.courseProgress.completedAt, null);
+  });
+});
+
+describe("Mudança de estrutura do curso", () => {
+  it("acrescentar aula obrigatória tira de 100% quem já havia concluído", async () => {
+    const aluno = await criarFuncionario();
+    const { curso, aulas } = await criarCurso({
+      aulas: [{ tipo: "TEXT" }, { tipo: "TEXT" }],
+    });
+    await matricular(aluno.id, curso.id);
+    await concluirAula(aluno.id, aulas[0]!.id);
+    await concluirAula(aluno.id, aulas[1]!.id);
+    await recalculateCourseProgress(aluno.id, curso.id);
+
+    const antes = await db.courseProgress.findUnique({
+      where: { userId_courseId: { userId: aluno.id, courseId: curso.id } },
+    });
+    assert.equal(antes!.percent, 100);
+    assert.notEqual(antes!.completedAt, null);
+
+    // O curso ganha uma prova obrigatória depois que o aluno terminou.
+    await db.lesson.create({
+      data: {
+        moduleId: aulas[0]!.moduleId,
+        title: "Avaliação final",
+        order: 2,
+        type: "TEXT",
+        required: true,
+      },
+    });
+
+    await ressincronizarProgressoDoCurso(curso.id);
+
+    const depois = await db.courseProgress.findUnique({
+      where: { userId_courseId: { userId: aluno.id, courseId: curso.id } },
+    });
+    assert.equal(depois!.percent, 67);
+    assert.equal(
+      depois!.completedAt,
+      null,
+      "quem não fez a aula nova não pode continuar marcado como concluído"
+    );
+  });
+
+  it("tornar a aula opcional devolve a conclusão", async () => {
+    const aluno = await criarFuncionario();
+    const { curso, aulas } = await criarCurso({
+      aulas: [{ tipo: "TEXT" }, { tipo: "TEXT" }],
+    });
+    await matricular(aluno.id, curso.id);
+    await concluirAula(aluno.id, aulas[0]!.id);
+    await recalculateCourseProgress(aluno.id, curso.id);
+
+    await db.lesson.update({
+      where: { id: aulas[1]!.id },
+      data: { required: false },
+    });
+    await ressincronizarProgressoDoCurso(curso.id);
+
+    const progresso = await db.courseProgress.findUnique({
+      where: { userId_courseId: { userId: aluno.id, courseId: curso.id } },
+    });
+    assert.equal(progresso!.percent, 100);
+    assert.notEqual(progresso!.completedAt, null);
+  });
+
+  it("ressincronizar alcança todo mundo matriculado, não só quem mexeu na aula", async () => {
+    const um = await criarFuncionario();
+    const dois = await criarFuncionario();
+    const { curso, aulas } = await criarCurso({ aulas: [{ tipo: "TEXT" }] });
+    await matricular(um.id, curso.id);
+    await matricular(dois.id, curso.id);
+    await concluirAula(um.id, aulas[0]!.id);
+    await concluirAula(dois.id, aulas[0]!.id);
+    await recalculateCourseProgress(um.id, curso.id);
+    await recalculateCourseProgress(dois.id, curso.id);
+
+    await db.lesson.create({
+      data: {
+        moduleId: aulas[0]!.moduleId,
+        title: "Aula nova",
+        order: 1,
+        type: "TEXT",
+        required: true,
+      },
+    });
+
+    const alcancados = await ressincronizarProgressoDoCurso(curso.id);
+    assert.equal(alcancados, 2);
+
+    for (const aluno of [um, dois]) {
+      const progresso = await db.courseProgress.findUnique({
+        where: { userId_courseId: { userId: aluno.id, courseId: curso.id } },
+      });
+      assert.equal(progresso!.percent, 50);
+    }
   });
 });

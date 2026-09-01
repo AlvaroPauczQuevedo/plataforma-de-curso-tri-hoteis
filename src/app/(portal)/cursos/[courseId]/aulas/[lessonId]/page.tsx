@@ -215,7 +215,9 @@ export default async function LessonPlayerPage({
                 {tentativasDaProva.length > 0 && (
                   <div className="rounded-2xl border border-border bg-white p-5">
                     <h2 className="mb-3 font-semibold text-ink-900">
-                      Suas últimas {tentativasDaProva.length} tentativas
+                      {tentativasDaProva.length === 1
+                        ? "Sua tentativa anterior"
+                        : `Suas últimas ${tentativasDaProva.length} tentativas`}
                     </h2>
                     <ul className="divide-y divide-border">
                       {tentativasDaProva.map((t) => (
