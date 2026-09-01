@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { db } from "@/lib/db";
+import { carregarAtorOuFalhar } from "@/lib/alcance-admin";
 import { requireAdmin } from "@/lib/session";
 import { Alert } from "@/components/ui/alert";
 import { EmployeeForm } from "@/components/admin/employee-form";
@@ -8,10 +9,7 @@ import { departamentosPermitidos } from "@/lib/permissoes-usuario";
 
 export default async function NovoFuncionarioPage() {
   const admin = await requireAdmin();
-  const ator = await db.user.findUniqueOrThrow({
-    where: { id: admin.id },
-    select: { id: true, protegido: true, departmentId: true },
-  });
+  const ator = await carregarAtorOuFalhar(admin.id);
 
   // Um administrador comum só cadastra dentro do próprio departamento. Oferecer
   // os demais na lista seria oferecer um cadastro que o servidor vai recusar.

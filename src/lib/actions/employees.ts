@@ -10,6 +10,7 @@ import { randomUUID } from "crypto";
 import { emailDeBoasVindas, emailDeRedefinicao, enviarEmail } from "@/lib/email";
 import { sincronizarUsuario } from "@/lib/matricula-automatica";
 import {
+  type Recusa,
   bloqueioDeAlteracao,
   bloqueioDeVinculo,
   ehProprietario,
@@ -24,6 +25,49 @@ const employeeSchema = z.object({
 });
 
 export type ActionResult = { ok: true; message?: string } | { ok: false; error: string };
+
+/**
+ * Lê os departamentos adicionais do formulário, já sem o principal e sem
+ * repetição.
+ *
+ * O principal sai da lista de propósito: guardá-lo nos dois lugares criaria
+ * duas fontes para a mesma informação, e um dia elas discordariam.
+ */
+function extrasDoFormulario(formData: FormData, principal: string | null) {
+  const marcados = formData.getAll("departamentosExtras").map((d) => String(d));
+  return [...new Set(marcados)].filter((id) => id && id !== principal);
+}
+
+/**
+ * Grava os adicionais, recusando o que o administrador não alcança.
+ *
+ * Sem esta checagem, bastaria forjar a requisição para se dar alcance a
+ * qualquer setor — a trava da tela não vale nada sozinha.
+ */
+async function salvarExtras(
+  userId: string,
+  extras: string[],
+  atorId: string
+): Promise<Recusa | null> {
+  for (const departmentId of extras) {
+    const recusa = await bloqueioDeVinculo(atorId, departmentId);
+    if (recusa) return recusa;
+  }
+
+  await db.departamentoExtra.deleteMany({
+    where: { userId, departmentId: { notIn: extras.length > 0 ? extras : ["-"] } },
+  });
+
+  for (const departmentId of extras) {
+    await db.departamentoExtra.upsert({
+      where: { userId_departmentId: { userId, departmentId } },
+      create: { userId, departmentId },
+      update: {},
+    });
+  }
+
+  return null;
+}
 
 export async function createEmployee(formData: FormData): Promise<ActionResult> {
   const admin = await requireAdmin();
@@ -77,7 +121,14 @@ export async function createEmployee(formData: FormData): Promise<ActionResult> 
     details: `Funcionário ${user.name} cadastrado. Senha temporária: ${tempPassword}`,
   });
 
-  // Já entra matriculado no que for obrigatório para o departamento dele.
+  const recusaExtras = await salvarExtras(
+    user.id,
+    extrasDoFormulario(formData, parsed.data.departmentId || null),
+    admin.id
+  );
+  if (recusaExtras) return recusaExtras;
+
+  // Já entra matriculado no que for obrigatório em todos os setores dele.
   const matriculas = await sincronizarUsuario(user.id, admin.id);
 
   // O envio é um extra: falhando, o cadastro continua válido e a senha aparece
@@ -143,6 +194,13 @@ export async function updateEmployee(
       role: parsed.data.role,
     },
   });
+
+  const recusaExtras = await salvarExtras(
+    userId,
+    extrasDoFormulario(formData, parsed.data.departmentId || null),
+    admin.id
+  );
+  if (recusaExtras) return recusaExtras;
 
   await logAdminActivity({
     adminId: admin.id,
@@ -300,6 +358,120 @@ export async function generatePasswordResetLink(
       : "Link válido por 1 hora e de uso único.",
     resetLink: `/redefinir-senha/${token}`,
   };
+}
+
+/**
+ * Quanto histórico a exclusão de um usuário destruiria, e o que a impede.
+ *
+ * Existe separada da exclusão porque a tela precisa dos mesmos números para
+ * avisar ANTES de perguntar. Confirmação que não diz o tamanho do estrago não
+ * é confirmação, é formalidade.
+ */
+export async function impactoDaExclusao(userId: string) {
+  const [
+    matriculas,
+    certificados,
+    tentativas,
+    atividades,
+    cursosCriados,
+    provasCriadas,
+    arquivos,
+    matriculasAtribuidas,
+  ] = await Promise.all([
+    db.enrollment.count({ where: { userId } }),
+    db.certificate.count({ where: { userId } }),
+    db.tentativaProva.count({ where: { userId } }),
+    db.adminActivityLog.count({ where: { adminId: userId } }),
+    db.course.count({ where: { createdById: userId } }),
+    db.prova.count({ where: { createdById: userId } }),
+    db.fileAsset.count({ where: { uploadedById: userId } }),
+    db.enrollment.count({ where: { assignedById: userId } }),
+  ]);
+
+  /*
+    Autoria é relação de restrição no banco: curso, prova, arquivo e matrícula
+    atribuída apontam para quem os criou e impedem a exclusão. Sem esta
+    contagem o usuário receberia um erro de chave estrangeira em vez de uma
+    explicação.
+  */
+  const autoria = cursosCriados + provasCriadas + arquivos + matriculasAtribuidas;
+
+  return {
+    matriculas,
+    certificados,
+    tentativas,
+    atividades,
+    cursosCriados,
+    provasCriadas,
+    arquivos,
+    matriculasAtribuidas,
+    autoria,
+    /** Some em cascata junto com a conta. */
+    historico: matriculas + certificados + tentativas + atividades,
+  };
+}
+
+/**
+ * Exclui um usuário definitivamente.
+ *
+ * Desativar continua sendo o caminho recomendado, e a tela diz isso — mas
+ * excluir precisa existir para o caso legítimo: conta criada por engano, com
+ * e-mail errado, que nunca deveria ter entrado no cadastro.
+ *
+ * A exclusão recusa quando a pessoa é AUTORA de conteúdo. Não é preciosismo:
+ * curso, prova, arquivo e matrícula atribuída guardam quem os criou, e apagar
+ * a conta arrancaria a autoria de material que continua no ar. Nesses casos o
+ * caminho é desativar.
+ */
+export async function deleteEmployee(userId: string): Promise<ActionResult> {
+  const admin = await requireAdmin();
+
+  if (userId === admin.id) {
+    return { ok: false, error: "Você não pode excluir a própria conta." };
+  }
+
+  // Mesmo alcance da edição: departamento próprio, e nunca conta protegida.
+  const bloqueio = await bloqueioDeAlteracao(userId, admin.id);
+  if (bloqueio) return bloqueio;
+
+  const alvo = await db.user.findUnique({
+    where: { id: userId },
+    select: { name: true },
+  });
+  if (!alvo) return { ok: false, error: "Usuário não encontrado." };
+
+  const impacto = await impactoDaExclusao(userId);
+
+  if (impacto.autoria > 0) {
+    const partes: string[] = [];
+    if (impacto.cursosCriados > 0) partes.push(`${impacto.cursosCriados} curso(s)`);
+    if (impacto.provasCriadas > 0) partes.push(`${impacto.provasCriadas} prova(s)`);
+    if (impacto.arquivos > 0) partes.push(`${impacto.arquivos} arquivo(s)`);
+    if (impacto.matriculasAtribuidas > 0) {
+      partes.push(`${impacto.matriculasAtribuidas} matrícula(s) atribuída(s)`);
+    }
+
+    return {
+      ok: false,
+      error:
+        `${alvo.name} é autor(a) de ${partes.join(", ")}. Excluir a conta arrancaria ` +
+        "a autoria desse conteúdo, que continua no ar. Desative o acesso — o " +
+        "histórico fica preservado e a pessoa não entra mais.",
+    };
+  }
+
+  await db.user.delete({ where: { id: userId } });
+
+  await logAdminActivity({
+    adminId: admin.id,
+    action: "EXCLUIR_USUARIO",
+    targetType: "User",
+    targetId: userId,
+    details: alvo.name,
+  });
+
+  revalidatePath("/admin/funcionarios");
+  return { ok: true, message: `Conta de ${alvo.name} excluída.` };
 }
 
 export async function createDepartment(name: string): Promise<ActionResult> {

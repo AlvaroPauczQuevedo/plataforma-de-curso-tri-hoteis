@@ -51,9 +51,17 @@ async function criarFaltantes(
       portal deles com os cursos que eles mesmos publicaram. Quando um
       administrador precisa fazer o curso, é matriculado individualmente.
     */
+    /*
+      Pertencer ao departamento vale tanto pelo principal quanto por um
+      adicional. Quem atua em dois setores precisa do treinamento obrigatório
+      dos dois — foi para isso que os adicionais existem.
+    */
     const alvos = await db.user.findMany({
       where: {
-        departmentId: regra.departmentId,
+        OR: [
+          { departmentId: regra.departmentId },
+          { departamentosExtras: { some: { departmentId: regra.departmentId } } },
+        ],
         role: "EMPLOYEE",
         active: true,
         ...(filtroDeUsuario ? { id: filtroDeUsuario.id } : {}),
@@ -113,14 +121,28 @@ export async function sincronizarUsuario(
 ): Promise<ResultadoSincronizacao> {
   const usuario = await db.user.findUnique({
     where: { id: userId },
-    select: { departmentId: true, active: true, role: true },
+    select: {
+      departmentId: true,
+      active: true,
+      role: true,
+      departamentosExtras: { select: { departmentId: true } },
+    },
   });
-  if (!usuario?.departmentId || !usuario.active || usuario.role !== "EMPLOYEE") {
+  if (!usuario || !usuario.active || usuario.role !== "EMPLOYEE") {
     return { criadas: 0, jaExistiam: 0 };
   }
 
+  // Principal e adicionais, sem repetição.
+  const departamentos = [
+    ...new Set([
+      ...(usuario.departmentId ? [usuario.departmentId] : []),
+      ...usuario.departamentosExtras.map((d) => d.departmentId),
+    ]),
+  ];
+  if (departamentos.length === 0) return { criadas: 0, jaExistiam: 0 };
+
   const obrigatorios = await db.cursoObrigatorio.findMany({
-    where: { departmentId: usuario.departmentId },
+    where: { departmentId: { in: departamentos } },
     select: { courseId: true, departmentId: true, prazoDias: true },
   });
   return criarFaltantes(obrigatorios, assignedById, { id: userId });

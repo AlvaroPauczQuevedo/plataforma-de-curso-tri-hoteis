@@ -11,6 +11,7 @@
  */
 import { db } from "@/lib/db";
 import {
+  type Ator,
   motivoDeBloqueio,
   motivoDeBloqueioDeCurso,
   motivoDeBloqueioDeProva,
@@ -21,7 +22,41 @@ import {
 
 export type Recusa = { ok: false; error: string };
 
-const CAMPOS = { id: true, protegido: true, departmentId: true } as const;
+const CAMPOS = {
+  id: true,
+  protegido: true,
+  departmentId: true,
+  departamentosExtras: { select: { departmentId: true } },
+} as const;
+
+/**
+ * Junta o departamento principal e os adicionais numa lista só.
+ *
+ * Para decidir alcance os dois valem igual, e reuni-los aqui evita que cada
+ * chamador lembre de somar — esquecer um lugar seria abrir um furo silencioso
+ * na hierarquia.
+ */
+function comoAtor(u: {
+  id: string;
+  protegido: boolean;
+  departmentId: string | null;
+  departamentosExtras: { departmentId: string }[];
+}): Ator {
+  return {
+    id: u.id,
+    protegido: u.protegido,
+    departamentos: [
+      ...(u.departmentId ? [u.departmentId] : []),
+      ...u.departamentosExtras.map((d) => d.departmentId),
+    ],
+  };
+}
+
+/** Carrega o ator já com o alcance montado. Use isto nas telas. */
+export async function carregarAtor(userId: string): Promise<Ator | null> {
+  const u = await db.user.findUnique({ where: { id: userId }, select: CAMPOS });
+  return u ? comoAtor(u) : null;
+}
 
 /** `null` se o administrador pode alterar esta conta; a recusa, se não pode. */
 export async function bloqueioDeAlteracao(
@@ -38,7 +73,7 @@ export async function bloqueioDeAlteracao(
   if (!alvo) return { ok: false, error: "Usuário não encontrado." };
   if (!ator) return { ok: false, error: "Sessão inválida." };
 
-  const motivo = motivoDeBloqueio(alvo, ator);
+  const motivo = motivoDeBloqueio(alvo, comoAtor(ator));
   return motivo ? { ok: false, error: motivo } : null;
 }
 
@@ -62,7 +97,7 @@ export async function bloqueioDeVinculo(
   const ator = await db.user.findUnique({ where: { id: atorId }, select: CAMPOS });
   if (!ator) return { ok: false, error: "Sessão inválida." };
 
-  const motivo = motivoDeVinculoInvalido(ator, departmentId);
+  const motivo = motivoDeVinculoInvalido(comoAtor(ator), departmentId);
   return motivo ? { ok: false, error: motivo } : null;
 }
 
@@ -82,7 +117,7 @@ async function recusaDeCurso(
   const ator = await db.user.findUnique({ where: { id: atorId }, select: CAMPOS });
   if (!ator) return { ok: false, error: "Sessão inválida." };
 
-  const motivo = motivoDeBloqueioDeCurso(curso, ator);
+  const motivo = motivoDeBloqueioDeCurso(curso, comoAtor(ator));
   return motivo ? { ok: false, error: motivo } : null;
 }
 
@@ -132,7 +167,7 @@ export async function bloqueioDeVinculoDeCurso(
   const ator = await db.user.findUnique({ where: { id: atorId }, select: CAMPOS });
   if (!ator) return { ok: false, error: "Sessão inválida." };
 
-  const motivo = motivoDeVinculoDeCursoInvalido(ator, departmentId);
+  const motivo = motivoDeVinculoDeCursoInvalido(comoAtor(ator), departmentId);
   return motivo ? { ok: false, error: motivo } : null;
 }
 
@@ -166,7 +201,7 @@ export async function bloqueioDeProva(
   if (!prova) return { ok: false, error: "Prova não encontrada." };
   if (!ator) return { ok: false, error: "Sessão inválida." };
 
-  const motivo = motivoDeBloqueioDeProva(prova, ator);
+  const motivo = motivoDeBloqueioDeProva(prova, comoAtor(ator));
   return motivo ? { ok: false, error: motivo } : null;
 }
 
@@ -191,6 +226,19 @@ export async function bloqueioDeVinculoDeProva(
   const ator = await db.user.findUnique({ where: { id: atorId }, select: CAMPOS });
   if (!ator) return { ok: false, error: "Sessão inválida." };
 
-  const motivo = motivoDeVinculoDeProvaInvalido(ator, departmentId);
+  const motivo = motivoDeVinculoDeProvaInvalido(comoAtor(ator), departmentId);
   return motivo ? { ok: false, error: motivo } : null;
+}
+
+/**
+ * Igual a `carregarAtor`, mas falha alto quando a conta não existe.
+ *
+ * As telas administrativas já passaram por `requireAdmin`: se o usuário sumiu
+ * entre a sessão e esta consulta, seguir com um ator vazio esconderia o
+ * problema atrás de uma tela sem permissão.
+ */
+export async function carregarAtorOuFalhar(userId: string): Promise<Ator> {
+  const ator = await carregarAtor(userId);
+  if (!ator) throw new Error(`Usuário ${userId} não encontrado ao montar o alcance.`);
+  return ator;
 }

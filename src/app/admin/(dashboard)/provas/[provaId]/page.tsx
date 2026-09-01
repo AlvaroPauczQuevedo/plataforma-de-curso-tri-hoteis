@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, Trash2, CheckCircle2 } from "lucide-react";
 import { db } from "@/lib/db";
+import { carregarAtorOuFalhar } from "@/lib/alcance-admin";
 import { requireAdmin } from "@/lib/session";
 import { motivoDeBloqueioDeProva } from "@/lib/permissoes-usuario";
 import { motivoParaNaoPublicar } from "@/lib/prova";
@@ -30,10 +31,7 @@ export default async function ProvaPage({ params }: { params: { provaId: string 
 
   if (!prova) notFound();
 
-  const ator = await db.user.findUniqueOrThrow({
-    where: { id: admin.id },
-    select: { id: true, protegido: true, departmentId: true },
-  });
+  const ator = await carregarAtorOuFalhar(admin.id);
 
   const motivo = motivoDeBloqueioDeProva(prova, ator);
   const impedimentoParaPublicar = motivoParaNaoPublicar(prova.questoes);

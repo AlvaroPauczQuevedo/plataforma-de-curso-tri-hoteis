@@ -8,9 +8,12 @@ import type { Department, User } from "@prisma/client";
 export function EmployeeForm({
   departments,
   employee,
+  extras = [],
 }: {
   departments: Department[];
   employee?: User;
+  /** Departamentos adicionais já marcados para esta pessoa. */
+  extras?: string[];
 }) {
   const router = useRouter();
   const isEdit = Boolean(employee);
@@ -84,8 +87,46 @@ export function EmployeeForm({
               </option>
             ))}
           </select>
+          <p className="text-xs text-ink-700/60">
+            É por ele que a pessoa aparece nos relatórios e na conformidade.
+          </p>
         </div>
       </div>
+
+      {departments.length > 1 && (
+        <div className="space-y-2">
+          <span className="text-sm font-medium text-ink-900">
+            Departamentos adicionais (opcional)
+          </span>
+          <p className="text-xs leading-relaxed text-ink-700/60">
+            Para quem atua em mais de um setor. Amplia o alcance: o funcionário
+            recebe o treinamento obrigatório de todos eles, e o administrador
+            passa a editar quem for de qualquer um deles. A contagem nos
+            relatórios continua saindo apenas pelo departamento principal.
+          </p>
+          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+            {departments.map((d) => (
+              <label
+                key={d.id}
+                className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-border px-3 py-2 text-sm text-ink-700 transition hover:bg-surface-muted"
+              >
+                <input
+                  type="checkbox"
+                  name="departamentosExtras"
+                  value={d.id}
+                  defaultChecked={extras.includes(d.id)}
+                  className="h-4 w-4 rounded border-border"
+                />
+                {d.name}
+              </label>
+            ))}
+          </div>
+          <p className="text-xs text-ink-700/50">
+            Marcar aqui o mesmo departamento escolhido acima não faz diferença —
+            ele já vale como principal.
+          </p>
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <label htmlFor="role" className="text-sm font-medium text-ink-900">

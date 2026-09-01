@@ -48,6 +48,7 @@ model Department {
   courses   Course[]
   obrigatorios CursoObrigatorio[]
   provas    Prova[]
+  membrosExtras DepartamentoExtra[]
 }
 
 model User {
@@ -103,6 +104,7 @@ model User {
   uploadedFiles     FileAsset[]
   provasCriadas     Prova[]            @relation("ProvaCriadaPor")
   tentativasProva   TentativaProva[]
+  departamentosExtras DepartamentoExtra[]
 }
 
 model Category {
@@ -434,4 +436,29 @@ model TentativaProva {
 
   @@index([userId, provaId])
   @@index([provaId])
+}
+
+/// Departamento adicional de um usuário.
+///
+/// O campo `User.departmentId` continua sendo o departamento PRINCIPAL, e é
+/// só ele que agrupa relatórios, conformidade e o gráfico do painel. Se uma
+/// pessoa contasse em duas colunas, a soma passaria a ser maior que o total de
+/// funcionários — número que ninguém consegue defender numa auditoria.
+///
+/// Os adicionais dão ALCANCE, e nada mais:
+///
+///  - administrador enxerga e edita quem é de qualquer um dos seus setores;
+///  - funcionário recebe o treinamento obrigatório de todos eles.
+///
+/// A separação entre "onde a pessoa é contada" e "onde ela alcança" é o que
+/// permite ter as duas coisas sem quebrar nenhum número que hoje fecha.
+model DepartamentoExtra {
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@id([userId, departmentId])
+  @@index([departmentId])
 }

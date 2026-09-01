@@ -21,7 +21,7 @@ const RECEPCAO = "dep-recepcao";
 const FINANCEIRO = "dep-financeiro";
 
 function ator(over: Partial<Ator> = {}): Ator {
-  return { id: "ator", protegido: false, departmentId: RECEPCAO, ...over };
+  return { id: "ator", protegido: false, departamentos: [RECEPCAO], ...over };
 }
 
 function alvo(over: Partial<Alvo> = {}): Alvo {
@@ -40,13 +40,13 @@ describe("Conta protegida", () => {
   });
 
   it("a proteção vence até para outro proprietário", () => {
-    const outroDono = ator({ id: "outro", protegido: true, departmentId: null });
+    const outroDono = ator({ id: "outro", protegido: true, departamentos: [] });
     const motivo = motivoDeBloqueio(alvo({ protegido: true }), outroDono);
     assert.match(motivo ?? "", /conta protegida/);
   });
 
   it("o proprietário alcança qualquer departamento", () => {
-    const dono = ator({ protegido: true, departmentId: null });
+    const dono = ator({ protegido: true, departamentos: [] });
     assert.equal(motivoDeBloqueio(alvo({ departmentId: FINANCEIRO }), dono), null);
   });
 });
@@ -66,12 +66,12 @@ describe("Alcance por departamento", () => {
   });
 
   it("administrador sem departamento não alcança ninguém", () => {
-    const motivo = motivoDeBloqueio(alvo(), ator({ departmentId: null }));
+    const motivo = motivoDeBloqueio(alvo(), ator({ departamentos: [] }));
     assert.match(motivo ?? "", /não tem departamento definido/);
   });
 
   it("qualquer conta continua alterando a si mesma", () => {
-    const solto = ator({ id: "eu", departmentId: null });
+    const solto = ator({ id: "eu", departamentos: [] });
     assert.equal(motivoDeBloqueio(alvo({ id: "eu", departmentId: null }), solto), null);
   });
 });
@@ -83,7 +83,7 @@ describe("Vínculo de departamento", () => {
    */
   it("administrador não se muda para outro departamento", () => {
     const motivo = motivoDeVinculoInvalido(ator(), FINANCEIRO);
-    assert.match(motivo ?? "", /seu próprio departamento/);
+    assert.match(motivo ?? "", /seus próprios departamentos/);
   });
 
   it("administrador vincula ao próprio departamento", () => {
@@ -95,7 +95,7 @@ describe("Vínculo de departamento", () => {
   });
 
   it("o proprietário vincula a qualquer departamento, inclusive nenhum", () => {
-    const dono = ator({ protegido: true, departmentId: null });
+    const dono = ator({ protegido: true, departamentos: [] });
     assert.equal(motivoDeVinculoInvalido(dono, FINANCEIRO), null);
     assert.equal(motivoDeVinculoInvalido(dono, null), null);
   });
@@ -114,7 +114,7 @@ describe("Departamentos oferecidos no formulário", () => {
   });
 
   it("administrador sem departamento não vê nenhum", () => {
-    assert.equal(departamentosPermitidos(ator({ departmentId: null }), todos).length, 0);
+    assert.equal(departamentosPermitidos(ator({ departamentos: [] }), todos).length, 0);
   });
 });
 
@@ -141,18 +141,18 @@ describe("Alcance de conteúdo (cursos, módulos, aulas)", () => {
   });
 
   it("o proprietário alcança curso de qualquer departamento", () => {
-    const dono = ator({ protegido: true, departmentId: null });
+    const dono = ator({ protegido: true, departamentos: [] });
     assert.equal(motivoDeBloqueioDeCurso(curso(FINANCEIRO), dono), null);
   });
 
   it("administrador sem departamento não alcança curso nenhum", () => {
-    const motivo = motivoDeBloqueioDeCurso(curso(RECEPCAO), ator({ departmentId: null }));
+    const motivo = motivoDeBloqueioDeCurso(curso(RECEPCAO), ator({ departamentos: [] }));
     assert.match(motivo ?? "", /não tem departamento definido/);
   });
 
   it("não empurra um curso para outro departamento", () => {
     const motivo = motivoDeVinculoDeCursoInvalido(ator(), FINANCEIRO);
-    assert.match(motivo ?? "", /seu próprio departamento/);
+    assert.match(motivo ?? "", /seus próprios departamentos/);
   });
 
   it("não larga um curso sem departamento", () => {
@@ -160,8 +160,63 @@ describe("Alcance de conteúdo (cursos, módulos, aulas)", () => {
   });
 
   it("o proprietário move um curso para onde quiser", () => {
-    const dono = ator({ protegido: true, departmentId: null });
+    const dono = ator({ protegido: true, departamentos: [] });
     assert.equal(motivoDeVinculoDeCursoInvalido(dono, FINANCEIRO), null);
     assert.equal(motivoDeVinculoDeCursoInvalido(dono, null), null);
+  });
+});
+
+describe("Departamentos adicionais", () => {
+  const EVENTOS = "dep-eventos";
+
+  it("alcança usuários de qualquer um dos seus departamentos", () => {
+    const gestorDeDois = ator({ departamentos: [RECEPCAO, FINANCEIRO] });
+
+    assert.equal(motivoDeBloqueio(alvo({ departmentId: RECEPCAO }), gestorDeDois), null);
+    assert.equal(motivoDeBloqueio(alvo({ departmentId: FINANCEIRO }), gestorDeDois), null);
+  });
+
+  it("continua barrando departamento fora da lista", () => {
+    const gestorDeDois = ator({ departamentos: [RECEPCAO, FINANCEIRO] });
+    const motivo = motivoDeBloqueio(alvo({ departmentId: EVENTOS }), gestorDeDois);
+
+    assert.notEqual(motivo, null);
+    assert.match(String(motivo), /outro departamento/);
+  });
+
+  it("vincula usuário a qualquer um dos seus, e só a esses", () => {
+    const gestorDeDois = ator({ departamentos: [RECEPCAO, FINANCEIRO] });
+
+    assert.equal(motivoDeVinculoInvalido(gestorDeDois, FINANCEIRO), null);
+    assert.notEqual(motivoDeVinculoInvalido(gestorDeDois, EVENTOS), null);
+  });
+
+  it("oferece no formulário exatamente os departamentos que alcança", () => {
+    const gestorDeDois = ator({ departamentos: [RECEPCAO, EVENTOS] });
+    const todos = [{ id: RECEPCAO }, { id: FINANCEIRO }, { id: EVENTOS }];
+
+    const permitidos = departamentosPermitidos(gestorDeDois, todos).map((d) => d.id);
+
+    assert.deepEqual(permitidos, [RECEPCAO, EVENTOS]);
+  });
+
+  it("conteúdo segue a mesma lista", () => {
+    const gestorDeDois = ator({ departamentos: [RECEPCAO, FINANCEIRO] });
+
+    assert.equal(
+      motivoDeBloqueioDeCurso({ title: "X", departmentId: FINANCEIRO }, gestorDeDois),
+      null
+    );
+    assert.notEqual(
+      motivoDeBloqueioDeCurso({ title: "X", departmentId: EVENTOS }, gestorDeDois),
+      null
+    );
+    assert.equal(motivoDeVinculoDeCursoInvalido(gestorDeDois, RECEPCAO), null);
+  });
+
+  it("lista vazia é o mesmo que não ter departamento", () => {
+    const semNada = ator({ departamentos: [] });
+
+    assert.match(String(motivoDeBloqueio(alvo(), semNada)), /não tem departamento definido/);
   });
 });

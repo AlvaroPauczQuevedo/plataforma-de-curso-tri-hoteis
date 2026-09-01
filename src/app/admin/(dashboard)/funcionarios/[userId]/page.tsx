@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { db } from "@/lib/db";
+import { carregarAtorOuFalhar } from "@/lib/alcance-admin";
 import { requireAdmin } from "@/lib/session";
 import { Avatar } from "@/components/ui/avatar";
 import { Alert } from "@/components/ui/alert";
@@ -11,6 +12,7 @@ import { EmployeeForm } from "@/components/admin/employee-form";
 import { EmployeeStatusActions } from "@/components/admin/employee-status-actions";
 import { EnrollSingleForm } from "@/components/admin/enroll-form";
 import { ActionButton } from "@/components/shared/action-button";
+import { impactoDaExclusao } from "@/lib/actions/employees";
 import { removeEnrollment } from "@/lib/actions/enrollments";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import {
@@ -32,11 +34,26 @@ export default async function FuncionarioDetailPage({
   });
   if (!employee) notFound();
 
-  const ator = await db.user.findUniqueOrThrow({
-    where: { id: admin.id },
-    select: { id: true, protegido: true, departmentId: true },
-  });
+  const ator = await carregarAtorOuFalhar(admin.id);
   const motivo = motivoDeBloqueio(employee, ator);
+
+  // Contado no servidor para a confirmacao poder dizer o tamanho do estrago.
+  const impacto = await impactoDaExclusao(employee.id);
+
+  const nomesDosExtras = (
+    await db.departamentoExtra.findMany({
+      where: { userId: employee.id },
+      select: { department: { select: { name: true } } },
+      orderBy: { department: { name: "asc" } },
+    })
+  ).map((d) => d.department.name);
+
+  const extrasDoUsuario = (
+    await db.departamentoExtra.findMany({
+      where: { userId: employee.id },
+      select: { departmentId: true },
+    })
+  ).map((d) => d.departmentId);
 
   const departments = await db.department.findMany({ orderBy: { name: "asc" } });
   const departamentosDisponiveis = departamentosPermitidos(ator, departments);
@@ -77,7 +94,9 @@ export default async function FuncionarioDetailPage({
             {employee.protegido && <Badge tone="navy">Conta protegida</Badge>}
           </div>
           <p className="text-sm text-ink-700/60">
-            {employee.position ?? "Sem cargo definido"} · {employee.department?.name ?? "Sem departamento"}
+            {employee.position ?? "Sem cargo definido"} ·{" "}
+            {employee.department?.name ?? "Sem departamento"}
+            {nomesDosExtras.length > 0 && ` (+ ${nomesDosExtras.join(", ")})`}
           </p>
           <p className="text-xs text-ink-700/50">Último acesso: {formatDateTime(employee.lastLoginAt)}</p>
         </div>
@@ -93,13 +112,22 @@ export default async function FuncionarioDetailPage({
           {motivo} Você continua vendo os dados e o histórico de treinamentos.
         </Alert>
       ) : (
-        <EmployeeStatusActions userId={employee.id} active={employee.active} />
+        <EmployeeStatusActions
+          userId={employee.id}
+          nome={employee.name}
+          active={employee.active}
+          impacto={impacto}
+        />
       )}
 
       {!motivo && (
         <section className="space-y-4 rounded-2xl border border-border bg-white p-6">
           <h2 className="font-semibold text-ink-900">Dados cadastrais</h2>
-          <EmployeeForm departments={departamentosDisponiveis} employee={employee} />
+          <EmployeeForm
+            departments={departamentosDisponiveis}
+            employee={employee}
+            extras={extrasDoUsuario}
+          />
         </section>
       )}
 

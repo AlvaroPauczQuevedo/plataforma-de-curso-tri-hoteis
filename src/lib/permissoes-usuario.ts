@@ -16,10 +16,18 @@
  * um usuário recém-criado e o sistema travaria sozinho.
  */
 
+/**
+ * Quem age.
+ *
+ * `departamentos` traz o principal e os adicionais juntos, porque para decidir
+ * alcance os dois valem igual. A distinção entre eles existe em outro lugar:
+ * relatórios e conformidade agrupam pelo principal, para que a soma das
+ * colunas continue batendo com o total de funcionários.
+ */
 export type Ator = {
   id: string;
   protegido: boolean;
-  departmentId: string | null;
+  departamentos: string[];
 };
 
 export type Alvo = {
@@ -49,10 +57,10 @@ export function motivoDeBloqueio(alvo: Alvo, ator: Ator): string | null {
   }
 
   if (ator.protegido) return null; // o proprietário alcança todos os departamentos
-  if (!ator.departmentId) return SEM_DEPARTAMENTO;
+  if (ator.departamentos.length === 0) return SEM_DEPARTAMENTO;
 
-  if (alvo.departmentId !== ator.departmentId) {
-    return `${alvo.name} é de outro departamento. Você só altera usuários do seu.`;
+  if (!alvo.departmentId || !ator.departamentos.includes(alvo.departmentId)) {
+    return `${alvo.name} é de outro departamento. Você só altera usuários dos seus.`;
   }
 
   return null;
@@ -70,10 +78,10 @@ export function motivoDeVinculoInvalido(
   departmentId: string | null
 ): string | null {
   if (ator.protegido) return null;
-  if (!ator.departmentId) return SEM_DEPARTAMENTO;
+  if (ator.departamentos.length === 0) return SEM_DEPARTAMENTO;
 
-  if (departmentId !== ator.departmentId) {
-    return "Você só pode vincular usuários ao seu próprio departamento.";
+  if (!departmentId || !ator.departamentos.includes(departmentId)) {
+    return "Você só pode vincular usuários aos seus próprios departamentos.";
   }
 
   return null;
@@ -85,7 +93,7 @@ export function departamentosPermitidos<T extends { id: string }>(
   todos: T[]
 ): T[] {
   if (ator.protegido) return todos;
-  return todos.filter((d) => d.id === ator.departmentId);
+  return todos.filter((d) => ator.departamentos.includes(d.id));
 }
 
 /**
@@ -106,14 +114,14 @@ export function motivoDeBloqueioDeCurso(
   ator: Ator
 ): string | null {
   if (ator.protegido) return null; // o proprietário alcança todos os departamentos
-  if (!ator.departmentId) return SEM_DEPARTAMENTO_CONTEUDO;
+  if (ator.departamentos.length === 0) return SEM_DEPARTAMENTO_CONTEUDO;
 
   if (curso.departmentId === null) {
     return `"${curso.title}" ainda não foi atribuído a um departamento. Só o proprietário da plataforma pode alterá-lo ou atribuí-lo.`;
   }
 
-  if (curso.departmentId !== ator.departmentId) {
-    return `"${curso.title}" pertence a outro departamento. Você só altera conteúdo do seu.`;
+  if (!ator.departamentos.includes(curso.departmentId)) {
+    return `"${curso.title}" pertence a outro departamento. Você só altera conteúdo dos seus.`;
   }
 
   return null;
@@ -125,10 +133,10 @@ export function motivoDeVinculoDeCursoInvalido(
   departmentId: string | null
 ): string | null {
   if (ator.protegido) return null;
-  if (!ator.departmentId) return SEM_DEPARTAMENTO_CONTEUDO;
+  if (ator.departamentos.length === 0) return SEM_DEPARTAMENTO_CONTEUDO;
 
-  if (departmentId !== ator.departmentId) {
-    return "Você só pode criar cursos no seu próprio departamento.";
+  if (!departmentId || !ator.departamentos.includes(departmentId)) {
+    return "Você só pode criar cursos nos seus próprios departamentos.";
   }
 
   return null;
@@ -162,10 +170,10 @@ export function motivoDeVinculoDeProvaInvalido(
   departmentId: string | null
 ): string | null {
   if (ator.protegido) return null;
-  if (!ator.departmentId) return SEM_DEPARTAMENTO_CONTEUDO;
+  if (ator.departamentos.length === 0) return SEM_DEPARTAMENTO_CONTEUDO;
 
-  if (departmentId !== ator.departmentId) {
-    return "Você só pode criar provas no seu próprio departamento.";
+  if (!departmentId || !ator.departamentos.includes(departmentId)) {
+    return "Você só pode criar provas nos seus próprios departamentos.";
   }
 
   return null;

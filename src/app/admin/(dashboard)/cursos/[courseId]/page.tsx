@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { db } from "@/lib/db";
+import { carregarAtorOuFalhar } from "@/lib/alcance-admin";
 import { requireAdmin } from "@/lib/session";
 import { Badge } from "@/components/ui/badge";
 import { CourseForm } from "@/components/admin/course-form";
@@ -42,10 +43,7 @@ export default async function CourseEditorPage({
 
   if (!course) notFound();
 
-  const ator = await db.user.findUniqueOrThrow({
-    where: { id: admin.id },
-    select: { id: true, protegido: true, departmentId: true },
-  });
+  const ator = await carregarAtorOuFalhar(admin.id);
   const motivo = motivoDeBloqueioDeCurso(course, ator);
 
   // Só o proprietário escolhe o departamento de um curso. Para os demais o
@@ -60,7 +58,7 @@ export default async function CourseEditorPage({
   */
   const podeObrigar = ator.protegido
     ? todosDepartamentos
-    : todosDepartamentos.filter((d) => d.id === ator.departmentId);
+    : todosDepartamentos.filter((d) => ator.departamentos.includes(d.id));
 
   /*
     Provas que podem ser aplicadas nas aulas deste curso: as gerais e as do
