@@ -35,9 +35,11 @@ jobs:
       ERROS_CLIENTE_LIMITE: "20"
 
     steps:
-      - uses: actions/checkout@v4
+      # v5 nas duas: a v4 roda em Node 20, que os runners do GitHub já marcam
+      # como obsoleto e forçam para o 24.
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           # O projeto declara Node >= 20.9. Usamos a LTS atual.
           node-version: 22
@@ -121,8 +123,16 @@ jobs:
           # Erro da plataforma durante a fumaça é sinal diferente do teto, e
           # ainda não sabemos o que aparece aqui. Fica visível, sem reprovar —
           # quando estiver caracterizado, decide-se se deve derrubar o build.
+          #
+          # O resumo sai como ANOTAÇÃO, e não apenas no log: o log do Actions só
+          # é legível por quem tem direitos de administração no repositório, e
+          # quem investiga uma falha nem sempre tem. A anotação aparece na API
+          # pública da execução.
           if [ "$outros" -gt 0 ]; then
             echo "::warning::a plataforma registrou $outros erro(s) fora do teste durante a fumaça"
+            printf '%s\n' "$registro" | grep -v "tela-de-teste" \
+              | node scripts/resumir-erros.mjs --anotacao
+            echo "--- registro completo, sem os avisos do teste ---"
             printf '%s\n' "$registro" | grep -v "tela-de-teste" | head -20
           fi
 

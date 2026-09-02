@@ -654,6 +654,20 @@ dividir obrigaria a instalar e construir duas vezes.
 Se algo falhar, o último passo despeja a saída do servidor e o registro de erros
 da própria plataforma, que costuma ser onde está a resposta.
 
+O passo do teto também **resume os erros que a plataforma registrou durante a
+fumaça** e emite cada assinatura distinta como anotação da execução. Isso não é
+capricho: o log do Actions só é legível por quem tem direitos de administração
+no repositório, e quem investiga nem sempre tem — a anotação aparece na API
+pública da execução. O resumidor serve fora do CI também:
+
+```bash
+cat ../erros/2026-09-02.jsonl | node scripts/resumir-erros.mjs
+```
+
+Esses erros **não reprovam** o build. São sinal diferente do teto, e enquanto
+não estiverem caracterizados só ficam visíveis; quando se souber o que são,
+decide-se se devem derrubar a verificação.
+
 O banco do CI é criado do zero a cada execução e descartado com a máquina. O
 `NEXTAUTH_SECRET` de lá é descartável e **não deve ser reutilizado** em lugar
 nenhum.
