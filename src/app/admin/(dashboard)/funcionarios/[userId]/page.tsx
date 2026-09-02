@@ -20,11 +20,12 @@ import {
   motivoDeBloqueio,
 } from "@/lib/permissoes-usuario";
 
-export default async function FuncionarioDetailPage({
-  params,
-}: {
-  params: { userId: string };
-}) {
+export default async function FuncionarioDetailPage(
+  props: {
+    params: Promise<{ userId: string }>;
+  }
+) {
+  const params = await props.params;
   const admin = await requireAdmin();
   const { userId } = params;
 

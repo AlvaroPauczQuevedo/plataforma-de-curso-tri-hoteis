@@ -24,14 +24,14 @@
     "@prisma/client": "^6.19.3",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
-    "lucide-react": "^0.468.0",
-    "next": "^14.2.35",
-    "next-auth": "^4.24.11",
-    "nodemailer": "^7.0.13",
+    "lucide-react": "^1.39.0",
+    "next": "^16.3.4",
+    "next-auth": "^4.24.15",
+    "nodemailer": "^9.1.1",
     "pdf-lib": "^1.17.1",
     "prisma": "^6.19.3",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "recharts": "^2.15.4",
     "tailwind-merge": "^3.6.0",
     "tsx": "^4.23.12",
@@ -44,11 +44,16 @@
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22.20.1",
     "@types/nodemailer": "^8.0.1",
-    "@types/react": "^18.3.31",
-    "@types/react-dom": "^18.3.7",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
     "eslint": "^9",
-    "eslint-config-next": "16.3.1",
+    "eslint-config-next": "^16.3.4",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "next-auth": {
+      "nodemailer": "$nodemailer"
+    }
   }
 }

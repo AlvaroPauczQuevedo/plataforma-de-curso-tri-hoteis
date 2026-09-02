@@ -2,7 +2,7 @@
  * O corpo da instrumentação, isolado num módulo próprio.
  *
  * A separação não é organização: é necessidade de build. `instrumentation.ts`
- * é compilado para OS DOIS runtimes quando existe middleware, e o de edge não
+ * é compilado para OS DOIS runtimes quando existe um proxy, e o de edge não
  * tem `node:fs` — o build quebrava antes de chegar a rodar. Mantendo o código
  * de sistema de arquivos aqui e importando este arquivo apenas dentro da
  * verificação de runtime, o empacotador do Next sabe deixá-lo de fora do
@@ -15,8 +15,39 @@ import {
   gravarErro,
   limparErrosAntigos,
 } from "@/lib/registro-de-erros";
+import { db } from "@/lib/db";
 
 await limparErrosAntigos();
+
+/**
+ * Liga o modo WAL do SQLite.
+ *
+ * No modo padrão, uma escrita tranca o arquivo inteiro e toda leitura
+ * concorrente espera. Esta plataforma escreve o tempo todo: o player grava o
+ * avanço do vídeo a cada quatro segundos, POR ALUNO — trinta pessoas
+ * assistindo dão centenas de transações por minuto, e cada uma delas segura as
+ * telas de quem está apenas lendo. O sintoma é SQLITE_BUSY aparecendo em
+ * consultas que não têm nada a ver com vídeo. Em WAL, leitura e escrita param
+ * de disputar.
+ *
+ * Mora aqui, e não em lib/db.ts, porque aquele módulo é avaliado a cada
+ * importação — inclusive pelo `next build`, que não tem DATABASE_URL e
+ * enchia o log de um build bem-sucedido com erros de conexão. A instrumentação
+ * roda uma vez, na subida do servidor.
+ *
+ * O modo fica gravado no próprio arquivo do banco, então ligá-lo uma vez
+ * bastaria; a chamada continua a cada subida para cobrir banco novo e backup
+ * restaurado de antes desta mudança.
+ *
+ * Ressalva: WAL não funciona em sistema de arquivos de rede (NFS, SMB). Ali o
+ * PRAGMA falha, o aviso fica registrado e o banco segue no modo antigo — que é
+ * o comportamento de sempre, não uma regressão.
+ */
+try {
+  await db.$queryRawUnsafe("PRAGMA journal_mode = WAL");
+} catch (erro) {
+  console.error("[banco] nao foi possivel ligar o WAL:", (erro as Error)?.message);
+}
 
 const originalErro = console.error.bind(console);
 

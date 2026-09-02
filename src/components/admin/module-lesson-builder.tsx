@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   DndContext,
@@ -59,15 +59,23 @@ export function ModuleLessonBuilder({
   modules: ModuleWithLessons[];
   provas?: ProvaDisponivel[];
 }) {
-  const [order, setOrder] = useState(modules.map((m) => m.id));
+  /*
+    A ordem em tela é OTIMISTA: ela muda no instante do arraste e só depois o
+    servidor confirma.
+
+    Antes isto era um estado local ressincronizado por efeito a cada mudança da
+    prop — o padrão que a documentação do React desaconselha, porque provoca uma
+    segunda renderização a cada atualização vinda do servidor. Com
+    `useOptimistic`, a ordem otimista é descartada sozinha quando a transição
+    termina, e o que fica é a ordem que o servidor devolveu. Some o efeito, some
+    a dupla renderização, e o caso de falha passa a ser o certo por construção:
+    se a gravação falhar, a lista volta para a ordem real sem ninguém tratar.
+  */
+  const [order, aplicarOrdem] = useOptimistic(modules.map((m) => m.id));
   const [newModuleTitle, setNewModuleTitle] = useState("");
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
-
-  useEffect(() => {
-    setOrder(modules.map((m) => m.id));
-  }, [modules]);
 
   const modulesById = new Map(modules.map((m) => [m.id, m]));
   const orderedModules = order.map((id) => modulesById.get(id)).filter(Boolean) as ModuleWithLessons[];
@@ -78,8 +86,11 @@ export function ModuleLessonBuilder({
     const oldIndex = order.indexOf(String(active.id));
     const newIndex = order.indexOf(String(over.id));
     const newOrder = arrayMove(order, oldIndex, newIndex);
-    setOrder(newOrder);
+
+    // A atualização otimista precisa acontecer DENTRO da transição: é o fim
+    // dela que devolve a lista à ordem vinda do servidor.
     startTransition(async () => {
+      aplicarOrdem(newOrder);
       await reorderModules(courseId, newOrder);
       router.refresh();
     });
@@ -223,13 +234,11 @@ function LessonList({
   module: ModuleWithLessons;
   provas: ProvaDisponivel[];
 }) {
-  const [order, setOrder] = useState(module.lessons.map((l) => l.id));
+  // Mesma ordem otimista da lista de módulos; ver a nota lá em cima.
+  const [order, aplicarOrdem] = useOptimistic(module.lessons.map((l) => l.id));
+  const [, startTransition] = useTransition();
   const router = useRouter();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
-
-  useEffect(() => {
-    setOrder(module.lessons.map((l) => l.id));
-  }, [module.lessons]);
 
   const byId = new Map(module.lessons.map((l) => [l.id, l]));
   const ordered = order.map((id) => byId.get(id)).filter(Boolean) as LessonWithFiles[];
@@ -240,8 +249,12 @@ function LessonList({
     const oldIndex = order.indexOf(String(active.id));
     const newIndex = order.indexOf(String(over.id));
     const newOrder = arrayMove(order, oldIndex, newIndex);
-    setOrder(newOrder);
-    reorderLessons(module.id, newOrder).then(() => router.refresh());
+
+    startTransition(async () => {
+      aplicarOrdem(newOrder);
+      await reorderLessons(module.id, newOrder);
+      router.refresh();
+    });
   }
 
   if (ordered.length === 0) {

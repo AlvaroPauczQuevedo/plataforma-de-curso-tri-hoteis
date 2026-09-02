@@ -16,7 +16,7 @@ export default async function AdminDashboardLayout({
    * já aplicava. Sem isto, a senha temporária que um administrador recebe ao ser
    * cadastrado vale para sempre, e ninguém é obrigado a trocá-la.
    *
-   * A verificação é aqui, no servidor, e não no middleware: o middleware só vê
+   * A verificação é aqui, no servidor, e não no proxy: o proxy só vê
    * o token da sessão, que não acompanha a troca de senha feita depois do login.
    */
   const conta = await db.user.findUnique({

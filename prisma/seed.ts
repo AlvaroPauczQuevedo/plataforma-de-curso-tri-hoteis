@@ -60,10 +60,64 @@ async function createPdfAsset(uploaderId: string, title: string, lines: string[]
   });
 }
 
+/**
+ * Garante que exista o vídeo de apoio do seed.
+ *
+ * `storage/uploads` não é versionado — são arquivos grandes, e o .gitignore os
+ * deixa de fora de propósito. O efeito colateral é que `npx prisma db seed`,
+ * que o README manda rodar logo depois de clonar, quebrava em toda instalação
+ * nova: o seed fazia `stat` num MP4 que nunca esteve no repositório e morria
+ * com exit 1 antes de criar coisa alguma. Quem clonava não conseguia povoar o
+ * ambiente de demonstração, e a mensagem de erro não dizia por quê.
+ *
+ * Se o vídeo de verdade estiver lá, é ele que vale. Se não estiver, o seed
+ * escreve no lugar um MP4 mínimo — cabeçalho válido e nada mais. Ele não
+ * reproduz imagem nenhuma, e não precisa: o que os dados de demonstração
+ * exigem é um arquivo que exista, tenha tamanho e possa ser servido, para que
+ * matrícula, progresso e certificado tenham o que exercitar. Trocar o
+ * substituto por um vídeo real é copiar por cima.
+ */
+async function garantirVideoDeApoio() {
+  await fs.mkdir(path.dirname(SEED_VIDEO_PATH), { recursive: true });
+
+  try {
+    await fs.stat(SEED_VIDEO_PATH);
+    return;
+  } catch {
+    // Não existe. Segue e escreve o substituto.
+  }
+
+  // Caixa "ftyp": tamanho, tipo, marca principal e marcas compatíveis.
+  const ftyp = Buffer.from([
+    0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70,
+    0x69, 0x73, 0x6f, 0x6d, 0x00, 0x00, 0x02, 0x00,
+    0x69, 0x73, 0x6f, 0x6d, 0x69, 0x73, 0x6f, 0x32,
+    0x61, 0x76, 0x63, 0x31, 0x6d, 0x70, 0x34, 0x31,
+  ]);
+
+  // Caixa "free": só para o arquivo ter algum corpo e um tamanho plausível.
+  const free = Buffer.alloc(2048);
+  free.writeUInt32BE(free.length, 0);
+  free.write("free", 4, "ascii");
+
+  await fs.writeFile(SEED_VIDEO_PATH, Buffer.concat([ftyp, free]));
+
+  console.warn(
+    "  [aviso] " +
+      path.relative(process.cwd(), SEED_VIDEO_PATH) +
+      " não existia — foi criado um MP4 mínimo, que não reproduz imagem." +
+      " Copie um vídeo real por cima para ver as aulas de vídeo funcionando."
+  );
+}
+
 async function createVideoAsset(uploaderId: string, originalName: string) {
+  await garantirVideoDeApoio();
+
   const stat = await fs.stat(SEED_VIDEO_PATH);
   const filename = `${randomUUID()}.mp4`;
   const dir = path.join(STORAGE_ROOT, "videos");
+  // O createPdfAsset já fazia isto; aqui faltava, e o destino pode não existir.
+  await fs.mkdir(dir, { recursive: true });
   await fs.copyFile(SEED_VIDEO_PATH, path.join(dir, filename));
 
   return db.fileAsset.create({

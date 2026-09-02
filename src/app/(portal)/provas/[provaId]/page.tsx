@@ -11,11 +11,12 @@ import { usuarioAlcancaProva } from "@/lib/alcance-de-provas";
 
 const ULTIMAS = 3;
 
-export default async function FazerProvaPage({
-  params,
-}: {
-  params: { provaId: string };
-}) {
+export default async function FazerProvaPage(
+  props: {
+    params: Promise<{ provaId: string }>;
+  }
+) {
+  const params = await props.params;
   const user = await requireUser();
 
   const prova = await db.prova.findUnique({

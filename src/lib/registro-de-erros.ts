@@ -28,9 +28,25 @@ import path from "node:path";
 /** Quantos dias de erro ficam guardados. */
 const DIAS_MANTIDOS = Number(process.env.ERROS_DIAS ?? 30);
 
+/*
+  O `turbopackIgnore` abaixo é deliberado.
+
+  O Turbopack avisa que um caminho montado em tempo de execução obriga a
+  rastrear o projeto inteiro para o pacote de produção — e ele está certo sobre
+  o mecanismo. Mas aqui o caminho é configurável DE PROPÓSITO: em produção ele
+  aponta para fora da pasta da aplicação, porque publicar substitui essa pasta
+  e levaria embora os arquivos junto. Prendê-lo a uma subpasta estática, que é
+  a outra saída sugerida, desfaria justamente o que ele existe para permitir.
+*/
 export const ERROS_ROOT = path.resolve(
   process.env.ERROS_DIR ||
-    path.join(process.env.STORAGE_DIR || path.join(process.cwd(), "storage"), "..", "erros")
+    path.join(
+      /* turbopackIgnore: true */
+      process.env.STORAGE_DIR ||
+        path.join(/* turbopackIgnore: true */ process.cwd(), "storage"),
+      "..",
+      "erros"
+    )
 );
 
 export type ErroRegistrado = {
@@ -93,7 +109,7 @@ export async function gravarErro(entrada: ErroRegistrado): Promise<void> {
  */
 export async function lerErrosRecentes(limite = 100): Promise<ErroRegistrado[]> {
   try {
-    const dias = (await readdir(ERROS_ROOT))
+    const dias = (await readdir(/* turbopackIgnore: true */ ERROS_ROOT))
       .filter((n) => n.endsWith(".jsonl"))
       .sort()
       .reverse();
@@ -127,7 +143,7 @@ export async function limparErrosAntigos(): Promise<void> {
       .toISOString()
       .slice(0, 10);
 
-    for (const nome of await readdir(ERROS_ROOT)) {
+    for (const nome of await readdir(/* turbopackIgnore: true */ ERROS_ROOT)) {
       if (!nome.endsWith(".jsonl")) continue;
       if (nome.slice(0, 10) < corte) {
         await rm(path.join(ERROS_ROOT, nome), { force: true });

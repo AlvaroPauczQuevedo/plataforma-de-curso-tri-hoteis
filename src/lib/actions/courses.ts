@@ -283,6 +283,27 @@ export async function deleteCourse(courseId: string): Promise<ActionResult> {
 
 export async function createCategory(name: string): Promise<ActionResult> {
   const admin = await requireAdmin();
+
+  /*
+    Só o proprietário, como já valia para departamento.
+
+    A categoria é global: entra no catálogo de todo mundo, e não pertence a
+    setor nenhum. Quem decide essa estrutura é quem enxerga a plataforma
+    inteira — foi o mesmo raciocínio de `createDepartment`.
+
+    A checagem é repetida AQUI, e não deixada por conta da tela. A única tela
+    que chama esta ação é /admin/configuracoes, que já é exclusiva do
+    proprietário; mas toda action exportada é um endpoint, e as duas funções
+    vizinhas no mesmo formulário — criar e excluir departamento — se defendem
+    sozinhas. Esta era a única das três que dependia da tela.
+  */
+  if (!(await ehProprietario(admin.id))) {
+    return {
+      ok: false,
+      error: "Só o proprietário da plataforma pode criar categorias.",
+    };
+  }
+
   if (!name?.trim()) return { ok: false, error: "Informe o nome da categoria." };
 
   const slug = name

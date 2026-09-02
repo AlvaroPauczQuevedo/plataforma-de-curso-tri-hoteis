@@ -50,12 +50,11 @@ if (process.env.NODE_ENV === "production") {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /**
-   * Liga `src/instrumentation.ts`, que captura os erros do servidor num
-   * arquivo legível pela tela /admin/erros. No Next 14 o gancho ainda é
-   * experimental; no 15 passa a ser padrão.
-   */
-  experimental: { instrumentationHook: true },
+  /*
+    `src/instrumentation.ts` — que captura os erros do servidor num arquivo
+    legível pela tela /admin/erros — não precisa mais ser ligado aqui: o gancho
+    era experimental no Next 14 e passou a ser padrão a partir do 15.
+  */
 
   /**
    * Otimizacao de imagem desligada, de proposito.

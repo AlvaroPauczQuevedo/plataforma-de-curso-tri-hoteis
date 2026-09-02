@@ -3,11 +3,12 @@ import { ArrowLeft } from "lucide-react";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { LoginForm } from "@/components/auth/login-form";
 
-export default function AdminLoginPage({
-  searchParams,
-}: {
-  searchParams: { callbackUrl?: string };
-}) {
+export default async function AdminLoginPage(
+  props: {
+    searchParams: Promise<{ callbackUrl?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   return (
     <AuthShell
       badge="Painel Administrativo"

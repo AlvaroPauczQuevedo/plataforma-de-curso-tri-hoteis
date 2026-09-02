@@ -13,11 +13,12 @@ import { Alert } from "@/components/ui/alert";
 import { statusLabel } from "@/lib/utils";
 import { motivoDeBloqueioDeCurso } from "@/lib/permissoes-usuario";
 
-export default async function CourseEditorPage({
-  params,
-}: {
-  params: { courseId: string };
-}) {
+export default async function CourseEditorPage(
+  props: {
+    params: Promise<{ courseId: string }>;
+  }
+) {
+  const params = await props.params;
   const admin = await requireAdmin();
   const { courseId } = params;
 

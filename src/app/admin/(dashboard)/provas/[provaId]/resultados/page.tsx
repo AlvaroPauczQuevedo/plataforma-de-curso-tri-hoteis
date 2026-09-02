@@ -20,11 +20,12 @@ import { formatDateTime } from "@/lib/utils";
  * mundo erra significa que o curso não cobriu aquilo, ou que o enunciado está
  * ambíguo. Nos dois casos o que precisa mudar é o material, não a nota.
  */
-export default async function ResultadosDaProvaPage({
-  params,
-}: {
-  params: { provaId: string };
-}) {
+export default async function ResultadosDaProvaPage(
+  props: {
+    params: Promise<{ provaId: string }>;
+  }
+) {
+  const params = await props.params;
   const admin = await requireAdmin();
   const ator = await carregarAtorOuFalhar(admin.id);
 

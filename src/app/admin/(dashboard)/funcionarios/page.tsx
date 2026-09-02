@@ -14,17 +14,18 @@ import { formatDateTime } from "@/lib/utils";
 
 const PAGE_SIZE = 10;
 
-export default async function FuncionariosPage({
-  searchParams,
-}: {
-  searchParams: {
-    q?: string;
-    departamento?: string;
-    status?: string;
-    papel?: string;
-    page?: string;
-  };
-}) {
+export default async function FuncionariosPage(
+  props: {
+    searchParams: Promise<{
+      q?: string;
+      departamento?: string;
+      status?: string;
+      papel?: string;
+      page?: string;
+    }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const admin = await requireAdmin();
 
   const page = Math.max(1, Number(searchParams.page ?? 1));

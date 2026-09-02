@@ -11,8 +11,19 @@ import { randomUUID } from "crypto";
  * cada atualização. Em produção aponte para um caminho FORA da pasta do
  * projeto — o mesmo cuidado que DATABASE_URL exige.
  */
+/*
+  O `turbopackIgnore` abaixo é deliberado.
+
+  O Turbopack avisa que um caminho montado em tempo de execução obriga a
+  rastrear o projeto inteiro para o pacote de produção — e ele está certo sobre
+  o mecanismo. Mas aqui o caminho é configurável DE PROPÓSITO: em produção ele
+  aponta para fora da pasta da aplicação, porque publicar substitui essa pasta
+  e levaria embora os arquivos junto. Prendê-lo a uma subpasta estática, que é
+  a outra saída sugerida, desfaria justamente o que ele existe para permitir.
+*/
 export const STORAGE_ROOT = path.resolve(
-  process.env.STORAGE_DIR || path.join(process.cwd(), "storage", "uploads")
+  process.env.STORAGE_DIR ||
+    path.join(/* turbopackIgnore: true */ process.cwd(), "storage", "uploads")
 );
 
 export type UploadKind = "videos" | "pdfs" | "covers" | "avatars";

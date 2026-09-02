@@ -12,11 +12,12 @@ import { statusLabel, difficultyLabel, formatDuration } from "@/lib/utils";
 // Doze cabe em 1, 2 ou 3 colunas sem deixar a última fileira quebrada.
 const PAGE_SIZE = 12;
 
-export default async function CursosPage({
-  searchParams,
-}: {
-  searchParams: { q?: string; categoria?: string; status?: string; page?: string };
-}) {
+export default async function CursosPage(
+  props: {
+    searchParams: Promise<{ q?: string; categoria?: string; status?: string; page?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   await requireAdmin();
 
   const page = Math.max(1, Number(searchParams.page ?? 1));

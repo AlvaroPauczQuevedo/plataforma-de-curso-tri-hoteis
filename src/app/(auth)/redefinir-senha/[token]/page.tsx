@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AuthShell } from "@/components/auth/auth-shell";
@@ -8,11 +8,12 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { resetPassword } from "@/lib/actions/password-reset";
 
-export default function ResetPasswordPage({
-  params,
-}: {
-  params: { token: string };
-}) {
+export default function ResetPasswordPage(
+  props: {
+    params: Promise<{ token: string }>;
+  }
+) {
+  const params = use(props.params);
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<{ ok: true; message?: string } | { ok: false; error: string } | null>(
     null

@@ -11,10 +11,8 @@ import { usuarioAlcancaProva } from "@/lib/alcance-de-provas";
  * prova geral. Sem esta checagem, bastaria conhecer o endereço para baixar a
  * prova de outro setor — e a rota é mais fácil de descobrir que a tela.
  */
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: { provaId: string } }
-) {
+export async function GET(_request: NextRequest, props: { params: Promise<{ provaId: string }> }) {
+  const params = await props.params;
   const usuario = await sessaoDeApi();
   if (!usuario) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });

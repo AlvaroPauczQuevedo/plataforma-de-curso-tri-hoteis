@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { registrarErro } from "@/lib/monitoramento";
+import { consumirVaga, JANELA_NOVA, type Janela } from "@/lib/teto-de-avisos";
 
 /**
  * Recebe do navegador o aviso de que uma tela quebrou.
@@ -20,26 +21,18 @@ import { registrarErro } from "@/lib/monitoramento";
 const TETO_POR_MINUTO = Number(process.env.ERROS_CLIENTE_LIMITE ?? 60);
 const JANELA_MS = 60_000;
 
-let janelaComecouEm = 0;
-let recebidosNaJanela = 0;
+/*
+  A contagem é global e vive em memória, como o agrupamento do monitoramento:
+  não é por origem porque o objetivo não é ser justo entre visitantes, é não
+  deixar o disco encher. A regra em si está em lib/teto-de-avisos, que recebe o
+  relógio por parâmetro e por isso pode ser exercitada em teste.
+*/
+let janela: Janela = JANELA_NOVA;
 
-/**
- * Consome uma vaga da janela. Devolve false quando o teto já estourou.
- *
- * Contagem global e em memória, como o agrupamento do monitoramento: não é
- * por origem porque o objetivo aqui não é ser justo entre visitantes, é não
- * deixar o disco encher.
- */
 function dentroDoTeto(): boolean {
-  const agora = Date.now();
-
-  if (agora - janelaComecouEm > JANELA_MS) {
-    janelaComecouEm = agora;
-    recebidosNaJanela = 0;
-  }
-
-  recebidosNaJanela += 1;
-  return recebidosNaJanela <= TETO_POR_MINUTO;
+  const vaga = consumirVaga(janela, Date.now(), TETO_POR_MINUTO, JANELA_MS);
+  janela = vaga.janela;
+  return vaga.aceito;
 }
 
 export async function POST(request: Request) {

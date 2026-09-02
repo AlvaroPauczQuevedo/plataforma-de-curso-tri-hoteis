@@ -5,11 +5,12 @@ import { CourseCard } from "@/components/portal/course-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CoursesTabs } from "@/components/portal/courses-tabs";
 
-export default async function MeusCursosPage({
-  searchParams,
-}: {
-  searchParams: { aba?: string };
-}) {
+export default async function MeusCursosPage(
+  props: {
+    searchParams: Promise<{ aba?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const user = await requireUser();
   const items = await getEnrollmentsWithProgress(user.id);
 

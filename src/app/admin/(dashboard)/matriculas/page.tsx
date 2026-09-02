@@ -13,11 +13,12 @@ import { formatDate } from "@/lib/utils";
 
 const PAGE_SIZE = 25;
 
-export default async function MatriculasPage({
-  searchParams,
-}: {
-  searchParams: { curso?: string; status?: string; page?: string };
-}) {
+export default async function MatriculasPage(
+  props: {
+    searchParams: Promise<{ curso?: string; status?: string; page?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   await requireAdmin();
 
   const page = Math.max(1, Number(searchParams.page ?? 1));

@@ -17,7 +17,7 @@ export default async function PortalLayout({
 
   /**
    * Senha provisória vigente bloqueia o portal inteiro até a troca. A
-   * verificação é aqui, no servidor, e não no middleware: o middleware só
+   * verificação é aqui, no servidor, e não no proxy: o proxy só
    * enxerga o token da sessão, que não acompanha a troca de senha feita
    * depois do login.
    */

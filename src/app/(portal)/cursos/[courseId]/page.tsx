@@ -23,11 +23,12 @@ import { getNextLessonId } from "@/lib/portal-data";
 
 const lessonIcon = { VIDEO: Video, PDF: FileText, TEXT: BookOpen, PROVA: FileQuestion };
 
-export default async function CourseDetailPage({
-  params,
-}: {
-  params: { courseId: string };
-}) {
+export default async function CourseDetailPage(
+  props: {
+    params: Promise<{ courseId: string }>;
+  }
+) {
+  const params = await props.params;
   const user = await requireUser();
   const { courseId } = params;
 

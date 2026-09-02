@@ -16,11 +16,12 @@ import { cn } from "@/lib/utils";
 
 const lessonIcon = { VIDEO: Video, PDF: FileText, TEXT: BookOpen, PROVA: FileQuestion };
 
-export default async function LessonPlayerPage({
-  params,
-}: {
-  params: { courseId: string; lessonId: string };
-}) {
+export default async function LessonPlayerPage(
+  props: {
+    params: Promise<{ courseId: string; lessonId: string }>;
+  }
+) {
+  const params = await props.params;
   const user = await requireUser();
   const { courseId, lessonId } = params;
 

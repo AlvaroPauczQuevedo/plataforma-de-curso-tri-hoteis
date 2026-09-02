@@ -17,11 +17,12 @@ import { formatDate } from "@/lib/utils";
  */
 export const dynamic = "force-dynamic";
 
-export default async function ValidarCertificadoPage({
-  params,
-}: {
-  params: { codigo: string };
-}) {
+export default async function ValidarCertificadoPage(
+  props: {
+    params: Promise<{ codigo: string }>;
+  }
+) {
+  const params = await props.params;
   const codigo = decodeURIComponent(params.codigo).trim().toUpperCase();
 
   const certificado = await db.certificate.findUnique({

@@ -3,13 +3,12 @@ import { sessaoDeApi } from "@/lib/session";
 import { db } from "@/lib/db";
 import { absoluteStoragePath } from "@/lib/storage";
 import { fileBelongsToAccessibleCourse } from "@/lib/access";
+import { faixaPedida } from "@/lib/faixa-de-bytes";
 import { createReadStream, statSync } from "fs";
 import { Readable } from "stream";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { fileId: string } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ fileId: string }> }) {
+  const params = await props.params;
   const { fileId } = params;
 
   const usuario = await sessaoDeApi();
@@ -50,40 +49,35 @@ export async function GET(
 
   const range = request.headers.get("range");
 
+  /*
+    Só vídeo responde por trecho: é o único formato que o navegador pede aos
+    pedaços, e a conta da faixa vive em lib/faixa-de-bytes, onde dá para
+    exercitar as bordas sem subir servidor.
+  */
   if (range && file.mimeType.startsWith("video/")) {
-    const match = /bytes=(\d+)-(\d*)/.exec(range);
-    const pedidoInicio = match ? parseInt(match[1], 10) : 0;
-    const pedidoFim = match && match[2] ? parseInt(match[2], 10) : stat.size - 1;
+    const faixa = faixaPedida(range, stat.size);
 
-    /*
-      O intervalo é escrito pelo cliente e ia direto para o createReadStream.
-      Um pedido além do fim do arquivo produzia um 206 com Content-Length
-      negativo e corpo vazio — resposta que nenhum player sabe interpretar, e
-      que o navegador trata como vídeo corrompido. A faixa válida vai do byte
-      zero ao último; fora dela a resposta certa é 416, informando o tamanho
-      real para o cliente se reposicionar.
-    */
-    const start = Math.max(0, pedidoInicio);
-    const end = Math.min(pedidoFim, stat.size - 1);
-
-    if (Number.isNaN(start) || Number.isNaN(end) || start > end || start >= stat.size) {
+    if (faixa.tipo === "fora-do-arquivo") {
       return new NextResponse(null, {
         status: 416,
-        headers: { "Content-Range": `bytes */${stat.size}` },
+        headers: { "Content-Range": "bytes */" + String(stat.size) },
       });
     }
 
-    const chunkSize = end - start + 1;
+    if (faixa.tipo === "trecho") {
+      const { inicio, fim } = faixa;
 
-    headers.set("Content-Range", `bytes ${start}-${end}/${stat.size}`);
-    headers.set("Accept-Ranges", "bytes");
-    headers.set("Content-Length", String(chunkSize));
+      headers.set("Content-Range", "bytes " + inicio + "-" + fim + "/" + stat.size);
+      headers.set("Accept-Ranges", "bytes");
+      headers.set("Content-Length", String(fim - inicio + 1));
 
-    const stream = createReadStream(fullPath, { start, end });
-    return new NextResponse(Readable.toWeb(stream) as ReadableStream, {
-      status: 206,
-      headers,
-    });
+      const trecho = createReadStream(fullPath, { start: inicio, end: fim });
+      return new NextResponse(Readable.toWeb(trecho) as ReadableStream, {
+        status: 206,
+        headers,
+      });
+    }
+    // "arquivo-inteiro": cai no 200 comum, logo abaixo.
   }
 
   headers.set("Content-Length", String(stat.size));

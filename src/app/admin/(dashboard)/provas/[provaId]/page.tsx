@@ -13,7 +13,8 @@ import { ProvaActions } from "@/components/admin/prova-actions";
 import { ProvaForm } from "@/components/admin/prova-form";
 import { QuestaoForm } from "@/components/admin/questao-form";
 
-export default async function ProvaPage({ params }: { params: { provaId: string } }) {
+export default async function ProvaPage(props: { params: Promise<{ provaId: string }> }) {
+  const params = await props.params;
   const admin = await requireAdmin();
 
   const prova = await db.prova.findUnique({

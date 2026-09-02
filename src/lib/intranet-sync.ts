@@ -42,7 +42,13 @@ type EmployeeRow = {
 export function intranetDbPath(): string | null {
   const bruto = process.env.INTRANET_DB_PATH;
   if (!bruto?.trim()) return null;
-  return path.isAbsolute(bruto) ? bruto : path.join(process.cwd(), bruto);
+  /*
+    Mesmo caso do STORAGE_DIR: o caminho do banco da intranet é configurado
+    pelo operador e mora fora do projeto. Ver a nota em lib/storage.ts.
+  */
+  return path.isAbsolute(bruto)
+    ? bruto
+    : path.join(/* turbopackIgnore: true */ process.cwd(), bruto);
 }
 
 export function syncDisponivel(): boolean {

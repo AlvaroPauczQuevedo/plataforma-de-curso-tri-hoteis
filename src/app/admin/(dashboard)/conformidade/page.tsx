@@ -21,16 +21,17 @@ const PAGE_SIZE = 25;
  * Só matrículas obrigatórias entram. Curso opcional não é dívida de ninguém, e
  * misturá-lo aqui inflaria o número de pendências até o relatório virar ruído.
  */
-export default async function ConformidadePage({
-  searchParams,
-}: {
-  searchParams: {
-    q?: string;
-    departamento?: string;
-    situacao?: string;
-    page?: string;
-  };
-}) {
+export default async function ConformidadePage(
+  props: {
+    searchParams: Promise<{
+      q?: string;
+      departamento?: string;
+      situacao?: string;
+      page?: string;
+    }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   await requireAdmin();
 
   const page = Math.max(1, Number(searchParams.page ?? 1));

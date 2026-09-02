@@ -53,11 +53,20 @@ export function AppShell({
   const [menuUsuario, setMenuUsuario] = useState(false);
   const refUsuario = useRef<HTMLDivElement>(null);
 
-  // Navegar fecha a gaveta e o menu do usuário.
-  useEffect(() => {
+  /*
+    Navegar fecha a gaveta e o menu do usuário.
+
+    O ajuste acontece DURANTE a renderização, comparando com o caminho
+    anterior, e não num efeito. É o padrão que a documentação do React indica
+    para "reagir à mudança de uma prop": num efeito, a tela chegava a pintar
+    uma vez com a gaveta ainda aberta sobre a página nova antes de fechá-la.
+  */
+  const [caminhoAnterior, setCaminhoAnterior] = useState(caminho);
+  if (caminho !== caminhoAnterior) {
+    setCaminhoAnterior(caminho);
     setMenuAberto(false);
     setMenuUsuario(false);
-  }, [caminho]);
+  }
 
   useEffect(() => {
     function aoClicarFora(evento: MouseEvent) {
