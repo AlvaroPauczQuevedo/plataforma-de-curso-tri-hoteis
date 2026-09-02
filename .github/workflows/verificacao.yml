@@ -106,9 +106,27 @@ jobs:
         # O passo anterior disparou 45 avisos com o teto em 20. A resposta é
         # sempre 204, então só o arquivo prova que o limitador agiu.
         run: |
-          gravadas=$(cat "$ERROS_DIR"/*.jsonl | wc -l)
-          echo "linhas gravadas: $gravadas (teto: $ERROS_CLIENTE_LIMITE)"
-          test "$gravadas" -eq "$ERROS_CLIENTE_LIMITE"
+          registro=$(cat "$ERROS_DIR"/*.jsonl 2>/dev/null || true)
+
+          # Conta SÓ os avisos que o teste disparou. O registro recebe qualquer
+          # erro do servidor, e a primeira versão desta conferência exigia que o
+          # arquivo INTEIRO tivesse 20 linhas — media a coisa errada, e por isso
+          # falhou na estreia enquanto o limitador funcionava.
+          avisos=$(printf '%s\n' "$registro" | grep -c "tela-de-teste" || true)
+          outros=$(printf '%s\n' "$registro" | grep -v "tela-de-teste" | grep -c . || true)
+
+          echo "avisos do teste registrados: $avisos (teto: $ERROS_CLIENTE_LIMITE)"
+          echo "outras linhas no registro: $outros"
+
+          # Erro da plataforma durante a fumaça é sinal diferente do teto, e
+          # ainda não sabemos o que aparece aqui. Fica visível, sem reprovar —
+          # quando estiver caracterizado, decide-se se deve derrubar o build.
+          if [ "$outros" -gt 0 ]; then
+            echo "::warning::a plataforma registrou $outros erro(s) fora do teste durante a fumaça"
+            printf '%s\n' "$registro" | grep -v "tela-de-teste" | head -20
+          fi
+
+          test "$avisos" -eq "$ERROS_CLIENTE_LIMITE"
 
       - name: Diagnóstico, se algo falhou
         if: failure()
