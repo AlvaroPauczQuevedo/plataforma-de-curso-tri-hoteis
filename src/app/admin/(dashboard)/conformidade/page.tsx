@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { SearchInput, SelectFilter, Pagination } from "@/components/admin/table-filters";
 import { formatDate } from "@/lib/utils";
+import { levantarObrigacoes } from "@/lib/conformidade";
 
 const PAGE_SIZE = 25;
 
@@ -35,87 +36,24 @@ export default async function ConformidadePage(
   await requireAdmin();
 
   const page = Math.max(1, Number(searchParams.page ?? 1));
-  const agora = new Date();
 
-  const [obrigatorias, departamentos] = await Promise.all([
-    db.enrollment.findMany({
-      where: {
-        mandatory: true,
-        user: {
-          active: true,
-          role: "EMPLOYEE",
-          ...(searchParams.departamento ? { departmentId: searchParams.departamento } : {}),
-          ...(searchParams.q
-            ? {
-                OR: [
-                  { name: { contains: searchParams.q } },
-                  { email: { contains: searchParams.q } },
-                ],
-              }
-            : {}),
-        },
-      },
-      /*
-        Rasa de propósito.
-
-        Os cartões de resumo obrigam a percorrer TODAS as obrigações: a
-        situação de cada uma depende do progresso, que mora em outra tabela, e
-        nenhum SQL daqui resolve o cruzamento sozinho. Mas nome, e-mail,
-        departamento e título do curso só aparecem nas 25 linhas em tela — e
-        vinham para todas. Era um usuário, um departamento e um curso
-        carregados por obrigação da empresa inteira para mostrar vinte e cinco.
-      */
-      select: { id: true, userId: true, courseId: true, dueDate: true },
-      orderBy: [{ dueDate: "asc" }, { assignedAt: "asc" }],
+  /*
+    A conta vive em lib/conformidade, e não aqui, porque o resumo semanal por
+    e-mail precisa da MESMA. Duas cópias acabariam discordando, e a divergência
+    apareceria do pior jeito: a tela dizendo doze atrasados e o e-mail dizendo
+    nove, sem ninguém saber qual vale.
+  */
+  const [{ linhas, resumo }, departamentos] = await Promise.all([
+    levantarObrigacoes({
+      q: searchParams.q,
+      departamentoId: searchParams.departamento,
     }),
     db.department.findMany({ orderBy: { name: "asc" } }),
   ]);
 
-  /*
-    O percentual mora em CourseProgress, tabela separada de Enrollment e sem
-    relação declarada entre as duas. Buscamos só os pares que estão em tela.
-  */
-  const progressos = await db.courseProgress.findMany({
-    where: {
-      userId: { in: [...new Set(obrigatorias.map((m) => m.userId))] },
-      courseId: { in: [...new Set(obrigatorias.map((m) => m.courseId))] },
-    },
-    select: { userId: true, courseId: true, percent: true },
-  });
-  const percentPor = new Map(progressos.map((p) => [`${p.userId}:${p.courseId}`, p.percent]));
-
-  const DIAS = 24 * 60 * 60 * 1000;
-
-  const linhas = obrigatorias.map((m) => {
-    const percent = percentPor.get(`${m.userId}:${m.courseId}`) ?? 0;
-    const concluido = percent >= 100;
-    const diasRestantes = m.dueDate
-      ? Math.ceil((m.dueDate.getTime() - agora.getTime()) / DIAS)
-      : null;
-
-    // "Vence em breve" é uma semana: tempo de agir sem virar alarme constante.
-    const situacao = concluido
-      ? "em_dia"
-      : diasRestantes !== null && diasRestantes < 0
-        ? "atrasado"
-        : diasRestantes !== null && diasRestantes <= 7
-          ? "vencendo"
-          : "pendente";
-
-    return { ...m, percent, concluido, diasRestantes, situacao };
-  });
-
   const filtradas = searchParams.situacao
     ? linhas.filter((l) => l.situacao === searchParams.situacao)
     : linhas;
-
-  const resumo = {
-    total: linhas.length,
-    atrasado: linhas.filter((l) => l.situacao === "atrasado").length,
-    vencendo: linhas.filter((l) => l.situacao === "vencendo").length,
-    pendente: linhas.filter((l) => l.situacao === "pendente").length,
-    em_dia: linhas.filter((l) => l.situacao === "em_dia").length,
-  };
 
   const totalPages = Math.max(1, Math.ceil(filtradas.length / PAGE_SIZE));
   const pagina = filtradas.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);

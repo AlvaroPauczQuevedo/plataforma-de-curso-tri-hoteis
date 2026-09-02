@@ -17,6 +17,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage } from "pdf-lib";
+import qrcode from "qrcode-generator";
 import { formatDate } from "@/lib/utils";
 
 /* Identidade Tri Hotéis — espelha os tokens de globals.css. */
@@ -155,16 +156,98 @@ export async function generateCertificatePdf(params: {
 
   const base = (process.env.NEXTAUTH_URL || "").replace(/\/+$/, "");
   if (base) {
-    page.drawText(`Confira a autenticidade em ${base}/validar/${code}`, {
+    const endereco = `${base}/validar/${code}`;
+
+    /*
+      O endereço continua impresso por extenso, ao lado do QR.
+
+      Não é redundância: o certificado é feito para ser impresso, e papel
+      fotocopiado, amassado ou enviado por fax leva o QR junto. O texto é o
+      caminho que sobrevive a tudo isso — e o QR é o que faz alguém realmente
+      conferir, em vez de digitar vinte caracteres à mão.
+    */
+    page.drawText(`Confira a autenticidade em ${endereco}`, {
       x: MARGEM,
       y: 102,
       size: 9,
       font: regular,
       color: CINZA,
     });
+
+    desenharQrDeConferencia(page, endereco, regular);
   }
 
   return pdfDoc.save();
+}
+
+/** Lado do QR, em pontos. ~2,7 cm impressos: leitura confortável de celular. */
+const QR_LADO = 78;
+
+/**
+ * O QR que leva à conferência pública do certificado.
+ *
+ * Desenhado módulo a módulo com retângulos, e não embutido como imagem: evita
+ * codificar um PNG só para isto, e o resultado é vetorial — amplia e imprime
+ * sem borrar, que é o que um código lido por câmera precisa.
+ *
+ * Fica na quina inferior direita, área livre do modelo: o selo está em y≈300 e
+ * a logo no alto. Longe também do texto de conferência, na esquerda.
+ */
+function desenharQrDeConferencia(page: PDFPage, endereco: string, fonte: PDFFont) {
+  // Correção de erro "M": tolera ~15% de dano, que é o que um papel guardado
+  // numa pasta por dois anos costuma sofrer.
+  const qr = qrcode(0, "M");
+  qr.addData(endereco);
+  qr.make();
+
+  const modulos = qr.getModuleCount();
+  const lado = QR_LADO / modulos;
+
+  const x = LARGURA - MARGEM - QR_LADO;
+  const y = 104;
+
+  /*
+    A zona de silêncio é parte da norma, não enfeite: sem quatro módulos de
+    margem clara em volta, o leitor não encontra as bordas do código. O fundo
+    do certificado é papel levemente quente, então a folga é pintada de branco
+    — de quebra, garante o contraste independentemente do que houver por perto.
+  */
+  const folga = lado * 4;
+  page.drawRectangle({
+    x: x - folga,
+    y: y - folga,
+    width: QR_LADO + folga * 2,
+    height: QR_LADO + folga * 2,
+    color: BRANCO,
+  });
+
+  for (let linha = 0; linha < modulos; linha += 1) {
+    for (let coluna = 0; coluna < modulos; coluna += 1) {
+      if (!qr.isDark(linha, coluna)) continue;
+
+      page.drawRectangle({
+        // A matriz do QR conta as linhas de cima para baixo; o PDF conta o eixo
+        // Y de baixo para cima. Daí a inversão.
+        x: x + coluna * lado,
+        y: y + QR_LADO - (linha + 1) * lado,
+        width: lado,
+        height: lado,
+        // Tinta do documento (#1c1917): contraste de ~19:1 sobre o branco,
+        // muito acima do que qualquer leitor exige.
+        color: GRAFITE,
+      });
+    }
+  }
+
+  const legenda = "Aponte a câmera";
+  const largura = fonte.widthOfTextAtSize(legenda, 7);
+  page.drawText(legenda, {
+    x: x + (QR_LADO - largura) / 2,
+    y: y - folga - 9,
+    size: 7,
+    font: fonte,
+    color: CINZA,
+  });
 }
 
 /* ------------------------------------------------------------------ arte */

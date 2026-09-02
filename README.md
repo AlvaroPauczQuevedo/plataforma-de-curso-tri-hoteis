@@ -143,6 +143,8 @@ de treinamento e os certificados precisam sobreviver ao desligamento.
 - **Tailwind CSS**, **Recharts** (gráficos), **@dnd-kit** (arrastar e soltar),
   **pdf-lib** (geração de certificados), **Zod** (validação)
 - **Nodemailer** para e-mail — carregado só quando há SMTP configurado
+- **qrcode-generator** para o QR do certificado (sem dependências próprias; os
+  módulos são desenhados como retângulos vetoriais pelo pdf-lib)
 
 ## Identidade visual
 
@@ -318,6 +320,45 @@ melhor não enviar do que falhar a cada cadastro. Uma falha de envio nunca
 invalida a operação — o funcionário é cadastrado de qualquer forma e a senha
 aparece na tela para entrega manual.
 
+## Resumo de conformidade por e-mail (opcional)
+
+```bash
+npm run conformidade:resumo            # levanta e envia
+npm run conformidade:resumo -- --seco  # mostra o que sairia, sem enviar
+```
+
+A tela `/admin/conformidade` responde a pergunta que auditoria e RH fazem —
+nome a nome, quem está em dia e quem está atrasado. O problema é que ela espera
+alguém lembrar de abri-la, e treinamento obrigatório vencido não avisa que
+venceu. Este resumo faz a pergunta chegar sozinha.
+
+Defina `RESUMO_CONFORMIDADE_EMAIL` e agende:
+
+```
+0 8 * * 1  cd /caminho/do/projeto && npm run conformidade:resumo
+```
+
+Roda por agendador, e não dentro da aplicação, de propósito: a plataforma sobe
+em modo standalone, sem processo de fundo, e um temporizador interno dispararia
+de novo a cada reinício.
+
+Três decisões que valem saber:
+
+- **Sem nada a cobrar, nenhum e-mail.** Um resumo que chega toda semana dizendo
+  "está tudo bem" é o que ensina quem recebe a arquivá-lo sem ler — e aí o da
+  semana que importa vai junto.
+- **Falha de envio termina com erro**, ao contrário do resto do sistema. Nos
+  outros pontos o e-mail é um extra sobre algo que já deu certo; aqui é a única
+  razão do script existir, e falhar em silêncio faria o agendador marcar
+  sucesso enquanto o resumo parou de chegar.
+- **A conta é a mesma da tela.** Ela mora em `src/lib/conformidade.ts`, usada
+  pelos dois — uma tela dizendo doze atrasados e um e-mail dizendo nove é pior
+  do que não ter o e-mail.
+
+Sem `RESUMO_CONFORMIDADE_EMAIL` ou sem SMTP, o resumo é impresso na saída e o
+script termina bem: dá para agendá-lo antes de configurar o e-mail e conferir o
+que sairia.
+
 ## Monitoramento (opcional)
 
 Erro em produção vira aviso ativo, por e-mail (`ALERTA_EMAIL`, usa o SMTP acima)
@@ -337,7 +378,7 @@ sobre a falha seria pior do que monitoramento nenhum.
 npm test
 ```
 
-208 testes em 18 arquivos, sem dependência extra — usam o executor nativo do
+228 testes em 20 arquivos, sem dependência extra — usam o executor nativo do
 Node (`node --test`)
 com `tsx` para o TypeScript. Cada execução cria um banco SQLite próprio em pasta
 temporária e aplica as migrações reais; **o banco de desenvolvimento nunca é
@@ -363,6 +404,8 @@ tocado**.
 | `tests/senha-provisoria.test.ts` | Formato e entropia da senha gerada, e a redefinição destravando conta bloqueada por tentativas. |
 | `tests/faixa-de-bytes.test.ts` | O trecho de arquivo pedido pelo cliente, contido no arquivo real — bordas, arquivo vazio, e a garantia de que nenhum tamanho sai negativo. |
 | `tests/teto-de-avisos.test.ts` | O limitador da rota de avisos: teto por janela, virada, e a enxurrada contínua que não pode reabrir a janela. |
+| `tests/conformidade.test.ts` | Quem está em dia: concluído vence prazo vencido, a borda do último dia, obrigação sem prazo, e a regra de que o resumo por e-mail não sai quando não há o que cobrar. |
+| `tests/certificado-pdf.test.ts` | O PDF sai válido com e sem endereço público, e o QR de conferência tem os três padrões de localização nas quinas certas — espelhado, nenhum leitor o abre. |
 
 A regra de crédito de vídeo mora em `src/lib/video-credito.ts` como função pura,
 separada da server action que a usa: é a única parte do sistema cujo resultado
@@ -668,7 +711,11 @@ de liberar qualquer tela.
   porque contém e-mails e hashes de senha.
 - **A conferência de certificado é pública** (`/validar`), e é isso que a torna
   útil: quem confere é gente de fora — auditor, cliente, outro empregador —, que
-  não tem login aqui.
+  não tem login aqui. O PDF traz um **QR** apontando para `/validar/<codigo>`,
+  ao lado do endereço por extenso: o QR é o que faz alguém de fato conferir em
+  vez de digitar vinte caracteres, e o texto é o que sobrevive a uma fotocópia
+  ruim. O QR só é desenhado quando `NEXTAUTH_URL` está definida — sem endereço
+  público não há para onde apontar.
 
 ## Ordem de configuração após publicar
 

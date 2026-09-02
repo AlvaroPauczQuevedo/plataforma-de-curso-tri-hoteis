@@ -145,6 +145,49 @@ export function emailDeBoasVindas(nome: string, email: string, senha: string): M
   };
 }
 
+/**
+ * O resumo semanal de conformidade.
+ *
+ * Existe porque a tela `/admin/conformidade` responde a pergunta certa e
+ * depende de alguém LEMBRAR de abri-la. Treinamento obrigatório vencido é
+ * exatamente o tipo de coisa que ninguém descobre até a auditoria perguntar.
+ *
+ * Só sai quando há o que cobrar: sem atraso nem vencimento próximo, não há
+ * e-mail. Um resumo semanal que chega dizendo "está tudo bem" é o que ensina
+ * quem recebe a arquivá-lo sem ler — e aí o da semana que importa vai junto.
+ * Quem quiser a foto completa abre a tela, que mostra também quem está em dia.
+ */
+export function emailDeConformidade(dados: {
+  atrasados: number;
+  vencendo: number;
+  porSetor: { departamento: string; atrasado: number; vencendo: number }[];
+}): Mensagem | null {
+  if (dados.atrasados === 0 && dados.vencendo === 0) return null;
+
+  const linhas = dados.porSetor.map(
+    (s) => `${s.departamento}: ${s.atrasado} atrasado(s), ${s.vencendo} vencendo`
+  );
+
+  const assunto =
+    dados.atrasados > 0
+      ? `${dados.atrasados} treinamento(s) obrigatório(s) em atraso`
+      : `${dados.vencendo} treinamento(s) obrigatório(s) vencendo`;
+
+  const paragrafos = [
+    "Resumo dos treinamentos obrigatórios da Academia Corporativa.",
+    [`Em atraso: ${dados.atrasados}`, `Vencendo em até 7 dias: ${dados.vencendo}`].join("\n"),
+    linhas.length > 0 ? ["Por setor:", ...linhas].join("\n") : "",
+    `Nome a nome, com prazo e progresso: ${enderecoPublico()}/admin/conformidade`,
+  ].filter(Boolean);
+
+  return {
+    // Quem chama preenche o destinatário: a mensagem não decide para quem vai.
+    para: "",
+    assunto: `[Academia] ${assunto}`,
+    texto: paragrafos.join("\n\n"),
+  };
+}
+
 export function emailDeRedefinicao(nome: string, email: string, token: string): Mensagem {
   const primeiroNome = nome.split(" ")[0];
   return {

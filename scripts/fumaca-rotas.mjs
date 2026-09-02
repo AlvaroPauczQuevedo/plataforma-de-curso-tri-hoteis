@@ -203,6 +203,17 @@ async function testarPdfs() {
       (r.headers.get("content-disposition") ?? "").startsWith("attachment"),
       `content-disposition = ${r.headers.get("content-disposition")}`
     );
+    /*
+      O QR de conferência são centenas de retângulos, um por módulo escuro. Um
+      certificado que voltasse sem ele passaria nas conferências acima — é PDF,
+      é anexo — e chegaria ao auditor sem o que o faz conferível. O tamanho é a
+      prova barata de que o desenho aconteceu.
+    */
+    conferir(
+      "o certificado traz o QR de conferência",
+      corpo.length > 20000,
+      `${corpo.length} bytes — pequeno demais para conter o QR`
+    );
 
     if (CERT_ESTRANHO) {
       await entrar(CERT_ESTRANHO, SENHA_FUNCIONARIO);
