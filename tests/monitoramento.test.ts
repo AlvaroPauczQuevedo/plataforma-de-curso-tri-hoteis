@@ -1,10 +1,18 @@
 import assert from "node:assert/strict";
-import { beforeEach, describe, it, mock } from "node:test";
+import { after, beforeEach, describe, it, mock } from "node:test";
+
+// ANTES do import abaixo, e não por estilo: este módulo desvia o registro de
+// erros para pasta temporária, e o desvio só vale se acontecer antes de
+// `monitoramento` carregar. A explicação inteira está lá dentro.
+import { limparPastaDeErros } from "./erros-temporarios";
+
 import {
   assinaturasConhecidas,
   limparHistoricoDeAvisos,
   registrarErro,
 } from "../src/lib/monitoramento";
+
+after(limparPastaDeErros);
 
 const env = process.env as Record<string, string | undefined>;
 

@@ -407,6 +407,14 @@ tocado**.
 | `tests/conformidade.test.ts` | Quem está em dia: concluído vence prazo vencido, a borda do último dia, obrigação sem prazo, e a regra de que o resumo por e-mail não sai quando não há o que cobrar. |
 | `tests/certificado-pdf.test.ts` | O PDF sai válido com e sem endereço público, e o QR de conferência tem os três padrões de localização nas quinas certas — espelhado, nenhum leitor o abre. |
 
+**Teste que grava em disco precisa desviar o destino.** `tests/ambiente.ts`
+aponta o `DATABASE_URL` para um banco temporário, e `tests/erros-temporarios.ts`
+faz o mesmo com o `ERROS_DIR` — importado ANTES do módulo que grava, porque o
+caminho é resolvido no carregamento. Sem esse cuidado, a suíte despeja erros
+inventados dentro do registro real que a tela `/admin/erros` lê; foram 225
+linhas de lixo acumuladas até a verificação automática denunciar. Se você
+escrever um teste que chame `registrarErro`, importe esse módulo primeiro.
+
 A regra de crédito de vídeo mora em `src/lib/video-credito.ts` como função pura,
 separada da server action que a usa: é a única parte do sistema cujo resultado
 depende do relógio, e assim pode ser exercitada com o tempo controlado, em
