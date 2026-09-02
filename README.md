@@ -136,7 +136,7 @@ de treinamento e os certificados precisam sobreviver ao desligamento.
 
 ## Stack
 
-- **Next.js 14** (App Router) + **TypeScript**
+- **Next.js 16** (App Router, Turbopack) + **React 19** + **TypeScript**
 - **Prisma** + **SQLite** (trocar o `provider` em `prisma/schema.prisma` para
   `postgresql` migra para PostgreSQL sem alterar o restante do código)
 - **NextAuth** (credenciais + JWT), senhas com hash **bcrypt**
@@ -264,7 +264,7 @@ Quatro módulos concentram as decisões que mais lugares precisam respeitar:
 - **Senha provisória**: senha criada por outra pessoa — cadastro de funcionário,
   redefinição pelo painel, sincronização com a intranet — vale **até o primeiro
   acesso**. Portal e painel administrativo bloqueiam a navegação até a troca. A
-  verificação é no servidor e não no middleware: o middleware só enxerga o token
+  verificação é no servidor e não no proxy: o proxy só enxerga o token
   da sessão, que não acompanha a troca feita depois do login.
 - **Certificado conferível**: cada certificado tem um código único e uma página
   pública em `/validar/<código>`, cujo endereço vai impresso no PDF. Mostra
@@ -337,7 +337,8 @@ sobre a falha seria pior do que monitoramento nenhum.
 npm test
 ```
 
-105 testes, sem dependência extra — usam o executor nativo do Node (`node --test`)
+208 testes em 18 arquivos, sem dependência extra — usam o executor nativo do
+Node (`node --test`)
 com `tsx` para o TypeScript. Cada execução cria um banco SQLite próprio em pasta
 temporária e aplica as migrações reais; **o banco de desenvolvimento nunca é
 tocado**.
@@ -353,15 +354,30 @@ tocado**.
 | `tests/email.test.ts` | Só liga com as cinco variáveis; escapa o que veio do cadastro antes de montar o HTML. |
 | `tests/monitoramento.test.ts` | Agrupamento de avisos e a garantia de que uma falha ao avisar não derruba quem chamou. |
 | `tests/certificado-codigo.test.ts` | Imprevisibilidade e ausência de colisão no código do certificado — que virou segredo quando a conferência ficou pública. |
+| `tests/liberacao-de-aulas.test.ts` | Ordem obrigatória: qual aula abre depois de qual, e o mapa que a tela e o servidor precisam calcular igual. |
+| `tests/prova.test.ts` | Correção, nota mínima, questão sem gabarito, o que o reprovado NÃO vê, e a estatística por pessoa e por questão. |
+| `tests/alcance-de-provas.test.ts` | Quem alcança qual prova: departamento principal, adicional, prova geral e a porta por matrícula em curso. Inclui a invariante de que listar e conferir nunca discordam. |
+| `tests/aplicar-prova.test.ts` | Quem pode APLICAR uma prova numa aula — regra distinta da de alterá-la, porque prova geral serve a qualquer curso. |
+| `tests/acesso-a-arquivos.test.ts` | A única barreira entre um id e o acervo: vídeo e PDF de curso matriculado, capa de publicado contra rascunho, avatar, arquivo órfão. |
+| `tests/painel.test.ts` | Os indicadores do painel, com destaque para "atrasado conta pessoas, não matrículas". |
+| `tests/senha-provisoria.test.ts` | Formato e entropia da senha gerada, e a redefinição destravando conta bloqueada por tentativas. |
+| `tests/faixa-de-bytes.test.ts` | O trecho de arquivo pedido pelo cliente, contido no arquivo real — bordas, arquivo vazio, e a garantia de que nenhum tamanho sai negativo. |
+| `tests/teto-de-avisos.test.ts` | O limitador da rota de avisos: teto por janela, virada, e a enxurrada contínua que não pode reabrir a janela. |
 
 A regra de crédito de vídeo mora em `src/lib/video-credito.ts` como função pura,
 separada da server action que a usa: é a única parte do sistema cujo resultado
 depende do relógio, e assim pode ser exercitada com o tempo controlado, em
 milissegundos em vez de minutos.
 
-**O que os testes não cobrem**: comportamento no nível HTTP — cabeçalhos de
-segurança, respostas 401/403 das rotas e o fluxo de sessão do NextAuth. Isso foi
-verificado manualmente e exigiria subir o servidor a cada execução.
+**O nível HTTP é coberto separadamente**, pelos dois roteiros de fumaça
+descritos adiante: eles sobem o servidor de verdade e conferem código de status,
+cabeçalho e corpo — inclusive as recusas (401, 403, 416), que é a metade da
+regra que um teste de "funciona" nunca alcança.
+
+**O que ainda não é coberto por nada automático**: interação de arrastar e
+soltar na montagem de módulos e aulas. A fumaça confirma que a tela responde,
+não que o arraste reordena. Depois de mexer em `module-lesson-builder.tsx`,
+confira à mão.
 
 ## Publicação
 
@@ -522,8 +538,11 @@ em `ERROS_DIR`, fora da pasta publicada — publicar substitui a aplicação, e 
 justamente depois de publicar que se quer olhar.
 
 A captura acontece em `src/instrumentation.ts`, envolvendo `console.error`. É
-rústico, e é o preço de estar no Next 14: o gancho `onRequestError`, feito para
-isto, só existe a partir do 15.
+rústico. Era o preço de estar no Next 14, onde o gancho `onRequestError` —
+feito exatamente para isto — ainda não existia. Com a subida para o Next 16 ele
+passou a estar disponível, e trocar a captura por ele é uma simplificação
+pendente: o envelope de `console.error` continua funcionando, mas deixou de ser
+a única opção.
 
 ### Teste de fumaça
 
@@ -535,11 +554,11 @@ FUMACA_EMAIL=... FUMACA_SENHA=... npm run fumaca -- https://seu-dominio
 Faz login e **navega por todas as telas**, exigindo que respondam. Não verifica
 conteúdo: verifica que a página renderiza.
 
-Parece pouco, e cobre exatamente o que os testes de unidade não alcançam. Eles
-são mais de cento e quarenta e **nenhum renderiza uma página** — todos exercitam
-regras puras. Por isso passou duas vezes o mesmo tipo de falha: erro de
-serialização entre componente de servidor e de cliente, que os tipos não pegam,
-o build não pega, e só aparece quando a tela é aberta.
+Parece pouco, e cobre exatamente o que os testes de unidade não alcançam. São
+mais de duzentos e **nenhum renderiza uma página** — todos exercitam regras
+puras. Por isso passou duas vezes o mesmo tipo de falha: erro de serialização
+entre componente de servidor e de cliente, que os tipos não pegam, o build não
+pega, e só aparece quando a tela é aberta.
 
 Ele **navega** em vez de percorrer uma lista fixa: as telas mais frágeis são as
 que dependem de dado real, e os endereços delas contêm ids que só existem no
@@ -548,6 +567,53 @@ funcionário sem conhecer id nenhum — e cobre sozinho o que for criado depois.
 
 Rode contra produção depois de publicar. As credenciais vêm do ambiente e nunca
 ficam no arquivo.
+
+### Teste de fumaça das rotas de API
+
+```bash
+npm run fumaca:preparar                     # prepara o cenário, imprime os ids
+FUMACA_ADMIN=... FUMACA_SENHA_ADMIN=... npm run fumaca:rotas
+```
+
+O roteiro acima navega por TELAS. Este cobre o que nenhuma tela alcança:
+
+- **entrega de arquivo por trecho** (`Range`) — o caminho que o player de vídeo
+  usa, com `Content-Range`, contagem de bytes e o 416 de quem pede além do fim;
+- **downloads em PDF** — certificado e prova, com as duas recusas que importam:
+  403 para o certificado alheio e 401 sem sessão;
+- **o teto de avisos** de `/api/erros`.
+
+`scripts/preparar-fumaca.mjs` existe para que o cenário seja o MESMO toda vez.
+O `prisma db seed` não cria prova nenhuma e nenhum administrador dele é
+proprietário — sem esse preparo, sete telas ficariam de fora, entre elas as três
+de prova, onde mora a regra de alcance mais delicada da plataforma. O script é
+idempotente e imprime os ids no formato `CHAVE=valor`.
+
+### Verificação automática
+
+O arquivo `.github/workflows/verificacao.yml` roda a bateria inteira a cada
+push em `main` e a cada pull request:
+
+| Passo | O que roda |
+| --- | --- |
+| Tipos | `tsc --noEmit` |
+| Lint | `npm run lint` |
+| Testes | `npm test` — os 208 |
+| Build | `npm run build` |
+| Fumaça | sobe o servidor e navega como proprietário e como funcionário |
+| Rotas | o roteiro de API acima, com as recusas |
+| Teto | confere no ARQUIVO que o limitador parou a gravação |
+
+A ordem é do mais barato para o mais caro, para a falha aparecer cedo. É um
+trabalho só, e não vários em paralelo, porque a fumaça depende do build —
+dividir obrigaria a instalar e construir duas vezes.
+
+Se algo falhar, o último passo despeja a saída do servidor e o registro de erros
+da própria plataforma, que costuma ser onde está a resposta.
+
+O banco do CI é criado do zero a cada execução e descartado com a máquina. O
+`NEXTAUTH_SECRET` de lá é descartável e **não deve ser reutilizado** em lugar
+nenhum.
 
 ### Prisma em Linux
 
@@ -619,4 +685,7 @@ Cada passo destrava o próximo:
 5. **Preencha SMTP e alertas**, se quiser envio de e-mail e aviso de erro.
    Precisa das credenciais do domínio de vocês.
 6. **Rode o teste de fumaça** apontando para o domínio. Leva segundos e é o que
-   pega tela quebrada antes de o primeiro usuário encontrá-la.
+   pega tela quebrada antes de o primeiro usuário encontrá-la. A verificação
+   automática já roda a bateria a cada push, mas ela testa o código — só a
+   fumaça contra o domínio testa a PUBLICAÇÃO: variável faltando, banco não
+   migrado, arquivo fora do lugar.

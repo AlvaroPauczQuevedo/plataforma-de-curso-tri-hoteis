@@ -1,0 +1,120 @@
+# Verificação automática da plataforma.
+#
+# Roda a mesma bateria que se roda à mão antes de publicar, na ordem do mais
+# barato para o mais caro: tipos, lint, testes, build e, por último, a fumaça —
+# que sobe o servidor de verdade e navega por ele.
+#
+# Um trabalho só, e não vários em paralelo, de propósito: a fumaça precisa do
+# build, e dividir obrigaria a instalar as dependências e construir duas vezes.
+# O GitHub já mostra qual PASSO falhou, que é a informação que importa.
+name: Verificação
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verificacao:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      # Banco descartável, criado do zero a cada execução.
+      DATABASE_URL: file:${{ github.workspace }}/ci.db
+      # O seed grava os arquivos de demonstração dentro do projeto; o servidor
+      # precisa procurá-los no mesmo lugar para /api/files encontrá-los.
+      STORAGE_DIR: ${{ github.workspace }}/storage/uploads
+      ERROS_DIR: ${{ github.workspace }}/erros-ci
+      NEXTAUTH_URL: http://localhost:3000
+      # Valor descartável: esta instância existe por poucos minutos e não
+      # guarda dado de ninguém. Nunca reutilize isto fora do CI.
+      NEXTAUTH_SECRET: segredo-exclusivo-do-ci-sem-valor-fora-daqui
+      # Teto baixo para a conferência do limitador ser rápida e evidente.
+      ERROS_CLIENTE_LIMITE: "20"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # O projeto declara Node >= 20.9. Usamos a LTS atual.
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Tipos
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Testes
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      # ------------------------------------------------------------ fumaça
+
+      - name: Preparar o banco da fumaça
+        run: |
+          npx prisma migrate deploy
+          npx prisma db seed
+          node scripts/preparar-fumaca.mjs >> "$GITHUB_ENV"
+
+      - name: Subir o servidor
+        run: |
+          # Em segundo plano, com a saída guardada: se a fumaça falhar depois,
+          # é neste arquivo que está o motivo.
+          nohup npx next start -p 3000 > servidor.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -sf -o /dev/null http://localhost:3000/login; then
+              echo "servidor no ar após ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "o servidor não respondeu em 60s:"
+          cat servidor.log
+          exit 1
+
+      - name: Fumaça — proprietário
+        env:
+          FUMACA_EMAIL: ${{ env.FUMACA_ADMIN }}
+          FUMACA_SENHA: Admin@123
+          FUMACA_LIMITE: "90"
+        run: node scripts/fumaca.mjs http://localhost:3000
+
+      - name: Fumaça — funcionário
+        env:
+          FUMACA_EMAIL: ${{ env.FUMACA_FUNCIONARIO }}
+          FUMACA_SENHA: Colaborador@123
+          FUMACA_LIMITE: "90"
+        run: node scripts/fumaca.mjs http://localhost:3000
+
+      - name: Fumaça — rotas de API
+        env:
+          FUMACA_SENHA_ADMIN: Admin@123
+          FUMACA_SENHA_FUNCIONARIO: Colaborador@123
+        run: node scripts/fumaca-rotas.mjs http://localhost:3000
+
+      - name: Conferir que o teto de avisos parou a gravação
+        # O passo anterior disparou 45 avisos com o teto em 20. A resposta é
+        # sempre 204, então só o arquivo prova que o limitador agiu.
+        run: |
+          gravadas=$(cat "$ERROS_DIR"/*.jsonl | wc -l)
+          echo "linhas gravadas: $gravadas (teto: $ERROS_CLIENTE_LIMITE)"
+          test "$gravadas" -eq "$ERROS_CLIENTE_LIMITE"
+
+      - name: Diagnóstico, se algo falhou
+        if: failure()
+        run: |
+          echo "===== saída do servidor ====="
+          cat servidor.log 2>/dev/null || echo "(o servidor não chegou a subir)"
+          echo
+          echo "===== erros registrados pela plataforma ====="
+          cat "$ERROS_DIR"/*.jsonl 2>/dev/null || echo "(nenhum)"

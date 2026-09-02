@@ -62,3 +62,11 @@ next-env.d.ts
 
 # registro de erros do servidor: contém pilha de chamadas e caminhos internos
 /erros/
+
+# artefatos da verificação automática, gerados a cada execução
+/ci.db
+/ci.db-journal
+/ci.db-wal
+/ci.db-shm
+/erros-ci/
+/servidor.log

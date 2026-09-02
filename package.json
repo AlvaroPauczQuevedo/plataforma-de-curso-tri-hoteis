@@ -14,6 +14,8 @@
     "start:local": "next start",
     "backup": "node scripts/backup.mjs",
     "fumaca": "node scripts/fumaca.mjs",
+    "fumaca:rotas": "node scripts/fumaca-rotas.mjs",
+    "fumaca:preparar": "node scripts/preparar-fumaca.mjs",
     "test": "node --import tsx --test tests/*.test.ts",
     "postinstall": "node scripts/pos-instalacao.mjs"
   },
