@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "node scripts/servidor.mjs dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "node scripts/servidor.mjs start",
     "lint": "eslint",
     "dev:local": "next dev",

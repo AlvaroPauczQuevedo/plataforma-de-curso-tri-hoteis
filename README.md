@@ -512,6 +512,48 @@ npm start
 
 Copie `.env.example` para `.env` e ajuste — ele documenta cada variável.
 
+### O build usa Webpack, e não Turbopack — não "conserte" isto
+
+O script de build é `next build --webpack`. **Não troque para o padrão**, por mais
+que o Next recomende Turbopack em toda a documentação.
+
+O Turbopack exige as bindings NATIVAS do SWC. A hospedagem desta plataforma tem
+glibc antiga demais para elas:
+
+```
+⚠ Attempted to load @next/swc-linux-x64-gnu, but an error occurred:
+  /lib64/libm.so.6: version `GLIBC_2.29' not found
+> Build error occurred
+Error: Turbopack is not supported on this platform (linux/x64) because native
+bindings are not available.
+```
+
+O Next cai para as bindings WASM, que servem para compilar mas **não** para o
+Turbopack — e o build morre aí. Com `--webpack` ele compila normalmente.
+
+Isso derrubou uma publicação **depois** de as migrações já terem sido aplicadas,
+o que deixa o pior estado possível: banco novo, aplicação velha. Ver *Publicar
+com migração de schema* logo abaixo.
+
+O desenvolvimento (`npm run dev`) continua no Turbopack, que é local e tem as
+bindings nativas. O CI usa `npm run build`, portanto compila do mesmo jeito que
+a produção — é de propósito: um CI que constrói com outro bundler não está
+verificando o que vai ao ar.
+
+### Publicar com migração de schema
+
+As migrações rodam no `npm ci`/`npm install`, **antes** do build. Se o build
+falhar depois disso, o banco já está no schema novo enquanto a aplicação no ar
+ainda é a antiga — e código antigo não conhece as colunas novas. Um cadastro de
+funcionário, por exemplo, morre em `NOT NULL constraint failed: User.username`.
+
+Por isso, ao publicar algo que traga migração:
+
+1. **`npm run backup` antes de tudo.** Migração reescreve tabela.
+2. Se o build falhar, **conserte e publique de novo antes de usar o sistema** —
+   não é um erro que dá para deixar para amanhã.
+3. Depois de publicar, confira uma tela que dependa do que mudou.
+
 **As migrações se aplicam na instalação de dependências.** O `postinstall`
 chama `scripts/pos-instalacao.mjs`, que roda `prisma generate` sempre e
 `prisma migrate deploy` quando `NODE_ENV=production` — ou quando
