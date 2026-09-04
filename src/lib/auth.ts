@@ -1,6 +1,7 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "@/lib/db";
+import { normalizarNomeDeUsuario } from "@/lib/nome-de-usuario";
 import { verifyPassword } from "@/lib/password";
 import {
   ipDaRequisicao,
@@ -23,32 +24,41 @@ export const authOptions: NextAuthOptions = {
       id: "credentials",
       name: "Credenciais",
       credentials: {
-        email: { label: "E-mail", type: "email" },
+        username: { label: "Nome de usuário", type: "text" },
         password: { label: "Senha", type: "password" },
       },
       async authorize(credentials, req) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Informe e-mail e senha.");
+        if (!credentials?.username || !credentials?.password) {
+          throw new Error("Informe nome de usuário e senha.");
         }
 
-        const email = credentials.email.toLowerCase().trim();
+        /*
+          A mesma normalização do cadastro, aplicada ao que foi digitado.
+
+          Sem isto, quem cadastrou "maria.silva" e digita "Maria Silva" no
+          celular — que sugere maiúscula na primeira letra sozinho — recebe
+          "usuário ou senha inválidos" tendo acertado os dois. O identificador
+          gravado é sempre a forma normalizada, então normalizar a entrada
+          alarga o que o login aceita sem alargar o que ele encontra.
+        */
+        const username = normalizarNomeDeUsuario(credentials.username);
         const ip = ipDaRequisicao(req?.headers as Record<string, string> | undefined);
 
         // Barreiras de tentativa antes de qualquer comparação de senha.
         try {
-          await permitirTentativa(email, ip);
+          await permitirTentativa(username, ip);
         } catch (erro) {
           if (erro instanceof LoginBloqueado) throw new Error(erro.message);
           throw erro;
         }
 
-        const user = await db.user.findUnique({ where: { email } });
+        const user = await db.user.findUnique({ where: { username } });
 
         if (!user) {
           // Registra mesmo sem conta: alimenta a barreira por origem contra
-          // quem varre endereços.
-          await registrarFalha(email, ip);
-          throw new Error("E-mail ou senha inválidos.");
+          // quem varre nomes de usuário.
+          await registrarFalha(username, ip);
+          throw new Error("Nome de usuário ou senha inválidos.");
         }
 
         if (!user.active) {
@@ -57,11 +67,11 @@ export const authOptions: NextAuthOptions = {
 
         const valid = await verifyPassword(credentials.password, user.passwordHash);
         if (!valid) {
-          await registrarFalha(email, ip);
-          throw new Error("E-mail ou senha inválidos.");
+          await registrarFalha(username, ip);
+          throw new Error("Nome de usuário ou senha inválidos.");
         }
 
-        await registrarSucesso(user.id, email, ip);
+        await registrarSucesso(user.id, username, ip);
 
         await db.user.update({
           where: { id: user.id },

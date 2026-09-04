@@ -130,17 +130,33 @@ export async function enviarEmail(mensagem: Mensagem): Promise<ResultadoEnvio> {
 
 // ---------- Mensagens da plataforma ----------
 
-export function emailDeBoasVindas(nome: string, email: string, senha: string): Mensagem {
+/**
+ * Aviso de senha provisória.
+ *
+ * Chamava-se `emailDeBoasVindas` e saía a cada cadastro. Não sai mais: quando
+ * a conta é criada ela ainda não tem endereço nenhum — o e-mail é pessoal e
+ * quem o informa é a própria pessoa, no perfil, confirmando por link. Sobrou o
+ * caso da redefinição feita pelo painel, para quem já cadastrou a caixa.
+ *
+ * O login vai no corpo porque a senha sozinha não serve: o identificador é um
+ * nome de usuário escolhido pelo RH, não o endereço para onde a mensagem foi.
+ */
+export function emailDeSenhaProvisoria(
+  nome: string,
+  email: string,
+  username: string,
+  senha: string
+): Mensagem {
   const primeiroNome = nome.split(" ")[0];
   return {
     para: email,
-    assunto: "Seu acesso à Academia Corporativa Tri Hotéis",
+    assunto: "Nova senha da Academia Corporativa Tri Hotéis",
     texto: [
       `Olá, ${primeiroNome}.`,
-      "Seu acesso à Academia Corporativa foi criado. Entre com:",
-      `Endereço: ${enderecoPublico()}\nE-mail: ${email}\nSenha provisória: ${senha}`,
+      "Sua senha da Academia Corporativa foi redefinida. Entre com:",
+      `Endereço: ${enderecoPublico()}\nNome de usuário: ${username}\nSenha provisória: ${senha}`,
       "A plataforma vai pedir uma nova senha no primeiro acesso. Esta senha provisória deixa de valer nesse momento.",
-      "Se você não esperava este e-mail, avise o RH.",
+      "Se você não pediu isto, avise o RH.",
     ].join("\n\n"),
   };
 }
@@ -185,6 +201,35 @@ export function emailDeConformidade(dados: {
     para: "",
     assunto: `[Academia] ${assunto}`,
     texto: paragrafos.join("\n\n"),
+  };
+}
+
+/**
+ * Confirmação do e-mail pessoal que a pessoa acabou de informar no perfil.
+ *
+ * Este link é o que transforma "digitou um endereço" em "provou que lê aquela
+ * caixa". Enquanto ele não for usado, o endereço não entra no cadastro e não
+ * serve para recuperar senha nenhuma — ver o modelo EmailConfirmacao.
+ *
+ * O texto avisa quem NÃO pediu, porque essa é a mensagem que chega quando
+ * alguém erra um dígito e acerta a caixa de um estranho.
+ */
+export function emailDeConfirmacaoDeEndereco(
+  nome: string,
+  email: string,
+  token: string
+): Mensagem {
+  const primeiroNome = nome.split(" ")[0];
+  return {
+    para: email,
+    assunto: "Confirme seu e-mail — Academia Corporativa",
+    texto: [
+      `Olá, ${primeiroNome}.`,
+      "Você pediu para usar este endereço na Academia Corporativa Tri Hotéis. Confirme pelo link abaixo:",
+      `${enderecoPublico()}/confirmar-email/${token}`,
+      "O link vale por 24 horas e só pode ser usado uma vez. Depois de confirmado, este endereço passa a receber o link de redefinição quando você esquecer a senha.",
+      "Se não foi você, ignore esta mensagem: sem o clique, nada é gravado e ninguém passa a ter acesso à sua conta.",
+    ].join("\n\n"),
   };
 }
 

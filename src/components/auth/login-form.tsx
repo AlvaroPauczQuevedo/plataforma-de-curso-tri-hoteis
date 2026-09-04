@@ -14,7 +14,7 @@ export function LoginForm({
   variant: "employee" | "admin";
   callbackUrl?: string;
 }) {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -26,13 +26,13 @@ export function LoginForm({
     setLoading(true);
 
     const result = await signIn("credentials", {
-      email,
+      username,
       password,
       redirect: false,
     });
 
     if (!result || result.error) {
-      setError("E-mail ou senha inválidos.");
+      setError("Nome de usuário ou senha inválidos.");
       setLoading(false);
       return;
     }
@@ -54,17 +54,26 @@ export function LoginForm({
       {error && <Alert tone="danger">{error}</Alert>}
 
       <div className="space-y-1.5">
-        <label htmlFor="email" className="text-sm font-medium text-ink-900">
-          E-mail
+        <label htmlFor="username" className="text-sm font-medium text-ink-900">
+          Nome de usuário
         </label>
         <input
-          id="email"
-          type="email"
+          id="username"
+          type="text"
           required
-          autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="seunome@trihoteis.com.br"
+          autoComplete="username"
+          /*
+            O celular é onde a maior parte da rede entra, e por padrão ele
+            capitaliza a primeira letra e tenta corrigir a palavra. As duas
+            coisas estragam um identificador que é sempre minúsculo — e o erro
+            resultante ("usuário ou senha inválidos") não diz que foi o teclado.
+          */
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="maria.silva"
           className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
         />
       </div>

@@ -107,7 +107,7 @@ export async function levantarObrigacoes(
     role: "EMPLOYEE",
     ...(filtro.departamentoId ? { departmentId: filtro.departamentoId } : {}),
     ...(filtro.q
-      ? { OR: [{ name: { contains: filtro.q } }, { email: { contains: filtro.q } }] }
+      ? { OR: [{ name: { contains: filtro.q } }, { username: { contains: filtro.q } }] }
       : {}),
   };
 

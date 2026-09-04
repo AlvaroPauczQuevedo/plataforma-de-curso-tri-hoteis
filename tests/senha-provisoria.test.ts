@@ -73,10 +73,10 @@ describe("Redefinir a senha destrava a conta", () => {
     const pessoa = await criarFuncionario();
 
     for (let i = 0; i < MAX_POR_CONTA; i += 1) {
-      await registrarFalha(pessoa.email, "");
+      await registrarFalha(pessoa.username, "");
     }
     assert.equal(
-      await passaNaBarreira(pessoa.email),
+      await passaNaBarreira(pessoa.username),
       false,
       "a conta deveria estar bloqueada antes da redefinição"
     );
@@ -94,7 +94,7 @@ describe("Redefinir a senha destrava a conta", () => {
     assert.equal(resultado.ok, true);
 
     assert.equal(
-      await passaNaBarreira(pessoa.email),
+      await passaNaBarreira(pessoa.username),
       true,
       "depois de redefinir, o login precisa passar"
     );
@@ -104,7 +104,7 @@ describe("Redefinir a senha destrava a conta", () => {
     const pessoa = await criarFuncionario();
 
     for (let i = 0; i < MAX_POR_CONTA; i += 1) {
-      await registrarFalha(pessoa.email, "");
+      await registrarFalha(pessoa.username, "");
     }
 
     const token = `token-limpeza-${pessoa.id}`;

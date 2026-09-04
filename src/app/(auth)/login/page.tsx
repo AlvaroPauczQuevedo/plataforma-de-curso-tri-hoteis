@@ -11,7 +11,7 @@ export default async function LoginPage(
   return (
     <AuthShell
       title="Bem-vindo de volta"
-      subtitle="Entre com seu e-mail e senha para acessar seus cursos."
+      subtitle="Entre com seu nome de usuário e senha para acessar seus cursos."
       footer={
         <p className="text-center text-xs text-ink-700/60">
           É administrador?{" "}

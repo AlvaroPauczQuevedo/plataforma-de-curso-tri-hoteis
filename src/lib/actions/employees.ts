@@ -7,8 +7,9 @@ import { requireAdmin } from "@/lib/session";
 import { hashPassword, senhaProvisoria } from "@/lib/password";
 import { logAdminActivity } from "@/lib/activity-log";
 import { randomUUID } from "crypto";
-import { emailDeBoasVindas, emailDeRedefinicao, enviarEmail } from "@/lib/email";
+import { emailDeRedefinicao, emailDeSenhaProvisoria, enviarEmail } from "@/lib/email";
 import { sincronizarUsuario } from "@/lib/matricula-automatica";
+import { motivoDeNomeInvalido, normalizarNomeDeUsuario } from "@/lib/nome-de-usuario";
 import {
   type Recusa,
   bloqueioDeAlteracao,
@@ -18,13 +19,29 @@ import {
 
 const employeeSchema = z.object({
   name: z.string().min(2, "Informe o nome completo."),
-  email: z.string().email("E-mail inválido."),
+  username: z.string().min(1, "Informe o nome de usuário."),
   position: z.string().optional(),
   departmentId: z.string().optional(),
   role: z.enum(["ADMIN", "EMPLOYEE"]).default("EMPLOYEE"),
 });
 
 export type ActionResult = { ok: true; message?: string } | { ok: false; error: string };
+
+/**
+ * Normaliza e confere o nome de usuário digitado no formulário.
+ *
+ * O e-mail saiu do cadastro: a rede não tem caixa corporativa, e o endereço
+ * pessoal é a própria pessoa quem informa depois, no perfil, confirmando por
+ * link. Aqui o administrador define só o identificador de acesso.
+ *
+ * A checagem roda no servidor mesmo havendo validação na tela, pela razão de
+ * sempre: a tela é uma conveniência, a server action é a fronteira.
+ */
+function lerNomeDeUsuario(bruto: string): { ok: true; valor: string } | Recusa {
+  const username = normalizarNomeDeUsuario(bruto);
+  const motivo = motivoDeNomeInvalido(username);
+  return motivo ? { ok: false, error: motivo } : { ok: true, valor: username };
+}
 
 /**
  * Lê os departamentos adicionais do formulário, já sem o principal e sem
@@ -74,7 +91,7 @@ export async function createEmployee(formData: FormData): Promise<ActionResult> 
 
   const parsed = employeeSchema.safeParse({
     name: formData.get("name"),
-    email: formData.get("email"),
+    username: formData.get("username"),
     position: formData.get("position") || undefined,
     departmentId: formData.get("departmentId") || undefined,
     role: formData.get("role") || "EMPLOYEE",
@@ -84,17 +101,24 @@ export async function createEmployee(formData: FormData): Promise<ActionResult> 
     return { ok: false, error: parsed.error.issues[0].message };
   }
 
+  const nome = lerNomeDeUsuario(parsed.data.username);
+  if (!nome.ok) return nome;
+
   const vinculo = await bloqueioDeVinculo(
     admin.id,
     parsed.data.departmentId || null
   );
   if (vinculo) return vinculo;
 
-  const existing = await db.user.findUnique({
-    where: { email: parsed.data.email.toLowerCase().trim() },
-  });
+  const existing = await db.user.findUnique({ where: { username: nome.valor } });
   if (existing) {
-    return { ok: false, error: "Já existe um usuário com este e-mail." };
+    // A mensagem mostra a forma NORMALIZADA, e não o que foi digitado: quem
+    // tentou cadastrar "Maria Silva" precisa entender que o conflito é com
+    // "maria.silva", senão procura na lista pelo texto errado.
+    return {
+      ok: false,
+      error: `Já existe um usuário com o nome "${nome.valor}". Escolha outro — o sobrenome do meio costuma resolver.`,
+    };
   }
 
   const tempPassword = senhaProvisoria();
@@ -103,7 +127,9 @@ export async function createEmployee(formData: FormData): Promise<ActionResult> 
   const user = await db.user.create({
     data: {
       name: parsed.data.name,
-      email: parsed.data.email.toLowerCase().trim(),
+      username: nome.valor,
+      // Sem e-mail: a rede não tem caixa corporativa, e o endereço pessoal é
+      // a própria pessoa quem cadastra no perfil, confirmando por link.
       position: parsed.data.position,
       departmentId: parsed.data.departmentId || null,
       role: parsed.data.role,
@@ -140,10 +166,19 @@ export async function createEmployee(formData: FormData): Promise<ActionResult> 
   // Já entra matriculado no que for obrigatório em todos os setores dele.
   const matriculas = await sincronizarUsuario(user.id, admin.id);
 
-  // O envio é um extra: falhando, o cadastro continua válido e a senha aparece
-  // na tela para entrega à mão, exatamente como funcionava antes.
-  const envio = await enviarEmail(emailDeBoasVindas(user.name, user.email, tempPassword));
+  /*
+    Nenhum e-mail é enviado aqui, e não por falta de configuração: no momento
+    do cadastro a conta ainda não TEM endereço, porque quem informa é a própria
+    pessoa, depois, no perfil.
 
+    Antes esta linha disparava um envio sempre. Com o e-mail corporativo
+    inexistente e um endereço inventado no lugar, cada admissão viraria uma
+    mensagem devolvida no dia em que alguém ligasse o SMTP para receber o
+    resumo de conformidade — e ninguém ligaria a enxurrada de retorno a uma
+    decisão tomada meses antes.
+
+    A entrega é em mãos: a senha provisória aparece na tela, uma vez.
+  */
   const sufixo =
     matriculas.criadas > 0
       ? ` Matriculado automaticamente em ${matriculas.criadas} curso(s) obrigatório(s).`
@@ -153,9 +188,9 @@ export async function createEmployee(formData: FormData): Promise<ActionResult> 
   return {
     ok: true,
     message:
-      (envio.enviado
-        ? `Funcionário cadastrado e avisado por e-mail. Senha temporária: ${tempPassword}`
-        : `Funcionário cadastrado. Senha temporária: ${tempPassword}`) + sufixo,
+      `Funcionário cadastrado. Usuário: ${nome.valor} — senha provisória: ${tempPassword}. ` +
+      `Anote e entregue: esta senha não volta a ser exibida.` +
+      sufixo,
   };
 }
 
@@ -170,7 +205,7 @@ export async function updateEmployee(
 
   const parsed = employeeSchema.safeParse({
     name: formData.get("name"),
-    email: formData.get("email"),
+    username: formData.get("username"),
     position: formData.get("position") || undefined,
     departmentId: formData.get("departmentId") || undefined,
     role: formData.get("role") || "EMPLOYEE",
@@ -180,6 +215,9 @@ export async function updateEmployee(
     return { ok: false, error: parsed.error.issues[0].message };
   }
 
+  const nome = lerNomeDeUsuario(parsed.data.username);
+  if (!nome.ok) return nome;
+
   const vinculo = await bloqueioDeVinculo(
     admin.id,
     parsed.data.departmentId || null
@@ -187,17 +225,30 @@ export async function updateEmployee(
   if (vinculo) return vinculo;
 
   const existing = await db.user.findFirst({
-    where: { email: parsed.data.email.toLowerCase().trim(), NOT: { id: userId } },
+    where: { username: nome.valor, NOT: { id: userId } },
   });
   if (existing) {
-    return { ok: false, error: "Já existe outro usuário com este e-mail." };
+    return {
+      ok: false,
+      error: `Já existe outro usuário com o nome "${nome.valor}".`,
+    };
   }
 
+  /*
+    O e-mail NÃO é tocado por aqui.
+
+    Ele é o canal de recuperação de senha da pessoa, e foi ela quem provou ser
+    dona daquela caixa clicando no link. Deixar um administrador reescrever o
+    campo daria a qualquer um com acesso ao painel um caminho de uma etapa para
+    tomar a conta de outro: aponta o e-mail para si, pede "esqueci minha senha",
+    entra. As travas de `alcance-admin` limitam QUEM ele alcança, não impedem
+    esse movimento dentro do próprio departamento.
+  */
   await db.user.update({
     where: { id: userId },
     data: {
       name: parsed.data.name,
-      email: parsed.data.email.toLowerCase().trim(),
+      username: nome.valor,
       position: parsed.data.position,
       departmentId: parsed.data.departmentId || null,
       role: parsed.data.role,
@@ -320,14 +371,23 @@ export async function resetEmployeePassword(userId: string): Promise<ActionResul
     targetId: userId,
   });
 
-  const envio = await enviarEmail(emailDeBoasVindas(alvo.name, alvo.email, tempPassword));
+  /*
+    Só envia para quem TEM endereço confirmado — hoje a minoria.
+
+    A senha ainda aparece na tela nos dois casos: quem administra precisa poder
+    entregá-la em mãos sem depender de a mensagem ter saído, e é assim que a
+    maior parte da rede vai receber.
+  */
+  const envio = alvo.email
+    ? await enviarEmail(emailDeSenhaProvisoria(alvo.name, alvo.email, alvo.username, tempPassword))
+    : null;
 
   revalidatePath(`/admin/funcionarios/${userId}`);
   return {
     ok: true,
-    message: envio.enviado
-      ? `Nova senha enviada por e-mail para ${alvo.email}. Senha: ${tempPassword}`
-      : `Nova senha temporária: ${tempPassword}`,
+    message: envio?.enviado
+      ? `Nova senha enviada para ${alvo.email}. Senha: ${tempPassword}`
+      : `Nova senha provisória: ${tempPassword}`,
   };
 }
 
@@ -372,11 +432,16 @@ export async function generatePasswordResetLink(
     details: target.name,
   });
 
-  const envio = await enviarEmail(emailDeRedefinicao(target.name, target.email, token));
+  // Só há para onde enviar quando a pessoa confirmou um endereço. Sem isso, o
+  // link fica só na tela, para o administrador entregar pelo canal interno —
+  // que é como a maior parte desta rede recebe.
+  const envio = target.email
+    ? await enviarEmail(emailDeRedefinicao(target.name, target.email, token))
+    : null;
 
   return {
     ok: true,
-    message: envio.enviado
+    message: envio?.enviado
       ? `Link enviado para ${target.email}. Válido por 1 hora e de uso único.`
       : "Link válido por 1 hora e de uso único.",
     resetLink: `/redefinir-senha/${token}`,

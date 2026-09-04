@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  emailDeBoasVindas,
+  emailDeConfirmacaoDeEndereco,
+  emailDeSenhaProvisoria,
   emailDeRedefinicao,
   enderecoPublico,
   enviarEmail,
@@ -57,14 +58,30 @@ describe("Envio de e-mail — configuração", () => {
 });
 
 describe("Mensagens da plataforma", () => {
-  it("as boas-vindas levam e-mail e senha provisória", () => {
-    const m = emailDeBoasVindas("Maria Silva", "maria@trihoteis.com.br", "ABCD-1234");
+  it("a senha provisória leva o LOGIN, não o endereço", () => {
+    const m = emailDeSenhaProvisoria("Maria Silva", "maria@gmail.com", "maria.silva", "ABCD-1234");
 
-    assert.equal(m.para, "maria@trihoteis.com.br");
+    assert.equal(m.para, "maria@gmail.com");
     assert.match(m.texto, /Maria/);
     assert.match(m.texto, /ABCD-1234/);
-    assert.match(m.texto, /maria@trihoteis\.com\.br/);
+    assert.match(m.texto, /maria\.silva/);
     assert.doesNotMatch(m.texto, /Silva,/, "trata pelo primeiro nome");
+  });
+
+  /**
+   * Esta mensagem é lida por quem NÃO pediu nada com alguma frequência: basta
+   * um funcionário errar um dígito para ela cair na caixa de um estranho. Por
+   * isso ela precisa dizer, no corpo, que ignorar não custa nada — senão o
+   * estranho confirma "para resolver" e passa a ter a chave de uma conta alheia.
+   */
+  it("a confirmação leva o link, o prazo e o que fazer se não foi você", () => {
+    const m = emailDeConfirmacaoDeEndereco("Ana Paula", "ana@gmail.com", "tok-abc");
+
+    assert.equal(m.para, "ana@gmail.com");
+    assert.match(m.texto, new RegExp(`${enderecoPublico()}/confirmar-email/tok-abc`));
+    assert.match(m.texto, /24 horas/);
+    assert.match(m.texto, /uma vez/);
+    assert.match(m.texto, /nada é gravado/i, "precisa dizer que ignorar é seguro");
   });
 
   it("a redefinição leva o link completo e o prazo", () => {
@@ -80,7 +97,7 @@ describe("Mensagens da plataforma", () => {
    * nome com marcação entraria cru no HTML do e-mail.
    */
   it("o corpo em HTML escapa o que veio do cadastro", () => {
-    const m = emailDeBoasVindas("<script>alert(1)</script>", "x@y.test", "S");
+    const m = emailDeSenhaProvisoria("<script>alert(1)</script>", "x@y.test", "u.teste", "S");
     const html = paraHtml(m.texto);
 
     assert.doesNotMatch(html, /<script>/, "a marcação não passa crua");

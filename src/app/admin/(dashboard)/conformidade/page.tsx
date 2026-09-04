@@ -68,7 +68,7 @@ export default async function ConformidadePage(
       select: {
         id: true,
         name: true,
-        email: true,
+        username: true,
         department: { select: { name: true } },
       },
     }),
@@ -170,7 +170,7 @@ export default async function ConformidadePage(
                       >
                         {l.user?.name ?? "—"}
                       </Link>
-                      <p className="text-xs text-ink-700/50">{l.user?.email}</p>
+                      <p className="text-xs text-ink-700/50">{l.user?.username}</p>
                     </td>
                     <td className="px-4 py-3 text-ink-700">
                       {l.user?.department?.name ?? "—"}

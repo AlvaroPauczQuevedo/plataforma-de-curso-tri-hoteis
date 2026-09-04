@@ -13,6 +13,7 @@
     "dev:local": "next dev",
     "start:local": "next start",
     "backup": "node scripts/backup.mjs",
+    "senha:redefinir": "tsx scripts/redefinir-senha.mjs",
     "conformidade:resumo": "tsx scripts/resumo-conformidade.mjs",
     "fumaca": "node scripts/fumaca.mjs",
     "fumaca:rotas": "node scripts/fumaca-rotas.mjs",

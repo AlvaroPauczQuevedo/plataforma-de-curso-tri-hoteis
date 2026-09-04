@@ -20,7 +20,7 @@ const db = new PrismaClient();
 interface AdminNovo {
   area: string;
   nome: string;
-  email: string;
+  username: string;
   cargo: string;
 }
 
@@ -28,25 +28,25 @@ const ADMINS: AdminNovo[] = [
   {
     area: "Empresas",
     nome: "Administração — Empresas",
-    email: "admin.empresas@trihoteis.com.br",
+    username: "admin.empresas",
     cargo: "Administrador da plataforma — Empresas",
   },
   {
     area: "Trainees",
     nome: "Administração — Trainees",
-    email: "admin.trainees@trihoteis.com.br",
+    username: "admin.trainees",
     cargo: "Administrador da plataforma — Trainees",
   },
   {
     area: "Telemarketing",
     nome: "Administração — Telemarketing",
-    email: "admin.telemarketing@trihoteis.com.br",
+    username: "admin.telemarketing",
     cargo: "Administrador da plataforma — Telemarketing",
   },
   {
     area: "Financeiro",
     nome: "Administração — Financeiro",
-    email: "admin.financeiro@trihoteis.com.br",
+    username: "admin.financeiro",
     cargo: "Administrador da plataforma — Financeiro",
   },
 ];
@@ -68,10 +68,10 @@ async function main() {
   const existentes: string[] = [];
 
   for (const admin of ADMINS) {
-    const email = admin.email.toLowerCase();
-    const ja = await db.user.findUnique({ where: { email } });
+    const username = admin.username;
+    const ja = await db.user.findUnique({ where: { username } });
     if (ja) {
-      existentes.push(`${admin.area} (${email})`);
+      existentes.push(`${admin.area} (${username})`);
       continue;
     }
 
@@ -79,7 +79,7 @@ async function main() {
     await db.user.create({
       data: {
         name: admin.nome,
-        email,
+        username,
         passwordHash: await bcrypt.hash(senha, 10),
         role: "ADMIN",
         active: true,
@@ -101,11 +101,11 @@ async function main() {
     console.log(" Anote agora: a senha não é recuperável depois.");
     console.log("");
     console.log(
-      ` ${"Área".padEnd(15)} ${"E-mail (login)".padEnd(38)} Senha inicial`
+      ` ${"Área".padEnd(15)} ${"Usuário (login)".padEnd(24)} Senha inicial`
     );
     console.log(" " + "-".repeat(76));
     for (const c of criados) {
-      console.log(` ${c.area.padEnd(15)} ${c.email.padEnd(38)} ${c.senha}`);
+      console.log(` ${c.area.padEnd(15)} ${c.username.padEnd(24)} ${c.senha}`);
     }
   }
 

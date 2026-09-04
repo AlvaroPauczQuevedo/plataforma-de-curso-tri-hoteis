@@ -9,7 +9,7 @@ import { enrollUsers } from "@/lib/actions/enrollments";
 type Employee = {
   id: string;
   name: string;
-  email: string;
+  username: string;
   role: string;
   department?: { name: string } | null;
 };
@@ -28,7 +28,7 @@ export function BulkEnrollForm({ employees, courses }: { employees: Employee[]; 
   const filtered = employees.filter(
     (e) =>
       e.name.toLowerCase().includes(search.toLowerCase()) ||
-      e.email.toLowerCase().includes(search.toLowerCase())
+      e.username.toLowerCase().includes(search.toLowerCase())
   );
 
   function toggle(id: string) {

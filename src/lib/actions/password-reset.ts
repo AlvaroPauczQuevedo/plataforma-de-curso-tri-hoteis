@@ -42,9 +42,12 @@ export async function requestPasswordReset(
 
   const mensagem = envioDisponivel() ? MENSAGEM_COM_EMAIL : MENSAGEM_SEM_EMAIL;
 
-  const user = await db.user.findUnique({
-    where: { email: email.data.toLowerCase().trim() },
-  });
+  const endereco = email.data.toLowerCase().trim();
+
+  // Busca pelo endereço, não pelo login: quem esqueceu a senha costuma
+  // lembrar da própria caixa. Contas sem e-mail — a maioria desta rede — não
+  // são alcançáveis por aqui de propósito, e a tela avisa isso antes.
+  const user = await db.user.findUnique({ where: { email: endereco } });
 
   // Não revelamos se o e-mail existe ou não, por segurança.
   if (!user || !user.active) {
@@ -65,7 +68,7 @@ export async function requestPasswordReset(
     data: { userId: user.id, token, expiresAt },
   });
 
-  await enviarEmail(emailDeRedefinicao(user.name, user.email, token));
+  await enviarEmail(emailDeRedefinicao(user.name, endereco, token));
 
   return { ok: true, message: mensagem };
 }

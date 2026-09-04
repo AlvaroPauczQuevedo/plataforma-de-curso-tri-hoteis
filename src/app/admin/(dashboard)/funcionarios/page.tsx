@@ -140,7 +140,7 @@ export default async function FuncionariosPage(
                         <Avatar name={emp.name} src={emp.avatarUrl} size="sm" />
                         <div className="min-w-0">
                           <p className="truncate font-medium text-ink-900">{emp.name}</p>
-                          <p className="truncate text-xs text-ink-700/50">{emp.email}</p>
+                          <p className="truncate text-xs text-ink-700/50">{emp.username}</p>
                         </div>
                       </div>
                     </td>

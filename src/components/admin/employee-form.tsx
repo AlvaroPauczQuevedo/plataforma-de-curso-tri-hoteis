@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ActionForm } from "@/components/shared/action-form";
 import { createEmployee, updateEmployee } from "@/lib/actions/employees";
+import { normalizarNomeDeUsuario, sugerirNomeDeUsuario } from "@/lib/nome-de-usuario";
 import type { Department, User } from "@prisma/client";
 
 export function EmployeeForm({
@@ -17,6 +19,21 @@ export function EmployeeForm({
 }) {
   const router = useRouter();
   const isEdit = Boolean(employee);
+
+  const [username, setUsername] = useState(employee?.username ?? "");
+  /**
+   * Se o administrador já mexeu no campo, a sugestão para de sobrescrever.
+   *
+   * Sem isto, o desempate entre duas pessoas homônimas — que é exatamente o
+   * caso em que ele precisa editar à mão — seria desfeito no instante em que
+   * ele voltasse ao nome para corrigir um acento.
+   */
+  const [tocado, setTocado] = useState(false);
+
+  function aoDigitarNome(nome: string) {
+    if (isEdit || tocado) return;
+    setUsername(sugerirNomeDeUsuario(nome));
+  }
 
   return (
     <ActionForm
@@ -40,21 +57,42 @@ export function EmployeeForm({
             name="name"
             required
             defaultValue={employee?.name}
+            onChange={(e) => aoDigitarNome(e.target.value)}
             className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
           />
         </div>
         <div className="space-y-1.5">
-          <label htmlFor="email" className="text-sm font-medium text-ink-900">
-            E-mail
+          <label htmlFor="username" className="text-sm font-medium text-ink-900">
+            Nome de usuário
           </label>
           <input
-            id="email"
-            name="email"
-            type="email"
+            id="username"
+            name="username"
             required
-            defaultValue={employee?.email}
-            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
+            value={username}
+            /*
+              Normaliza a cada tecla, em vez de só ao salvar.
+
+              O campo é o identificador de ACESSO, e quem cadastra precisa ver
+              exatamente o que a pessoa vai digitar para entrar. Corrigir isto
+              em silêncio no servidor faria o administrador anotar no papel um
+              login diferente do que foi gravado — e o funcionário chegaria
+              amanhã dizendo que a senha não funciona.
+            */
+            onChange={(e) => {
+              setTocado(true);
+              setUsername(normalizarNomeDeUsuario(e.target.value));
+            }}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            className="w-full rounded-xl border border-border px-3.5 py-2.5 font-mono text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
           />
+          <p className="text-xs text-ink-700/60">
+            {isEdit
+              ? "Alterar isto muda o login desta pessoa. Avise-a antes."
+              : "É o que a pessoa digita para entrar. Anote junto com a senha provisória."}
+          </p>
         </div>
       </div>
 

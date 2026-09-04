@@ -18,9 +18,10 @@
  * nada. Quem tem acesso ao servidor já tem acesso ao banco de qualquer forma.
  *
  * Uso:
- *   npx tsx prisma/criar-proprietario.ts <e-mail> "<Nome Completo>"
+ *   npx tsx prisma/criar-proprietario.ts <nome-de-usuario> "<Nome Completo>"
  */
 import { PrismaClient } from "@prisma/client";
+import { motivoDeNomeInvalido, normalizarNomeDeUsuario } from "../src/lib/nome-de-usuario";
 import { randomInt } from "node:crypto";
 import bcrypt from "bcryptjs";
 
@@ -35,21 +36,28 @@ function senhaInicial(): string {
 }
 
 async function main() {
-  const email = process.argv[2]?.toLowerCase().trim();
+  const username = normalizarNomeDeUsuario(process.argv[2] ?? "");
   const nome = process.argv[3]?.trim();
 
-  if (!email || !nome) {
-    console.error("\nInforme o e-mail e o nome completo.");
-    console.error('  npx tsx prisma/criar-proprietario.ts fulano@exemplo.com "Fulano de Tal"\n');
+  if (!username || !nome) {
+    console.error("\nInforme o nome de usuário e o nome completo.");
+    console.error('  npx tsx prisma/criar-proprietario.ts fulano.tal "Fulano de Tal"\n');
     process.exitCode = 1;
     return;
   }
 
-  const jaExiste = await db.user.findUnique({ where: { email } });
+  const motivo = motivoDeNomeInvalido(username);
+  if (motivo) {
+    console.error(`\n${motivo}\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const jaExiste = await db.user.findUnique({ where: { username } });
   if (jaExiste) {
-    console.error(`\nJá existe uma conta com o e-mail ${email}.`);
+    console.error(`\nJá existe uma conta com o usuário ${username}.`);
     console.error("Para proteger uma conta que já existe, use:");
-    console.error(`  npx tsx prisma/definir-proprietario.ts ${email}\n`);
+    console.error(`  npx tsx prisma/definir-proprietario.ts ${username}\n`);
     process.exitCode = 1;
     return;
   }
@@ -58,7 +66,7 @@ async function main() {
   const conta = await db.user.create({
     data: {
       name: nome,
-      email,
+      username,
       passwordHash: await bcrypt.hash(senha, 10),
       role: "ADMIN",
       active: true,
@@ -73,7 +81,7 @@ async function main() {
   console.log(linha);
   console.log("");
   console.log(`  Nome:   ${conta.name}`);
-  console.log(`  E-mail: ${conta.email}`);
+  console.log(`  Usuário: ${conta.username}`);
   console.log(`  Senha:  ${senha}`);
   console.log("");
   console.log("  Esta senha aparece UMA única vez. Anote agora.");
@@ -96,11 +104,11 @@ async function main() {
 
   const protegidas = await db.user.findMany({
     where: { protegido: true },
-    select: { email: true },
-    orderBy: { email: "asc" },
+    select: { username: true },
+    orderBy: { username: "asc" },
   });
   console.log(` Contas protegidas agora: ${protegidas.length}`);
-  for (const p of protegidas) console.log(`   ${p.email}`);
+  for (const p of protegidas) console.log(`   ${p.username}`);
   console.log("");
 }
 

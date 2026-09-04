@@ -54,7 +54,29 @@ model Department {
 model User {
   id           String   @id @default(cuid())
   name         String
-  email        String   @unique
+
+  /// Identificador de ACESSO. E o que a pessoa digita para entrar.
+  ///
+  /// A rede nao tem matricula nem e-mail corporativo, entao nao havia nenhum
+  /// identificador anterior para reaproveitar: quem cadastra escolhe este, e a
+  /// plataforma passa a ser a dona dele. O formato e imposto por
+  /// `lib/nome-de-usuario` — minusculo, sem acento e sem espaco —, porque um
+  /// login que varia e um login que a propria pessoa nao consegue reproduzir.
+  username     String   @unique
+
+  /// E-mail PESSOAL, e opcional.
+  ///
+  /// Nao e dado de contato: e o canal de recuperacao de senha, o que faz de
+  /// quem controla a caixa o dono do acesso. Por isso so e gravado depois que
+  /// a pessoa clica no link de confirmacao (ver EmailConfirmacao) — nunca
+  /// existe endereco por confirmar neste campo, ele esta vazio ou conferido.
+  ///
+  /// Nulo e o estado normal de quem nao tem e-mail, e sao muitos: no SQLite
+  /// dois NULL nao colidem num indice unico, entao a plataforma inteira pode
+  /// ficar sem endereco. O @unique existe para o caso oposto — impedir que
+  /// duas pessoas registrem a MESMA caixa, o que daria a uma delas a
+  /// recuperacao de senha da outra.
+  email        String?  @unique
   passwordHash String
   role         Role     @default(EMPLOYEE)
   active       Boolean  @default(true)
@@ -99,6 +121,7 @@ model User {
   courseProgress    CourseProgress[]
   certificates      Certificate[]
   passwordResets    PasswordResetToken[]
+  confirmacoesEmail EmailConfirmacao[]
   accessLogs        AccessLog[]
   adminActivity     AdminActivityLog[]
   uploadedFiles     FileAsset[]
@@ -320,12 +343,20 @@ model Certificate {
 /// pela propria rotina de verificacao.
 model LoginAttempt {
   id        String   @id @default(cuid())
-  email     String
+
+  /// O que foi DIGITADO no campo de acesso, nao a conta encontrada.
+  ///
+  /// Chamava-se `email` e passou a `identificador` junto com a troca do login:
+  /// guardar tentativa de acesso a uma conta que nao existe e metade da razao
+  /// de esta tabela existir, e nesse caso nao ha conta nenhuma a que se
+  /// referir. O nome antigo passou a mentir sobre o conteudo no dia em que o
+  /// login deixou de ser e-mail.
+  identificador String
   ip        String   @default("")
   success   Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  @@index([email, createdAt])
+  @@index([identificador, createdAt])
   @@index([ip, createdAt])
 }
 
@@ -337,6 +368,31 @@ model PasswordResetToken {
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
+}
+
+/// Endereco aguardando confirmacao pelo link.
+///
+/// O endereco mora AQUI, e nao em `User.email`, ate o clique. E a diferenca
+/// entre "a pessoa digitou um endereco" e "a pessoa provou que le aquela
+/// caixa" — e so a segunda pode valer como recuperacao de senha.
+///
+/// Sem esta separacao, um digito errado (gmial.com, ou a caixa de um
+/// estranho) poria a chave da conta de um funcionario na mao de terceiro, que
+/// poderia pedir redefinicao quando quisesse. O que esta em jogo sao os
+/// certificados de treinamento obrigatorio, que e o papel que uma auditoria
+/// pede.
+model EmailConfirmacao {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// O endereco pretendido. So chega em User.email quando o link for usado.
+  email     String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 model AccessLog {

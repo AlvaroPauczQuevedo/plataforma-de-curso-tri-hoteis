@@ -1,7 +1,9 @@
 import { requireUser } from "@/lib/session";
 import { db } from "@/lib/db";
 import { AvatarUploader } from "@/components/portal/avatar-uploader";
+import { EmailPessoalCard } from "@/components/portal/email-pessoal-card";
 import { ActionForm } from "@/components/shared/action-form";
+import { envioDisponivel } from "@/lib/email";
 import { updateProfile, changePassword } from "@/lib/actions/profile";
 import { formatDateTime } from "@/lib/utils";
 
@@ -38,11 +40,16 @@ export default async function PerfilPage() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-ink-900">E-mail</label>
+              <label className="text-sm font-medium text-ink-900">Nome de usuário</label>
+              {/*
+                Desabilitado: é o identificador de acesso, e trocá-lo sozinho
+                deixaria a pessoa sem conseguir entrar amanhã se esquecesse o
+                novo. Quem muda isto é o RH, avisando antes.
+              */}
               <input
                 disabled
-                value={user.email}
-                className="w-full rounded-xl border border-border bg-surface-muted px-3.5 py-2.5 text-sm text-ink-700/70"
+                value={user.username}
+                className="w-full rounded-xl border border-border bg-surface-muted px-3.5 py-2.5 font-mono text-sm text-ink-700/70"
               />
             </div>
             <div className="space-y-1.5">
@@ -75,6 +82,8 @@ export default async function PerfilPage() {
           </div>
         </ActionForm>
       </section>
+
+      <EmailPessoalCard email={user.email} envioDisponivel={envioDisponivel()} />
 
       <section className="space-y-5 rounded-2xl border border-border bg-white p-6">
         <div>

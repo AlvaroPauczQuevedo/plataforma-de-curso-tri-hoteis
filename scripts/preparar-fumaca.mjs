@@ -150,12 +150,12 @@ async function main() {
     orderBy: { createdAt: "asc" },
   });
 
-  console.log(`FUMACA_ADMIN=${admin.email}`);
-  console.log(`FUMACA_FUNCIONARIO=${funcionario.email}`);
+  console.log(`FUMACA_ADMIN=${admin.username}`);
+  console.log(`FUMACA_FUNCIONARIO=${funcionario.username}`);
   console.log(`FUMACA_VIDEO_ID=${video?.id ?? ""}`);
   console.log(`FUMACA_CERT_ID=${certificado?.id ?? ""}`);
-  console.log(`FUMACA_CERT_DONO=${certificado?.user.email ?? ""}`);
-  console.log(`FUMACA_CERT_ESTRANHO=${outro?.email ?? ""}`);
+  console.log(`FUMACA_CERT_DONO=${certificado?.user.username ?? ""}`);
+  console.log(`FUMACA_CERT_ESTRANHO=${outro?.username ?? ""}`);
   console.log(`FUMACA_PROVA_ID=${porCurso.id}`);
 }
 

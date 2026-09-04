@@ -83,16 +83,16 @@ export function IntranetSyncPanel() {
                     <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-ink-700/60">
                       <th className="pb-2 pr-3 font-medium">Matrícula</th>
                       <th className="pb-2 pr-3 font-medium">Nome</th>
-                      <th className="pb-2 pr-3 font-medium">E-mail (login)</th>
+                      <th className="pb-2 pr-3 font-medium">Usuário (login)</th>
                       <th className="pb-2 font-medium">Senha provisória</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {resultado.resumo.criados.map((pessoa) => (
-                      <tr key={pessoa.email}>
+                      <tr key={pessoa.username}>
                         <td className="py-2 pr-3 text-ink-700">{pessoa.matricula}</td>
                         <td className="py-2 pr-3 text-ink-900">{pessoa.nome}</td>
-                        <td className="py-2 pr-3 text-ink-700">{pessoa.email}</td>
+                        <td className="py-2 pr-3 font-mono text-ink-700">{pessoa.username}</td>
                         <td className="py-2 font-mono text-ink-900">{pessoa.senhaProvisoria}</td>
                       </tr>
                     ))}

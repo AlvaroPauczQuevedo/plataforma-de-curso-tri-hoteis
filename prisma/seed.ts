@@ -211,7 +211,7 @@ async function main() {
   const admin = await db.user.create({
     data: {
       name: "Ana Beatriz Ferreira",
-      email: "admin@trihoteis.com.br",
+      username: "admin",
       passwordHash: await hash("Admin@123"),
       role: "ADMIN",
       position: "Gerente de Treinamento e Desenvolvimento",
@@ -235,7 +235,9 @@ async function main() {
 
   const employees = [];
   for (const [i, data] of employeesData.entries()) {
-    const emailLocal = data.name
+    // O mesmo desenho do cadastro real: o login é derivado do nome, e a
+    // rede não tem e-mail — as contas nascem sem endereço.
+    const login = data.name
       .toLowerCase()
       .normalize("NFD")
       .replace(new RegExp("[\\u0300-\\u036f]", "g"), "")
@@ -243,7 +245,7 @@ async function main() {
     const employee = await db.user.create({
       data: {
         name: data.name,
-        email: `${emailLocal}@trihoteis.com.br`,
+        username: login,
         passwordHash: employeePassword,
         role: "EMPLOYEE",
         position: data.position,
@@ -257,7 +259,7 @@ async function main() {
   const inactiveEmployee = await db.user.create({
     data: {
       name: "Roberto Dias",
-      email: "roberto.dias@trihoteis.com.br",
+      username: "roberto.dias",
       passwordHash: employeePassword,
       role: "EMPLOYEE",
       position: "Ex-colaborador — Manutenção",
@@ -770,9 +772,9 @@ async function main() {
   });
 
   console.log("\nSeed concluído com sucesso!\n");
-  console.log("Login administrativo: admin@trihoteis.com.br / Admin@123");
-  console.log("Login de funcionário (qualquer um): <nome.sobrenome>@trihoteis.com.br / Colaborador@123");
-  console.log("Exemplo: marina.costa@trihoteis.com.br / Colaborador@123");
+  console.log("Login administrativo: admin / Admin@123");
+  console.log("Login de funcionário (qualquer um): <nome.sobrenome> / Colaborador@123");
+  console.log("Exemplo: marina.costa / Colaborador@123");
 }
 
 main()

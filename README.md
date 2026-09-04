@@ -25,6 +25,63 @@ na inicialização, então a plataforma fica disponível para toda a rede local:
 
 O portal do funcionário fica em `/` e o painel administrativo em `/admin`.
 
+## Como se entra: nome de usuário
+
+**O login é um nome de usuário, não um e-mail.** A rede não tem caixa
+corporativa — governança, cozinha, manutenção e lavanderia não têm e-mail de
+trabalho —, e não existe matrícula. Não havia nenhum identificador anterior para
+reaproveitar, então a plataforma passou a emitir o seu:
+
+```
+usuário:  maria.silva
+senha:    Tri-K7M2XP4Q   (provisória, troca obrigatória no 1º acesso)
+```
+
+Quem cadastra escolhe o nome; o formulário sugere `primeiro.ultimo` a partir do
+nome completo e deixa editar — o desempate entre duas pessoas homônimas é
+decisão de quem cadastra, porque é ele que sabe que são duas pessoas.
+
+O formato é imposto por `src/lib/nome-de-usuario.ts`: minúsculo, sem acento, sem
+espaço, começando por letra. Não é preciosismo. Um identificador que aceita
+variação é um login que a própria pessoa não consegue reproduzir — ela não
+lembra se digitou com acento, com espaço ou com maiúscula no dia do cadastro. O
+campo normaliza a cada tecla, para quem cadastra anotar no papel exatamente o
+que foi gravado.
+
+O **login também normaliza o que é digitado**, e isso importa mais do que
+parece: o teclado do celular capitaliza a primeira letra sozinho, e é do celular
+que a maior parte da rede entra. Sem isso, "Marina Costa" seria recusado com
+"usuário ou senha inválidos" tendo os dois certos.
+
+### E-mail: pessoal, opcional e confirmado
+
+O e-mail continua existindo, agora **opcional** e **da própria pessoa** — ela o
+cadastra em *Perfil → Meu e-mail*, não o RH.
+
+Ele serve para **uma coisa só**: recuperar a própria senha sem depender de
+ninguém. Não é dado de contato — é a chave da conta, porque quem lê aquela caixa
+pede "esqueci minha senha" e entra. Por isso:
+
+- **só é gravado depois do clique no link de confirmação.** O endereço fica em
+  `EmailConfirmacao` até lá; nunca existe endereço por confirmar no cadastro. Um
+  dígito errado — `gmial.com`, ou a caixa de um estranho — poria a chave da
+  conta de um funcionário na mão de terceiro;
+- **é único.** Duas pessoas não registram a mesma caixa. O caso real é o casal
+  que divide um e-mail, os dois funcionários da rede: sem essa trava, um pediria
+  redefinição da conta do outro e entraria nela;
+- **o administrador não o edita.** Ele foi confirmado pela pessoa. Deixar o
+  painel reescrevê-lo daria um caminho de uma etapa para tomar a conta alheia:
+  aponta o e-mail para si, pede nova senha, entra.
+
+Quem não cadastrar e-mail — hoje, a maioria — depende do RH para recuperar a
+senha. É o preço de uma rede sem caixa corporativa, e é explícito na tela.
+
+> **Antes de anunciar isso à rede**, confira com quem cuida do domínio se
+> `trihoteis.com.br` tem **SPF, DKIM e DMARC** configurados. Todos os endereços
+> serão Gmail, Hotmail e Outlook; sem esses registros a confirmação e o link de
+> redefinição caem no spam, e o recurso inteiro parece não funcionar sem
+> nenhuma mensagem de erro em lugar nenhum.
+
 ## Primeiro acesso
 
 O banco de demonstração foi limpo: restam apenas as contas administrativas, os
@@ -33,6 +90,10 @@ administrador cadastra as pessoas em *Painel Administrativo → Usuários → No
 e a senha inicial de cada uma é exibida uma única vez na tela, no momento do
 cadastro. Ela vale até o primeiro acesso: a plataforma exige a troca antes de
 liberar qualquer tela.
+
+**Nenhum e-mail é enviado no cadastro**, e não por falta de configuração: a
+conta ainda não tem endereço nenhum. A entrega do usuário e da senha provisória
+é em mãos.
 
 Para recriar a base de demonstração (funcionários e cursos de exemplo) em um
 ambiente de testes:
@@ -70,10 +131,10 @@ sistema travaria sozinho.
 
 ```bash
 # criar do zero (a senha é impressa uma única vez)
-npx tsx prisma/criar-proprietario.ts fulano@trihoteis.com.br "Nome Completo"
+npx tsx prisma/criar-proprietario.ts fulano.tal "Nome Completo"
 
 # ou promover uma conta que já existe
-npx tsx prisma/definir-proprietario.ts fulano@trihoteis.com.br
+npx tsx prisma/definir-proprietario.ts fulano.tal
 ```
 
 Ambos rodam **por linha de comando de propósito**. Fosse um botão na interface,
@@ -122,9 +183,10 @@ próprio banco e o próprio login. O que a integração acrescenta:
   `src/components/shell/app-shell.tsx` e os estilos no fim de
   `src/app/globals.css`, portados de `web/src/styles.css` da intranet.
 
-**O login não é compartilhado.** A intranet autentica por CPF; aqui é por
-e-mail corporativo. Senhas são hashes e não podem ser copiadas de um sistema
-para o outro, então cada conta criada pela sincronização nasce com uma **senha
+**O login não é compartilhado.** A intranet autentica por CPF; aqui é por nome
+de usuário, derivado do nome da pessoa e desempatado pela matrícula quando dois
+coincidem. Senhas são hashes e não podem ser copiadas de um sistema para o
+outro, então cada conta criada pela sincronização nasce com uma **senha
 provisória**, exibida uma única vez ao administrador no momento da
 sincronização. No primeiro acesso a plataforma exige a troca dessa senha antes
 de liberar qualquer tela.
@@ -302,17 +364,22 @@ A plataforma **funciona sem SMTP configurado**, exatamente como funcionava antes
 de o envio existir: o administrador entrega senha e link à mão. Configurado, três
 fluxos passam a avisar a pessoa direto:
 
-| Quando | O que sai |
-| --- | --- |
-| Funcionário cadastrado, ou senha redefinida no painel | Endereço, e-mail e senha provisória |
-| `/esqueci-senha` | Link de redefinição, **para o e-mail da própria conta** |
-| Administrador gera link de redefinição | O mesmo link, por e-mail |
+| Quando | O que sai | Para quem |
+| --- | --- | --- |
+| *Perfil → Meu e-mail* | Link de confirmação do endereço | Quem está cadastrando |
+| `/esqueci-senha` | Link de redefinição | Só quem já confirmou um endereço |
+| Senha redefinida no painel | Login e senha provisória | Só quem já confirmou |
+| Administrador gera link de redefinição | O mesmo link | Só quem já confirmou |
 
-O segundo é o que mais muda na prática: hoje a tela pública só registra o pedido
-e o funcionário precisa procurar o administrador. Com SMTP, ela se resolve
-sozinha — e continua segura, porque **o link nunca é devolvido na tela**, só
-enviado ao endereço cadastrado. Devolvê-lo ali permitiria que qualquer pessoa
-que soubesse o e-mail de um funcionário assumisse a conta dele.
+**Todo envio depende de a pessoa ter confirmado um e-mail.** Quem não tem
+recebe do mesmo jeito de sempre: a senha aparece na tela do administrador, para
+entrega em mãos. Nada falha por falta de endereço.
+
+O `/esqueci-senha` é o que mais muda na prática: quem cadastrou a caixa se
+resolve sozinho, sem procurar ninguém. E continua seguro, porque **o link nunca
+é devolvido na tela**, só enviado ao endereço confirmado — devolvê-lo ali
+permitiria que qualquer um que soubesse o e-mail de um funcionário assumisse a
+conta dele.
 
 Precisa das **cinco** variáveis (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`,
 `SMTP_PASS`, `SMTP_FROM`). Faltando uma, o envio fica desligado de propósito:
@@ -405,6 +472,8 @@ tocado**.
 | `tests/faixa-de-bytes.test.ts` | O trecho de arquivo pedido pelo cliente, contido no arquivo real — bordas, arquivo vazio, e a garantia de que nenhum tamanho sai negativo. |
 | `tests/teto-de-avisos.test.ts` | O limitador da rota de avisos: teto por janela, virada, e a enxurrada contínua que não pode reabrir a janela. |
 | `tests/conformidade.test.ts` | Quem está em dia: concluído vence prazo vencido, a borda do último dia, obrigação sem prazo, e a regra de que o resumo por e-mail não sai quando não há o que cobrar. |
+| `tests/nome-de-usuario.test.ts` | O formato do identificador de acesso: normalização do que foi digitado, o que a validação recusa, e a invariante de que tudo que a normalização produz a validação aceita. |
+| `tests/email-pessoal.test.ts` | A confirmação do e-mail pessoal: uso único, prazo, e as duas contas que tentam registrar a mesma caixa — inclusive a corrida em que os dois links são emitidos antes de qualquer confirmação. |
 | `tests/certificado-pdf.test.ts` | O PDF sai válido com e sem endereço público, e o QR de conferência tem os três padrões de localização nas quinas certas — espelhado, nenhum leitor o abre. |
 
 **Teste que grava em disco precisa desviar o destino.** `tests/ambiente.ts`
@@ -532,6 +601,26 @@ razão) no `.gitignore`.
 DATABASE_URL="file:/home/usuario/dados-faculdade/dev.db"
 STORAGE_DIR="/home/usuario/dados-faculdade/uploads"
 ```
+
+### Senha esquecida pela linha de comando
+
+```bash
+npm run senha:redefinir -- maria.silva      # sorteia uma senha nova
+npm run senha:redefinir -- --listar-admins  # mostra as contas administrativas
+```
+
+É a **saída de emergência da plataforma**, e existe por um motivo específico: a
+conta protegida ("proprietário") só pode ser alterada pelo próprio titular — nem
+outro proprietário a alcança. Com o login por nome de usuário e a maior parte da
+rede sem e-mail confirmado, `/esqueci-senha` não vale para ela. Sem este script,
+o dono que esquecesse a senha ficaria trancado do lado de fora, e a única saída
+seria editar o SQLite à mão gerando um hash bcrypt por fora.
+
+Roda no servidor de propósito, e não como botão na interface: quem alcança o
+disco da aplicação já pode tudo de qualquer forma, então esta é a autoridade
+certa para "o dono perdeu a senha" — e não uma porta nova. A senha é impressa
+**uma única vez**, destrava a conta bloqueada por tentativas e exige troca no
+primeiro acesso.
 
 ### Backup
 
@@ -690,7 +779,7 @@ acrescente o alvo correspondente e rode `npx prisma generate` de novo.
 ### Primeiro acesso
 
 ```bash
-npx tsx prisma/criar-proprietario.ts voce@trihoteis.com.br "Seu Nome"
+npx tsx prisma/criar-proprietario.ts seu.nome "Seu Nome"
 npx tsx prisma/criar-admins.ts    # contas por setor, se for o caso
 ```
 
@@ -707,11 +796,18 @@ de liberar qualquer tela.
 
 ## Observações desta entrega
 
-- **Recuperação de senha**: o envio por e-mail existe e liga ao preencher as
-  variáveis `SMTP_*` (ver *E-mail*). **Sem SMTP configurado**, a tela pública
-  `/esqueci-senha` apenas registra a solicitação e nunca exibe o link — quem o
-  gera é o administrador, em *Usuários → (pessoa) → Gerar link de
-  redefinição*. Token de uso único, válido por 1 hora, nos dois caminhos.
+- **Recuperação de senha**, em três degraus:
+  1. **A própria pessoa**, se cadastrou e confirmou um e-mail pessoal
+     (*Perfil → Meu e-mail*): `/esqueci-senha` resolve sozinho. Exige `SMTP_*`
+     configurado.
+  2. **O administrador**, para todo o resto — que hoje é a maioria: *Usuários →
+     (pessoa) → Gerar link de redefinição*, ou redefinir a senha direto. O link
+     nunca é exibido na tela pública, só no painel.
+  3. **A linha de comando**, `npm run senha:redefinir`, para o que nenhum dos
+     dois alcança: a conta protegida do proprietário, que nenhum outro
+     administrador pode redefinir.
+
+  Token de uso único, válido por 1 hora, em todos os caminhos.
 - **Armazenamento**: os arquivos ficam em `storage/uploads/` no servidor. A
   camada de acesso está isolada em `src/lib/storage.ts`, o que facilita migrar
   para um serviço de nuvem (S3 ou similar) futuramente.

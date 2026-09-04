@@ -1,6 +1,7 @@
 import path from "path";
 import { db } from "@/lib/db";
 import { hashPassword, senhaProvisoria } from "@/lib/password";
+import { sugerirNomeDeUsuario } from "@/lib/nome-de-usuario";
 
 /**
  * Sincronização de funcionários com a intranet.
@@ -22,9 +23,18 @@ import { hashPassword, senhaProvisoria } from "@/lib/password";
  */
 
 export type SyncOutcome = {
-  criados: Array<{ nome: string; email: string; matricula: string; senhaProvisoria: string }>;
+  criados: Array<{ nome: string; username: string; matricula: string; senhaProvisoria: string }>;
   atualizados: number;
   desativados: number;
+  /**
+   * Quem a sincronização não conseguiu trazer.
+   *
+   * Hoje sai sempre vazia, e isso é a melhoria: o único motivo que existia era
+   * "sem e-mail corporativo", de quando o login era por e-mail. Numa rede
+   * hoteleira aquilo excluía em silêncio governança, cozinha e manutenção
+   * inteiras. O campo fica porque a categoria é legítima e volta a ter uso no
+   * dia em que houver um motivo de verdade para pular alguém.
+   */
   ignorados: Array<{ nome: string; motivo: string }>;
 };
 
@@ -162,24 +172,27 @@ export async function sincronizarComIntranet(): Promise<SyncOutcome> {
 
   for (const funcionario of funcionarios) {
     const nome = funcionario.social_name || funcionario.full_name;
-    const email = funcionario.email_corporate.trim().toLowerCase();
 
-    if (!email) {
-      resultado.ignorados.push({
-        nome,
-        motivo: "sem e-mail corporativo na intranet (o login desta plataforma é por e-mail)",
-      });
-      continue;
-    }
+    /*
+      Ninguém é mais ignorado por falta de e-mail.
 
+      Esta função recusava quem não tivesse `email_corporate`, com o motivo
+      "o login desta plataforma é por e-mail". Isso deixou de ser verdade — o
+      login é o nome de usuário — e a regra antiga excluiria em silêncio a
+      maior parte de uma rede hoteleira, onde governança, cozinha e manutenção
+      não têm caixa. O relatório de ignorados é lido por quem já espera pouca
+      coisa nele; ninguém iria conferir a lista para descobrir que faltava
+      metade do quadro.
+    */
     const ativo = funcionario.status !== "DESLIGADO";
     const setorId = await departamentoId(funcionario.department_name);
+    const email = funcionario.email_corporate?.trim().toLowerCase() || null;
 
-    // Reencontra pela âncora da intranet; se ainda não houver vínculo, cai no
-    // e-mail para adotar uma conta que já existia antes da integração.
+    // Reencontra pela âncora da intranet; sem vínculo ainda, cai na matrícula
+    // para adotar uma conta que já existia antes da integração.
     const existente =
       (await db.user.findUnique({ where: { intranetEmployeeId: funcionario.id } })) ??
-      (await db.user.findUnique({ where: { email } }));
+      (await db.user.findUnique({ where: { matricula: funcionario.registration } }));
 
     if (existente) {
       const eraAtivo = existente.active;
@@ -187,7 +200,15 @@ export async function sincronizarComIntranet(): Promise<SyncOutcome> {
         where: { id: existente.id },
         data: {
           name: nome,
-          email,
+          /*
+            O e-mail só é ESCRITO quando a intranet tem um e a conta não.
+
+            Ele é o canal de recuperação de senha desta plataforma, e o
+            endereço que está aqui foi confirmado pela própria pessoa por
+            link. Uma sincronização noturna sobrescrevendo isso com o que a
+            intranet acha desfaria a confirmação sem ninguém perceber.
+          */
+          ...(email && !existente.email ? { email } : {}),
           position: funcionario.position_name ?? existente.position,
           departmentId: setorId ?? existente.departmentId,
           matricula: funcionario.registration,
@@ -205,11 +226,25 @@ export async function sincronizarComIntranet(): Promise<SyncOutcome> {
 
     if (!ativo) continue; // desligado que nunca existiu aqui não precisa de conta
 
+    /*
+      O login sai do nome, e a matrícula é o desempate.
+
+      Duas "Maria Silva" numa rede hoteleira não são hipótese, e aqui não há
+      ninguém para decidir entre elas: a sincronização roda sozinha, de
+      madrugada. Colar a matrícula quando o nome já existe resolve sem
+      inventar ordem — a matrícula é única na intranet e não muda.
+    */
+    const sugerido = sugerirNomeDeUsuario(nome) || `func.${funcionario.registration}`;
+    const username = (await db.user.findUnique({ where: { username: sugerido } }))
+      ? `${sugerido}.${funcionario.registration}`
+      : sugerido;
+
     const senha = senhaProvisoria();
     await db.user.create({
       data: {
         name: nome,
-        email,
+        username,
+        ...(email ? { email } : {}),
         passwordHash: await hashPassword(senha),
         role: "EMPLOYEE",
         active: true,
@@ -223,7 +258,7 @@ export async function sincronizarComIntranet(): Promise<SyncOutcome> {
     });
     resultado.criados.push({
       nome,
-      email,
+      username,
       matricula: funcionario.registration,
       senhaProvisoria: senha,
     });

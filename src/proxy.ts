@@ -6,6 +6,16 @@ const PUBLIC_PATHS = [
   "/login",
   "/esqueci-senha",
   "/redefinir-senha",
+  /*
+    O link de confirmação do e-mail pessoal chega na caixa da pessoa e é
+    aberto no celular, quase sempre sem sessão aberta. Exigir login aqui
+    mandaria para /login justamente quem está tentando cadastrar o único canal
+    que lhe permitiria recuperar a senha sozinha depois.
+
+    O token é a credencial, vale uma vez e por 24 horas. A página só mostra o
+    endereço; nada é gravado sem o clique de confirmação.
+  */
+  "/confirmar-email",
   "/admin/login",
   // A conferência de certificado é pública de propósito: quem confere é gente
   // de fora — auditor, cliente, outro empregador —, que não tem login aqui.

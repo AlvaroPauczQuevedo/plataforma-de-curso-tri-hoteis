@@ -73,7 +73,7 @@ export async function criarFuncionario(
   return db.user.create({
     data: {
       name: `Funcionário ${n}`,
-      email: `func${n}@teste.local`,
+      username: `func${n}`,
       passwordHash: await bcrypt.hash(opcoes.senha ?? "Senha@123", 4),
       role: "EMPLOYEE",
       active: opcoes.ativo ?? true,
@@ -87,7 +87,7 @@ export async function criarAdministrador() {
   return db.user.create({
     data: {
       name: `Administrador ${n}`,
-      email: `admin${n}@teste.local`,
+      username: `admin${n}`,
       passwordHash: await bcrypt.hash("Senha@123", 4),
       role: "ADMIN",
       active: true,

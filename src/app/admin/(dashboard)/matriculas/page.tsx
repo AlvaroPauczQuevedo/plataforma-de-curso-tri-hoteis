@@ -149,7 +149,7 @@ export default async function MatriculasPage(
                     <tr key={e.id} className="hover:bg-surface-muted/40">
                       <td className="px-4 py-3">
                         <p className="font-medium text-ink-900">{e.user.name}</p>
-                        <p className="text-xs text-ink-700/50">{e.user.email}</p>
+                        <p className="text-xs text-ink-700/50">{e.user.username}</p>
                       </td>
                       <td className="px-4 py-3 text-ink-700">
                         {e.course.title}

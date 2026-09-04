@@ -26,7 +26,7 @@ export default function ForgotPasswordPage() {
   return (
     <AuthShell
       title="Recuperar senha"
-      subtitle="Informe seu e-mail corporativo para registrar a solicitação de nova senha."
+      subtitle="Informe o e-mail pessoal que você cadastrou no seu perfil. Se você nunca cadastrou um, procure o RH — só ele pode redefinir sua senha."
       footer={
         <p className="text-center text-xs text-ink-700/60">
           <Link href="/login" className="font-medium text-brand-700 hover:underline">
@@ -48,7 +48,7 @@ export default function ForgotPasswordPage() {
             name="email"
             type="email"
             required
-            placeholder="seunome@trihoteis.com.br"
+            placeholder="seunome@gmail.com"
             className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
           />
         </div>

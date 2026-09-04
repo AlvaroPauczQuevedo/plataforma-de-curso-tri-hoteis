@@ -18,19 +18,19 @@
  * nenhum, e cobre sozinho o que for criado depois.
  *
  * Uso:
- *   FUMACA_EMAIL=... FUMACA_SENHA=... node scripts/fumaca.mjs [url-base]
+ *   FUMACA_USUARIO=... FUMACA_SENHA=... node scripts/fumaca.mjs [url-base]
  *
  * A url-base padrão é http://localhost:3000. Aponte para produção para
  * conferir uma publicação — as credenciais nunca ficam no arquivo.
  */
 
 const BASE = (process.argv[2] || process.env.FUMACA_URL || "http://localhost:3000").replace(/\/$/, "");
-const EMAIL = process.env.FUMACA_EMAIL;
+const USUARIO = process.env.FUMACA_USUARIO;
 const SENHA = process.env.FUMACA_SENHA;
 const LIMITE = Number(process.env.FUMACA_LIMITE ?? 60);
 
-if (!EMAIL || !SENHA) {
-  console.error("Defina FUMACA_EMAIL e FUMACA_SENHA. Nunca escreva credenciais neste arquivo.");
+if (!USUARIO || !SENHA) {
+  console.error("Defina FUMACA_USUARIO e FUMACA_SENHA. Nunca escreva credenciais neste arquivo.");
   process.exit(2);
 }
 
@@ -68,7 +68,7 @@ async function entrar() {
 
   const corpo = new URLSearchParams({
     csrfToken: csrf.csrfToken,
-    email: EMAIL,
+    username: USUARIO,
     password: SENHA,
     callbackUrl: `${BASE}/`,
     json: "true",
@@ -81,7 +81,7 @@ async function entrar() {
   });
 
   const sessao = await (await buscar("/api/auth/session")).json();
-  if (!sessao?.user) throw new Error("login recusado — confira e-mail e senha");
+  if (!sessao?.user) throw new Error("login recusado — confira usuário e senha");
   return sessao.user;
 }
 
@@ -185,7 +185,7 @@ async function navegar() {
 /* ---------------------------------------------------------------- início */
 
 const usuario = await entrar();
-console.log(`\nAutenticado como ${usuario.name ?? usuario.email}.`);
+console.log(`\nAutenticado como ${usuario.name ?? USUARIO}.`);
 console.log(`Navegando em ${BASE} (limite de ${LIMITE} telas)\n`);
 
 const { falhas, visitadas } = await navegar();

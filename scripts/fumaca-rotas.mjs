@@ -68,7 +68,7 @@ async function buscar(caminho, opcoes = {}) {
 }
 
 /** Entra como alguém, descartando a sessão anterior. */
-async function entrar(email, senha) {
+async function entrar(usuario, senha) {
   cookies = new Map();
 
   const csrf = await (await buscar("/api/auth/csrf")).json();
@@ -78,7 +78,7 @@ async function entrar(email, senha) {
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       csrfToken: csrf.csrfToken,
-      email,
+      username: usuario,
       password: senha,
       callbackUrl: `${BASE}/`,
       json: "true",
@@ -86,7 +86,7 @@ async function entrar(email, senha) {
   });
 
   const sessao = await (await buscar("/api/auth/session")).json();
-  if (!sessao?.user) throw new Error(`login recusado para ${email}`);
+  if (!sessao?.user) throw new Error(`login recusado para ${usuario}`);
   return sessao.user;
 }
 
@@ -283,7 +283,7 @@ async function testarTetoDeAvisos(teto) {
 /* ---------------------------------------------------------------- início */
 
 const usuario = await entrar(ADMIN, SENHA_ADMIN);
-console.log(`Autenticado como ${usuario.name ?? usuario.email} em ${BASE}`);
+console.log(`Autenticado como ${usuario.name} em ${BASE}`);
 
 if (VIDEO_ID) {
   const cabeca = await buscar(`/api/files/${VIDEO_ID}`);

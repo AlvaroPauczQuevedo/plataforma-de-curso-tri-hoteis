@@ -86,14 +86,14 @@ jobs:
 
       - name: Fumaça — proprietário
         env:
-          FUMACA_EMAIL: ${{ env.FUMACA_ADMIN }}
+          FUMACA_USUARIO: ${{ env.FUMACA_ADMIN }}
           FUMACA_SENHA: Admin@123
           FUMACA_LIMITE: "90"
         run: node scripts/fumaca.mjs http://localhost:3000
 
       - name: Fumaça — funcionário
         env:
-          FUMACA_EMAIL: ${{ env.FUMACA_FUNCIONARIO }}
+          FUMACA_USUARIO: ${{ env.FUMACA_FUNCIONARIO }}
           FUMACA_SENHA: Colaborador@123
           FUMACA_LIMITE: "90"
         run: node scripts/fumaca.mjs http://localhost:3000

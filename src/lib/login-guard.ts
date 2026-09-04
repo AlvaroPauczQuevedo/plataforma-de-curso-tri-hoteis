@@ -44,7 +44,7 @@ export function ipDaRequisicao(headers: Record<string, string> | undefined): str
  * Verifica se a tentativa pode prosseguir. Lança `LoginBloqueado` com a
  * mensagem que o usuário verá.
  */
-export async function permitirTentativa(email: string, ip: string): Promise<void> {
+export async function permitirTentativa(identificador: string, ip: string): Promise<void> {
   const agora = new Date();
 
   if (ip) {
@@ -60,7 +60,7 @@ export async function permitirTentativa(email: string, ip: string): Promise<void
   }
 
   const conta = await db.user.findUnique({
-    where: { email },
+    where: { username: identificador },
     select: { lockedUntil: true },
   });
 
@@ -76,16 +76,16 @@ export async function permitirTentativa(email: string, ip: string): Promise<void
 }
 
 /** Registra o erro, incrementa o contador e bloqueia ao atingir o limite. */
-export async function registrarFalha(email: string, ip: string): Promise<void> {
-  await db.loginAttempt.create({ data: { email, ip, success: false } });
+export async function registrarFalha(identificador: string, ip: string): Promise<void> {
+  await db.loginAttempt.create({ data: { identificador, ip, success: false } });
 
   const conta = await db.user.findUnique({
-    where: { email },
+    where: { username: identificador },
     select: { id: true, failedAttempts: true },
   });
   // Conta inexistente: a tentativa fica registrada para a barreira por origem,
   // mas não há contador a incrementar — e a resposta ao usuário continua a
-  // mesma, para não revelar quais e-mails existem.
+  // mesma, para não revelar quais nomes de usuário existem.
   if (!conta) return;
 
   const total = conta.failedAttempts + 1;
@@ -102,8 +102,12 @@ export async function registrarFalha(email: string, ip: string): Promise<void> {
 }
 
 /** Zera o contador e limpa o histórico velho. */
-export async function registrarSucesso(userId: string, email: string, ip: string): Promise<void> {
-  await db.loginAttempt.create({ data: { email, ip, success: true } });
+export async function registrarSucesso(
+  userId: string,
+  identificador: string,
+  ip: string
+): Promise<void> {
+  await db.loginAttempt.create({ data: { identificador, ip, success: true } });
   await db.user.update({
     where: { id: userId },
     data: { failedAttempts: 0, lockedUntil: null },

@@ -15,26 +15,27 @@
  *   npx tsx prisma/definir-proprietario.ts <e-mail> --remover
  */
 import { PrismaClient } from "@prisma/client";
+import { normalizarNomeDeUsuario } from "../src/lib/nome-de-usuario";
 
 const db = new PrismaClient();
 
 async function main() {
-  const email = process.argv[2]?.toLowerCase().trim();
+  const username = normalizarNomeDeUsuario(process.argv[2] ?? "");
   const remover = process.argv.includes("--remover");
 
-  if (!email) {
+  if (!username) {
     console.error("\nInforme o e-mail da conta.");
     console.error("  npx tsx prisma/definir-proprietario.ts admin.empresas@trihoteis.com.br\n");
     process.exitCode = 1;
     return;
   }
 
-  const conta = await db.user.findUnique({ where: { email } });
+  const conta = await db.user.findUnique({ where: { username } });
   if (!conta) {
-    console.error(`\nNenhuma conta com o e-mail ${email}.\n`);
+    console.error(`\nNenhuma conta com o usuário ${username}.\n`);
     console.error("Contas existentes:");
-    for (const u of await db.user.findMany({ orderBy: { email: "asc" } })) {
-      console.error(`  ${u.email}  (${u.role})`);
+    for (const u of await db.user.findMany({ orderBy: { username: "asc" } })) {
+      console.error(`  ${u.username}  (${u.role})`);
     }
     console.error("");
     process.exitCode = 1;
@@ -65,7 +66,7 @@ async function main() {
     console.log(" administrador.");
   } else {
     console.log(` CONTA PROTEGIDA: ${conta.name}`);
-    console.log(` ${conta.email}`);
+    console.log(` ${conta.username}`);
     console.log("");
     console.log(" Continua enxergando e gerenciando todos os usuários.");
     console.log(" Nenhum outro administrador pode editá-la, desativá-la nem");
@@ -79,11 +80,11 @@ async function main() {
 
   const protegidas = await db.user.findMany({
     where: { protegido: true },
-    select: { name: true, email: true },
-    orderBy: { email: "asc" },
+    select: { name: true, username: true },
+    orderBy: { username: "asc" },
   });
   console.log(` Contas protegidas agora: ${protegidas.length}`);
-  for (const p of protegidas) console.log(`   ${p.email}`);
+  for (const p of protegidas) console.log(`   ${p.username}`);
   console.log("");
 }
 
