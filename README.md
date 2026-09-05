@@ -106,9 +106,9 @@ npx tsx prisma/limpar-dados.ts   # remove tudo, preservando o administrador
 ## Curso de boas-vindas
 
 ```bash
-npx tsx prisma/curso-de-boas-vindas.ts --simular            # confere sem gravar
-npx tsx prisma/curso-de-boas-vindas.ts                      # cria
-npx tsx prisma/curso-de-boas-vindas.ts --matricular-todos   # cria e matricula
+npm run curso:boas-vindas -- --simular            # confere sem gravar
+npm run curso:boas-vindas                         # cria
+npm run curso:boas-vindas -- --matricular-todos   # cria e matricula
 ```
 
 Cria o curso **"Como usar a Academia Corporativa"** — três módulos, sete aulas
@@ -134,6 +134,30 @@ o mesmo título: recriar por cima duplicaria o conteúdo e o progresso de quem j
 o fez.
 
 O autor é a primeira conta protegida encontrada, ou outra via `--autor <usuário>`.
+
+É `.mjs` e roda com **node puro**, sem `tsx`. Não é detalhe de estilo: ele
+precisa ser chamado durante a publicação (ver abaixo), e depender do `tsx`
+estar presente naquele momento seria uma aposta a mais.
+
+### Sem terminal no servidor
+
+Esta hospedagem não dá acesso a terminal, e a publicação é o único momento em
+que um script nosso roda no servidor com o banco à mão. Por isso o
+`postinstall` sabe criar o curso, **quando pedido**:
+
+| Variável | Efeito |
+| --- | --- |
+| `CRIAR_CURSO_BOAS_VINDAS=1` | A próxima publicação cria o curso |
+| `CURSO_MATRICULAR_TODOS=1` | Matricula todo funcionário ativo junto |
+| `CURSO_AUTOR=usuario` | Quem consta como autor (padrão: a conta protegida) |
+
+Defina no painel da hospedagem e publique. Depois **pode deixar ligado**: o
+script recusa se já houver curso com aquele título, então republicar não
+duplica conteúdo nem toca no progresso de quem já fez.
+
+Uma falha aqui **avisa e deixa a publicação seguir**, pelo mesmo motivo da
+migração: trocar "o curso não foi criado" por "site fora do ar" seria péssimo
+negócio. Conteúdo não é infraestrutura.
 
 ## Hierarquia de administradores
 

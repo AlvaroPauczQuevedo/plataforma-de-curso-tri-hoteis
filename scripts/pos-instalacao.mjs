@@ -30,6 +30,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
 
@@ -87,3 +88,48 @@ if (prisma("migrate", "deploy") !== 0) {
 }
 
 console.log("  [migracao] banco em dia.");
+
+// ------------------------------------------------- conteúdo de primeira vez
+
+/*
+  Criação única do curso de boas-vindas, quando a variável pede.
+
+  Existe porque esta hospedagem não dá terminal: sem isto, montar as sete aulas
+  e as oito questões seria digitação manual no formulário, e a publicação é o
+  único momento em que algo nosso roda no servidor com o banco à mão.
+
+  DESLIGADO por padrão. Sem a variável, nada acontece — conteúdo não deve
+  aparecer sozinho num sistema que já está em uso.
+
+  Deixar a variável ligada para sempre é inofensivo: o script recusa se já
+  houver curso com aquele título, então republicar não duplica nem sobrescreve
+  o progresso de quem já fez.
+
+  Falhar aqui NÃO derruba a publicação, pelo mesmo motivo da migração acima:
+  trocar "o curso não foi criado" por "site fora do ar" seria péssimo negócio.
+*/
+const criarCurso = /^(1|true|sim)$/i.test(process.env.CRIAR_CURSO_BOAS_VINDAS ?? "");
+
+if (criarCurso) {
+  console.log("  [conteudo] criando o curso de boas-vindas...");
+
+  // fileURLToPath, e não `.pathname`: no Windows o pathname vem como
+  // "/C:/..." e o node não acha o arquivo.
+  const argumentos = [fileURLToPath(new URL("../prisma/curso-de-boas-vindas.mjs", import.meta.url))];
+  if (/^(1|true|sim)$/i.test(process.env.CURSO_MATRICULAR_TODOS ?? "")) {
+    argumentos.push("--matricular-todos");
+  }
+  if (process.env.CURSO_AUTOR?.trim()) {
+    argumentos.push("--autor", process.env.CURSO_AUTOR.trim());
+  }
+
+  const saida = spawnSync(process.execPath, argumentos, {
+    stdio: "inherit",
+    env: process.env,
+  });
+
+  if ((saida.status ?? 1) !== 0) {
+    console.error("\n  [conteudo] AVISO: a criação do curso de boas-vindas falhou.");
+    console.error("  A publicação segue normalmente — o resto da plataforma não depende dela.\n");
+  }
+}

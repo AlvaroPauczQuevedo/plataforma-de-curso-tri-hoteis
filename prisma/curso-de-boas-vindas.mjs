@@ -36,10 +36,7 @@ const autorPedido = (() => {
 
 /* --------------------------------------------------------------- conteúdo */
 
-type Aula = { titulo: string; texto: string };
-type Modulo = { titulo: string; aulas: Aula[] };
-
-const MODULOS: Modulo[] = [
+const MODULOS = [
   {
     titulo: "Comece por aqui",
     aulas: [
@@ -181,9 +178,7 @@ Você chegou ao fim das aulas. Agora é a prova final: dez minutos, e o seu prim
 
 /* ------------------------------------------------------------------ prova */
 
-type Questao = { enunciado: string; alternativas: string[]; correta: number };
-
-const QUESTOES: Questao[] = [
+const QUESTOES = [
   {
     enunciado: "Com o que você entra na Academia Corporativa?",
     alternativas: [
@@ -376,7 +371,7 @@ async function main() {
             create: modulo.aulas.map((aula, ordemAula) => ({
               title: aula.titulo,
               order: ordemAula,
-              type: "TEXT" as const,
+              type: "TEXT",
               required: true,
               textContent: aula.texto,
             })),
@@ -388,8 +383,8 @@ async function main() {
   });
 
   // A prova entra como última aula do último módulo.
-  const ultimoModulo = curso.modules[curso.modules.length - 1]!;
-  const aulasDoUltimo = MODULOS[MODULOS.length - 1]!.aulas.length;
+  const ultimoModulo = curso.modules[curso.modules.length - 1];
+  const aulasDoUltimo = MODULOS[MODULOS.length - 1].aulas.length;
 
   await db.lesson.create({
     data: {
@@ -434,7 +429,7 @@ async function main() {
 main()
   .catch((erro) => {
     console.error("");
-    console.error(`Falhou: ${(erro as Error).message}`);
+    console.error(`Falhou: ${erro.message}`);
     console.error("");
     process.exitCode = 1;
   })
