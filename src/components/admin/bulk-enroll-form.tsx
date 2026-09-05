@@ -124,7 +124,7 @@ export function BulkEnrollForm({ employees, courses }: { employees: Employee[]; 
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por nome ou e-mail..."
+          placeholder="Buscar por nome ou usuário..."
           className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
         />
         <div className="max-h-64 overflow-y-auto rounded-xl border border-border">

@@ -121,7 +121,7 @@ export default async function ConformidadePage(
 
       <Suspense>
         <div className="flex flex-wrap gap-3">
-          <SearchInput placeholder="Buscar por nome ou e-mail" />
+          <SearchInput placeholder="Buscar por nome ou usuário" />
           <SelectFilter
             paramKey="departamento"
             placeholder="Todos os departamentos"

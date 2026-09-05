@@ -353,10 +353,45 @@ Quatro módulos concentram as decisões que mais lugares precisam respeitar:
 | --- | --- |
 | **Relatórios** | Como vai cada curso e cada departamento — visão consolidada, em percentuais. |
 | **Conformidade** | Nome a nome: quem está em dia, atrasado, ou vence nos próximos 7 dias. É a pergunta que auditoria e RH fazem, e que a consolidação não responde. |
+| **Primeiro acesso** | A senha que eu entreguei virou acesso? Quem nunca entrou, quem entrou e parou, e quem sequer tem curso atribuído. |
 
 Conformidade considera **apenas matrículas obrigatórias**. Curso opcional não é
 dívida de ninguém, e misturá-lo inflaria as pendências até o relatório virar
 ruído.
+
+### Primeiro acesso
+
+Existe por uma limitação da rede, e não por pedido de relatório: **ninguém tem
+e-mail**. Não há lembrete automático possível para o funcionário — nem de
+senha, nem de treinamento vencendo. A única cobrança é humana, e depende de
+alguém saber a quem cobrar.
+
+A senha provisória é entregue em papel, uma vez. Depois disso ninguém sabe se
+ela foi usada, se o papel se perdeu, ou se a pessoa entrou e parou na primeira
+tela. O `lastLoginAt` já era gravado a cada login, mas só aparecia na ficha
+individual: descobrir quem faltava exigia abrir uma conta por vez.
+
+Quatro situações, e a ordem entre as duas primeiras é a decisão do módulo:
+
+| Situação | O que fazer, e **quem** faz |
+| --- | --- |
+| **Sem curso** | Ninguém atribuiu treinamento. Quem age é o **administrador**. |
+| **Nunca entrou** | A senha não virou acesso. Quem age é o **gestor**, indo atrás da pessoa. |
+| **Entrou, não começou** | Usou a senha e parou. Vale um empurrão. |
+| **Ativo** | Concluiu ao menos uma aula. |
+
+`sem_curso` vem antes de `nunca_entrou` de propósito: cobrar alguém por não ter
+feito um treinamento que ninguém atribuiu a ela desmoraliza a cobrança inteira.
+São ações de donos diferentes, e a tela precisa separar isso.
+
+A lista é ordenada **por urgência, não por nome**: quem está parado há mais
+tempo aparece primeiro. Uma senha entregue há dois meses e nunca usada é um
+problema diferente de uma entregue ontem.
+
+É pergunta distinta da Conformidade, e por isso mora separado: lá é "quem está
+atrasado no que devia"; aqui é anterior a qualquer dívida. Alguém sem curso
+obrigatório não aparece na conformidade nunca, e ainda assim pode ter recebido
+uma senha que jamais usou.
 
 ## E-mail (opcional)
 
@@ -386,6 +421,32 @@ Precisa das **cinco** variáveis (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`,
 melhor não enviar do que falhar a cada cadastro. Uma falha de envio nunca
 invalida a operação — o funcionário é cadastrado de qualquer forma e a senha
 aparece na tela para entrega manual.
+
+### Conferir se o envio funciona
+
+```bash
+npm run email:testar -- voce@gmail.com
+```
+
+Mostra quais das cinco variáveis estão preenchidas (a senha nunca é impressa,
+só o tamanho) e manda uma mensagem de teste pelo **mesmo caminho da
+aplicação** — não por uma conexão própria, senão o teste poderia passar
+enquanto a plataforma falha.
+
+Existe porque o SMTP falha em silêncio **de propósito**: senha errada ou porta
+bloqueada não derrubam nada, `enviarEmail` devolve `{ enviado: false }` e a
+plataforma segue. Isso é o certo em produção — ninguém perde um cadastro porque
+a mensagem não saiu —, mas sem este comando a única forma de descobrir que o
+envio está quebrado seria alguém precisar dele e não receber.
+
+Em caso de falha ele imprime o erro real do servidor (`ECONNREFUSED`,
+autenticação recusada, etc.), que a aplicação engole.
+
+**Se a mensagem chegar no spam, o problema não é a configuração daqui**: falta
+SPF, DKIM e DMARC no domínio remetente. Como todos os endereços dos
+funcionários são Gmail, Hotmail e Outlook, sem esses registros no DNS o link de
+confirmação e o de nova senha somem na caixa de spam de todo mundo — e o
+recurso parece quebrado sem dar erro nenhum.
 
 ## Resumo de conformidade por e-mail (opcional)
 
@@ -471,6 +532,7 @@ tocado**.
 | `tests/senha-provisoria.test.ts` | Formato e entropia da senha gerada, e a redefinição destravando conta bloqueada por tentativas. |
 | `tests/faixa-de-bytes.test.ts` | O trecho de arquivo pedido pelo cliente, contido no arquivo real — bordas, arquivo vazio, e a garantia de que nenhum tamanho sai negativo. |
 | `tests/teto-de-avisos.test.ts` | O limitador da rota de avisos: teto por janela, virada, e a enxurrada contínua que não pode reabrir a janela. |
+| `tests/primeiro-acesso.test.ts` | A credencial virou acesso: a ordem entre "sem curso" e "nunca entrou" (ações de donos diferentes), administrador e inativo fora da conta, e a ordenação por tempo parado. |
 | `tests/conformidade.test.ts` | Quem está em dia: concluído vence prazo vencido, a borda do último dia, obrigação sem prazo, e a regra de que o resumo por e-mail não sai quando não há o que cobrar. |
 | `tests/nome-de-usuario.test.ts` | O formato do identificador de acesso: normalização do que foi digitado, o que a validação recusa, e a invariante de que tudo que a normalização produz a validação aceita. |
 | `tests/email-pessoal.test.ts` | A confirmação do e-mail pessoal: uso único, prazo, e as duas contas que tentam registrar a mesma caixa — inclusive a corrida em que os dois links são emitidos antes de qualquer confirmação. |

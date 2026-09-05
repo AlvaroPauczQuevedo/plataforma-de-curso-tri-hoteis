@@ -4,6 +4,7 @@ import {
   BarChart3,
   BookOpen,
   ClipboardList,
+  DoorOpen,
   FileQuestion,
   History,
   ShieldAlert,
@@ -53,6 +54,7 @@ function menuDe(proprietario: boolean): GrupoMenu[] {
       itens: [
         { href: "/admin/funcionarios", label: "Usuários", icon: Users },
         { href: "/admin/matriculas", label: "Matrículas", icon: ClipboardList },
+        { href: "/admin/primeiro-acesso", label: "Primeiro acesso", icon: DoorOpen },
       ],
     },
     {

@@ -15,6 +15,7 @@
     "backup": "node scripts/backup.mjs",
     "senha:redefinir": "tsx scripts/redefinir-senha.mjs",
     "conformidade:resumo": "tsx scripts/resumo-conformidade.mjs",
+    "email:testar": "tsx scripts/testar-email.mjs",
     "fumaca": "node scripts/fumaca.mjs",
     "fumaca:rotas": "node scripts/fumaca-rotas.mjs",
     "fumaca:preparar": "node scripts/preparar-fumaca.mjs",
