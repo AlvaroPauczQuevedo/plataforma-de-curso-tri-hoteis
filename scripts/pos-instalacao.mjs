@@ -79,15 +79,56 @@ console.log("  [migracao] aplicando migrações pendentes...");
   ambiente onde o Prisma acharia a URL sozinho. Faltando de verdade, ele diz
   qual variável falta e o aviso abaixo entra em seguida.
 */
-if (prisma("migrate", "deploy") !== 0) {
-  console.error("\n  [migracao] AVISO: `prisma migrate deploy` falhou.");
-  console.error("  A publicação segue, mas telas que dependem do schema novo vão");
-  console.error("  apresentar erro. Resolva a migração antes de usar a plataforma.");
-  console.error("  Causa mais comum: DATABASE_URL ausente no ambiente de publicação.\n");
-  process.exit(0);
+/**
+ * Espera bloqueante, sem async: este script é sequencial de ponta a ponta.
+ */
+function esperar(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
-console.log("  [migracao] banco em dia.");
+/*
+  Tenta mais de uma vez, porque a falha típica aqui é TRANSITÓRIA.
+
+  O banco é SQLite num arquivo, e durante a publicação a aplicação ANTIGA
+  continua no ar, servindo e segurando aquele arquivo. O `migrate deploy`
+  precisa escrever em `_prisma_migrations` e às vezes esbarra nisso:
+
+      Error: SQLite database error
+      database is locked
+       0: sql_schema_connector::sql_migration_persistence::initialize
+
+  Não é configuração errada nem schema quebrado — é disputa de acesso, e passa
+  em segundos. Desistir na primeira tentativa deixaria o banco desatualizado
+  por causa de um instante de azar, que é exatamente o cenário que já derrubou
+  este site três vezes.
+*/
+const TENTATIVAS = 4;
+const ESPERA_MS = 3000;
+
+let migrou = false;
+for (let tentativa = 1; tentativa <= TENTATIVAS; tentativa += 1) {
+  if (prisma("migrate", "deploy") === 0) {
+    migrou = true;
+    break;
+  }
+  if (tentativa < TENTATIVAS) {
+    console.error(
+      `  [migracao] tentativa ${tentativa} de ${TENTATIVAS} falhou. ` +
+        `Nova tentativa em ${ESPERA_MS / 1000}s...`
+    );
+    esperar(ESPERA_MS);
+  }
+}
+
+if (migrou) {
+  console.log("  [migracao] banco em dia.");
+} else {
+  console.error(`\n  [migracao] AVISO: \`prisma migrate deploy\` falhou ${TENTATIVAS} vezes.`);
+  console.error("  A publicação segue, mas telas que dependem do schema novo vão");
+  console.error("  apresentar erro. Resolva a migração antes de usar a plataforma.");
+  console.error("  Causas mais comuns: DATABASE_URL ausente, ou o arquivo do banco");
+  console.error("  preso por outro processo (`database is locked`).\n");
+}
 
 // ------------------------------------------------- conteúdo de primeira vez
 
@@ -110,8 +151,34 @@ console.log("  [migracao] banco em dia.");
 */
 const criarCurso = /^(1|true|sim)$/i.test(process.env.CRIAR_CURSO_BOAS_VINDAS ?? "");
 
-if (criarCurso) {
+if (!criarCurso) {
+  /*
+    Diz que está desligado em vez de calar.
+
+    Silêncio aqui é indistinguível de "a variável não pegou": quem ligou
+    CRIAR_CURSO_BOAS_VINDAS no painel e não vê linha nenhuma no log não tem
+    como saber se errou o nome, se o painel não aplicou, ou se o passo nem
+    existe nesta versão.
+  */
+  console.log("  [conteudo] CRIAR_CURSO_BOAS_VINDAS desligada — nada a criar.");
+} else {
   console.log("  [conteudo] criando o curso de boas-vindas...");
+
+  /*
+    Roda MESMO SE a migração falhou, e isto foi uma correção.
+
+    Antes este trecho vinha depois de um `process.exit(0)` no erro de migração,
+    e a primeira publicação com a variável ligada bateu justamente num
+    `database is locked` — falha transitória, sem migração pendente nenhuma. O
+    curso não foi criado por causa de um problema que não tinha relação com
+    ele, e nada no log explicava a ausência.
+
+    Se o schema estiver mesmo desatualizado, este passo falha sozinho e avisa,
+    sem derrubar a publicação.
+  */
+  if (!migrou) {
+    console.log("  [conteudo] a migração falhou antes; tentando assim mesmo.");
+  }
 
   // fileURLToPath, e não `.pathname`: no Windows o pathname vem como
   // "/C:/..." e o node não acha o arquivo.

@@ -159,6 +159,34 @@ Uma falha aqui **avisa e deixa a publicação seguir**, pelo mesmo motivo da
 migração: trocar "o curso não foi criado" por "site fora do ar" seria péssimo
 negócio. Conteúdo não é infraestrutura.
 
+O passo roda **mesmo quando a migração falha**, e isso foi uma correção. Na
+primeira publicação com a variável ligada, o `migrate deploy` bateu num
+`database is locked` — falha transitória, sem nenhuma migração pendente — e o
+curso não foi criado por causa de um problema sem relação com ele. Pior: nada
+no log explicava a ausência. Hoje o log diz em qual dos casos você está,
+inclusive quando a variável está desligada.
+
+### "database is locked" na migração
+
+O banco é um arquivo SQLite, e durante a publicação a aplicação **antiga**
+continua no ar segurando esse arquivo. O `migrate deploy` precisa escrever em
+`_prisma_migrations` e às vezes esbarra nisso:
+
+```
+Error: SQLite database error
+database is locked
+ 0: sql_schema_connector::sql_migration_persistence::initialize
+```
+
+Não é configuração errada nem schema quebrado — é disputa de acesso, e passa em
+segundos. Por isso o `postinstall` **tenta quatro vezes, com 3 segundos de
+intervalo**, antes de desistir. Desistir na primeira deixaria o banco
+desatualizado por um instante de azar, que é exatamente o cenário que já
+derrubou este site três vezes.
+
+Se as quatro falharem, o aviso sai alto e a publicação segue — mas aí é para
+resolver antes de usar a plataforma.
+
 ## Hierarquia de administradores
 
 Todo administrador **enxerga a plataforma inteira** — todos os usuários, todos
