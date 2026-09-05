@@ -30,6 +30,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
+import { readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
@@ -87,20 +88,24 @@ function esperar(ms) {
 }
 
 /*
-  Tenta mais de uma vez, porque a falha típica aqui é TRANSITÓRIA.
+  Tenta mais de uma vez, e depois CONFERE o resultado por outro caminho.
 
-  O banco é SQLite num arquivo, e durante a publicação a aplicação ANTIGA
-  continua no ar, servindo e segurando aquele arquivo. O `migrate deploy`
-  precisa escrever em `_prisma_migrations` e às vezes esbarra nisso:
+  O banco é SQLite num arquivo, e durante a publicação a aplicação continua no
+  ar segurando esse arquivo. O `migrate deploy` precisa escrever em
+  `_prisma_migrations` e esbarra nisso:
 
       Error: SQLite database error
       database is locked
        0: sql_schema_connector::sql_migration_persistence::initialize
 
-  Não é configuração errada nem schema quebrado — é disputa de acesso, e passa
-  em segundos. Desistir na primeira tentativa deixaria o banco desatualizado
-  por causa de um instante de azar, que é exatamente o cenário que já derrubou
-  este site três vezes.
+  A repetição cobre a disputa passageira. Mas nesta hospedagem ela NÃO resolve:
+  as quatro tentativas falham igual, o que mostra que o lock é sustentado, e
+  não um instante de azar. Por isso as tentativas são só a primeira metade —
+  `migracoesPendentes()`, logo abaixo, é que diz se aquilo teve consequência.
+
+  Vale insistir mesmo assim: onde a disputa for passageira, desistir de cara
+  deixaria o banco desatualizado por azar de um segundo — o cenário que já
+  derrubou este site três vezes.
 */
 const TENTATIVAS = 4;
 const ESPERA_MS = 3000;
@@ -120,14 +125,65 @@ for (let tentativa = 1; tentativa <= TENTATIVAS; tentativa += 1) {
   }
 }
 
+/**
+ * Quais migrações do repositório ainda não constam como aplicadas.
+ *
+ * Pergunta pelo CLIENTE do Prisma, e não pelo motor de migração. A diferença é
+ * o ponto todo desta função: quando dá `database is locked`, quem não consegue
+ * o arquivo é o motor de migração — a aplicação continua lendo e escrevendo
+ * normalmente. O cliente passa por onde o motor tropeça.
+ *
+ * Sem isto, um lock deixava o log dizendo "resolva a migração antes de usar a
+ * plataforma" mesmo quando não havia nada a aplicar: aviso alarmante e falso,
+ * que é o tipo de coisa que ensina a ignorar aviso.
+ *
+ * Devolve `null` quando nem isso foi possível — aí realmente não se sabe.
+ */
+async function migracoesPendentes() {
+  let cliente;
+  try {
+    const { PrismaClient } = await import("@prisma/client");
+    cliente = new PrismaClient();
+
+    const aplicadas = await cliente.$queryRawUnsafe(
+      "SELECT migration_name FROM _prisma_migrations WHERE finished_at IS NOT NULL"
+    );
+    const jaAplicadas = new Set(aplicadas.map((linha) => linha.migration_name));
+
+    const pasta = fileURLToPath(new URL("../prisma/migrations", import.meta.url));
+    return readdirSync(pasta)
+      .filter((nome) => /^\d/.test(nome))
+      .filter((nome) => !jaAplicadas.has(nome))
+      .sort();
+  } catch {
+    return null;
+  } finally {
+    await cliente?.$disconnect().catch(() => {});
+  }
+}
+
 if (migrou) {
   console.log("  [migracao] banco em dia.");
 } else {
-  console.error(`\n  [migracao] AVISO: \`prisma migrate deploy\` falhou ${TENTATIVAS} vezes.`);
-  console.error("  A publicação segue, mas telas que dependem do schema novo vão");
-  console.error("  apresentar erro. Resolva a migração antes de usar a plataforma.");
-  console.error("  Causas mais comuns: DATABASE_URL ausente, ou o arquivo do banco");
-  console.error("  preso por outro processo (`database is locked`).\n");
+  console.error(`\n  [migracao] \`prisma migrate deploy\` falhou ${TENTATIVAS} vezes.`);
+
+  const pendentes = await migracoesPendentes();
+
+  if (pendentes === null) {
+    console.error("  [migracao] AVISO: não foi possível nem conferir o estado do banco.");
+    console.error("  Causa mais comum: DATABASE_URL ausente no ambiente de publicação.");
+    console.error("  A publicação segue, mas confira a plataforma antes de usá-la.\n");
+  } else if (pendentes.length === 0) {
+    console.log("  [migracao] ...mas NÃO HÁ NADA PENDENTE: o banco já está no schema atual.");
+    console.log("  A falha foi só disputa pelo arquivo (`database is locked`), sem efeito.");
+    console.log("  Nenhuma ação necessária.\n");
+    migrou = true; // para efeitos práticos, o banco está em dia
+  } else {
+    console.error(`  [migracao] AVISO: ${pendentes.length} migração(ões) PENDENTE(S):`);
+    for (const nome of pendentes) console.error(`      ${nome}`);
+    console.error("  Telas que dependem do schema novo vão apresentar erro.");
+    console.error("  Resolva antes de usar a plataforma.\n");
+  }
 }
 
 // ------------------------------------------------- conteúdo de primeira vez

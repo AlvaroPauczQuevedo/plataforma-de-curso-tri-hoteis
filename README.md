@@ -178,14 +178,32 @@ database is locked
  0: sql_schema_connector::sql_migration_persistence::initialize
 ```
 
-Não é configuração errada nem schema quebrado — é disputa de acesso, e passa em
-segundos. Por isso o `postinstall` **tenta quatro vezes, com 3 segundos de
-intervalo**, antes de desistir. Desistir na primeira deixaria o banco
-desatualizado por um instante de azar, que é exatamente o cenário que já
-derrubou este site três vezes.
+O `postinstall` **tenta quatro vezes, com 3 segundos de intervalo**. Onde a
+disputa for passageira, isso resolve — e desistir de cara deixaria o banco
+desatualizado por azar de um segundo, o cenário que já derrubou este site três
+vezes.
 
-Se as quatro falharem, o aviso sai alto e a publicação segue — mas aí é para
-resolver antes de usar a plataforma.
+**Nesta hospedagem a repetição não resolve**: as quatro tentativas falham
+igual, o que mostra um lock sustentado, não um instante de azar.
+
+Por isso a repetição é só a primeira metade. Quando as quatro falham, o script
+**confere o estado do banco por outro caminho**: pergunta ao *cliente* do
+Prisma quais migrações constam em `_prisma_migrations` e compara com as pastas
+de `prisma/migrations`.
+
+A diferença é o ponto todo: quem não consegue o arquivo é o **motor de
+migração**; a aplicação continua lendo e escrevendo normalmente, e o cliente
+passa por onde o motor tropeça. O log então diz uma de três coisas:
+
+| Situação | O que aparece |
+| --- | --- |
+| Nada pendente | `NÃO HÁ NADA PENDENTE: o banco já está no schema atual` — sem ação |
+| Algo pendente | lista os nomes e alerta em maiúsculas |
+| Nem deu para conferir | avisa que o estado é desconhecido |
+
+Sem isso, um lock deixava o log gritando "resolva a migração antes de usar a
+plataforma" mesmo sem nada a aplicar. Aviso alarmante e falso é o que ensina
+todo mundo a ignorar aviso.
 
 ## Hierarquia de administradores
 
