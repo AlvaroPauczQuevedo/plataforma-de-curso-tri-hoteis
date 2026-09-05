@@ -15,6 +15,7 @@
  *   npm run email:testar -- voce@gmail.com
  */
 import { enviarEmail, enderecoPublico, envioDisponivel } from "../src/lib/email.ts";
+import { formatDateTime } from "../src/lib/utils.ts";
 
 const VARIAVEIS = ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM"];
 
@@ -62,7 +63,8 @@ const resultado = await enviarEmail({
   texto: [
     "Esta mensagem confirma que o envio de e-mail da Academia Corporativa está funcionando.",
     `Endereço da plataforma: ${enderecoPublico()}`,
-    `Enviada em ${new Date().toLocaleString("pt-BR")}.`,
+    // Pelo mesmo formatador das telas: no servidor, `toLocaleString` sairia em UTC.
+    `Enviada em ${formatDateTime(new Date())}.`,
     "Se você recebeu isto, os funcionários já conseguem cadastrar o e-mail pessoal e recuperar a senha sozinhos.",
   ].join("\n\n"),
 });

@@ -18,7 +18,7 @@ import { mapaDeLiberacao } from "@/lib/liberacao-de-aulas";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
-import { formatDate, formatDuration, difficultyLabel } from "@/lib/utils";
+import { difficultyLabel, formatDuration, formatPrazo } from "@/lib/utils";
 import { getNextLessonId } from "@/lib/portal-data";
 
 const lessonIcon = { VIDEO: Video, PDF: FileText, TEXT: BookOpen, PROVA: FileQuestion };
@@ -126,7 +126,7 @@ export default async function CourseDetailPage(
             </span>
             {course.instructor && <span>Instrutor(a): {course.instructor}</span>}
             {enrollment?.dueDate && (
-              <span>Prazo: {formatDate(enrollment.dueDate)}</span>
+              <span>Prazo: {formatPrazo(enrollment.dueDate)}</span>
             )}
           </div>
 

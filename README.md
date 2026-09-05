@@ -393,6 +393,32 @@ atrasado no que devia"; aqui é anterior a qualquer dívida. Alguém sem curso
 obrigatório não aparece na conformidade nunca, e ainda assim pode ter recebido
 uma senha que jamais usou.
 
+## Datas e fuso horário
+
+A formatação acontece no **servidor**, e servidor Linux roda em UTC.
+`Intl.DateTimeFormat("pt-BR")` define o formato (dd/mm/aaaa) mas **não o
+fuso** — sem a opção `timeZone` ele usa o do processo. O resultado era todo
+horário três horas adiantado, e um acesso da noite de quarta aparecendo como
+quinta. O dado no banco sempre esteve certo; quem mentia era a tela.
+
+São duas coisas diferentes, e `src/lib/utils.ts` tem uma função para cada:
+
+| Função | Para | Fuso |
+| --- | --- | --- |
+| `formatDateTime`, `formatDate` | **Instantes** — último acesso, emissão de certificado, conclusão de aula | `TZ_EXIBICAO`, padrão `America/Sao_Paulo` |
+| `formatPrazo` | **Datas de calendário** — o prazo de uma matrícula | UTC, de propósito |
+
+O `formatPrazo` parece errado e não é. O `<input type="date">` manda
+`"2026-09-05"`, que o `new Date()` lê como meia-noite **UTC**. Exibir esse
+instante em São Paulo dá 05/09 menos três horas, ou seja **04/09**: o prazo
+apareceria um dia antes do digitado e o funcionário seria cobrado cedo demais.
+Prazo não é um momento no tempo, é um dia do calendário — lê-lo no mesmo fuso
+em que foi gravado devolve o dia escolhido.
+
+> **Ao mexer nisso, rode a suíte com `TZ=UTC npm test`.** O defeito original
+> passava despercebido justamente porque a máquina de quem desenvolve está em
+> São Paulo e o servidor não.
+
 ## E-mail (opcional)
 
 A plataforma **funciona sem SMTP configurado**, exatamente como funcionava antes
@@ -532,6 +558,7 @@ tocado**.
 | `tests/senha-provisoria.test.ts` | Formato e entropia da senha gerada, e a redefinição destravando conta bloqueada por tentativas. |
 | `tests/faixa-de-bytes.test.ts` | O trecho de arquivo pedido pelo cliente, contido no arquivo real — bordas, arquivo vazio, e a garantia de que nenhum tamanho sai negativo. |
 | `tests/teto-de-avisos.test.ts` | O limitador da rota de avisos: teto por janela, virada, e a enxurrada contínua que não pode reabrir a janela. |
+| `tests/datas.test.ts` | O fuso da exibição: hora de São Paulo para instantes, e o dia digitado para prazos. Compara com valores fixos, e não com o relógio local, senão passaria na máquina do desenvolvedor e falharia no servidor. |
 | `tests/primeiro-acesso.test.ts` | A credencial virou acesso: a ordem entre "sem curso" e "nunca entrou" (ações de donos diferentes), administrador e inativo fora da conta, e a ordenação por tempo parado. |
 | `tests/conformidade.test.ts` | Quem está em dia: concluído vence prazo vencido, a borda do último dia, obrigação sem prazo, e a regra de que o resumo por e-mail não sai quando não há o que cobrar. |
 | `tests/nome-de-usuario.test.ts` | O formato do identificador de acesso: normalização do que foi digitado, o que a validação recusa, e a invariante de que tudo que a normalização produz a validação aceita. |

@@ -14,7 +14,7 @@ import { EnrollSingleForm } from "@/components/admin/enroll-form";
 import { ActionButton } from "@/components/shared/action-button";
 import { impactoDaExclusao } from "@/lib/actions/employees";
 import { removeEnrollment } from "@/lib/actions/enrollments";
-import { formatDate, formatDateTime } from "@/lib/utils";
+import { formatDateTime, formatPrazo } from "@/lib/utils";
 import {
   departamentosPermitidos,
   motivoDeBloqueio,
@@ -168,7 +168,7 @@ export default async function FuncionarioDetailPage(
                         {completed && <Badge tone="success">Concluído</Badge>}
                         {overdue && <Badge tone="danger">Atrasado</Badge>}
                         {enr.dueDate && (
-                          <span className="text-ink-700/50">Prazo: {formatDate(enr.dueDate)}</span>
+                          <span className="text-ink-700/50">Prazo: {formatPrazo(enr.dueDate)}</span>
                         )}
                       </div>
                     </div>

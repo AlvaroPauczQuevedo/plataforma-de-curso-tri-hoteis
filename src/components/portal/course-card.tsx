@@ -2,7 +2,7 @@ import Link from "next/link";
 import { BookOpen, Clock, GraduationCap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import { formatDate, formatDuration, difficultyLabel } from "@/lib/utils";
+import { difficultyLabel, formatDuration, formatPrazo } from "@/lib/utils";
 
 export function CourseCard({
   id,
@@ -82,7 +82,7 @@ export function CourseCard({
               <span className="font-medium text-ink-900">{percent}% concluído</span>
               {dueDate && (
                 <span className={overdue ? "text-danger-600" : "text-ink-700/60"}>
-                  Prazo: {formatDate(dueDate)}
+                  Prazo: {formatPrazo(dueDate)}
                 </span>
               )}
             </div>

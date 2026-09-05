@@ -9,7 +9,7 @@ import { BulkEnrollForm } from "@/components/admin/bulk-enroll-form";
 import { ActionButton } from "@/components/shared/action-button";
 import { SelectFilter, Pagination } from "@/components/admin/table-filters";
 import { removeEnrollment } from "@/lib/actions/enrollments";
-import { formatDate } from "@/lib/utils";
+import { formatPrazo } from "@/lib/utils";
 
 const PAGE_SIZE = 25;
 
@@ -162,7 +162,7 @@ export default async function MatriculasPage(
                         </div>
                       </td>
                       <td className="px-4 py-3">{statusBadge[e.status as keyof typeof statusBadge]}</td>
-                      <td className="px-4 py-3 text-xs text-ink-700/60">{formatDate(e.dueDate)}</td>
+                      <td className="px-4 py-3 text-xs text-ink-700/60">{formatPrazo(e.dueDate)}</td>
                       <td className="px-4 py-3 text-right">
                         <ActionButton
                           action={removeEnrollment.bind(null, e.userId, e.courseId)}

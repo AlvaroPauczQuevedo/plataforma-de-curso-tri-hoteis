@@ -5,6 +5,26 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Fuso em que a plataforma MOSTRA data e hora.
+ *
+ * Precisa ser explícito. `Intl.DateTimeFormat("pt-BR")` define o formato
+ * (dd/mm/aaaa) mas NÃO o fuso: sem esta opção ele usa o fuso de quem executa —
+ * e quem executa é o servidor. Em hospedagem Linux isso é UTC, então todo
+ * horário aparecia três horas adiantado. Foi assim que "o horário de acesso não
+ * bate" chegou como relato: o dado estava certo no banco, a exibição é que
+ * mentia.
+ *
+ * Configurável para o dia em que houver hotel em outro fuso; o Brasil não tem
+ * mais horário de verão desde 2019, então o valor padrão serve à rede inteira.
+ */
+const FUSO = process.env.TZ_EXIBICAO || "America/Sao_Paulo";
+
+/**
+ * Data de um INSTANTE — emissão de certificado, conclusão de aula.
+ *
+ * Para prazo use `formatPrazo`: a diferença não é estilística, ver lá.
+ */
 export function formatDate(date: Date | string | null | undefined) {
   if (!date) return "-";
   const d = typeof date === "string" ? new Date(date) : date;
@@ -12,9 +32,33 @@ export function formatDate(date: Date | string | null | undefined) {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
+    timeZone: FUSO,
   }).format(d);
 }
 
+/**
+ * Data de CALENDÁRIO, sem hora — o prazo de uma matrícula.
+ *
+ * Formata em UTC, e é de propósito. O `<input type="date">` manda "2026-09-05",
+ * que o `new Date()` interpreta como meia-noite UTC. Exibir esse instante em
+ * São Paulo dá 05/09 menos três horas, ou seja **04/09**: o prazo apareceria um
+ * dia antes do que foi digitado, e o funcionário seria cobrado cedo demais.
+ *
+ * Aqui o valor não é um momento no tempo, é um dia do calendário. Lê-lo no
+ * mesmo fuso em que foi gravado devolve exatamente o dia escolhido.
+ */
+export function formatPrazo(date: Date | string | null | undefined) {
+  if (!date) return "-";
+  const d = typeof date === "string" ? new Date(date) : date;
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(d);
+}
+
+/** Data e hora de um instante — último acesso, registro de atividade. */
 export function formatDateTime(date: Date | string | null | undefined) {
   if (!date) return "-";
   const d = typeof date === "string" ? new Date(date) : date;
@@ -24,6 +68,7 @@ export function formatDateTime(date: Date | string | null | undefined) {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: FUSO,
   }).format(d);
 }
 

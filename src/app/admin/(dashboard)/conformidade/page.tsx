@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { SearchInput, SelectFilter, Pagination } from "@/components/admin/table-filters";
-import { formatDate } from "@/lib/utils";
+import { formatPrazo } from "@/lib/utils";
 import { levantarObrigacoes } from "@/lib/conformidade";
 
 const PAGE_SIZE = 25;
@@ -194,7 +194,7 @@ export default async function ConformidadePage(
                     <td className="px-4 py-3 text-xs text-ink-700/60">
                       {l.dueDate ? (
                         <>
-                          {formatDate(l.dueDate)}
+                          {formatPrazo(l.dueDate)}
                           {!l.concluido && l.diasRestantes !== null && (
                             <span
                               className={
