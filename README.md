@@ -456,6 +456,7 @@ Quatro módulos concentram as decisões que mais lugares precisam respeitar:
 | **Relatórios** | Como vai cada curso e cada departamento — visão consolidada, em percentuais. |
 | **Conformidade** | Nome a nome: quem está em dia, atrasado, ou vence nos próximos 7 dias. É a pergunta que auditoria e RH fazem, e que a consolidação não responde. |
 | **Primeiro acesso** | A senha que eu entreguei virou acesso? Quem nunca entrou, quem entrou e parou, e quem sequer tem curso atribuído. |
+| **Relatório para auditoria** (PDF) | Por departamento e treinamento obrigatório: quem está regular, com o código de conferência de cada certificado. |
 
 Conformidade considera **apenas matrículas obrigatórias**. Curso opcional não é
 dívida de ninguém, e misturá-lo inflaria as pendências até o relatório virar
@@ -494,6 +495,92 @@ problema diferente de uma entregue ontem.
 atrasado no que devia"; aqui é anterior a qualquer dívida. Alguém sem curso
 obrigatório não aparece na conformidade nunca, e ainda assim pode ter recebido
 uma senha que jamais usou.
+
+## WhatsApp: o canal que existe
+
+Ninguém nesta rede tem e-mail corporativo, e o pessoal é opcional. O resultado
+era que **não havia caminho até o funcionário** — nem para entregar senha, nem
+para cobrar treinamento. Toda comunicação dependia de alguém lembrar de falar
+com alguém, pessoalmente.
+
+WhatsApp, essa gente tem. O cadastro ganhou um campo de celular (opcional), e
+as telas ganharam um botão que **abre o WhatsApp com a mensagem pronta**:
+
+| Onde | Mensagem |
+| --- | --- |
+| **Primeiro acesso** | Lembra do treinamento, com o usuário — **sem senha** |
+| **Conformidade** | Cobra o curso com prazo vencendo ou vencido |
+| **Reciclagem** | Avisa que o certificado está deixando de valer |
+
+### Sem API, sem custo, e manual de propósito
+
+É um link `wa.me`. Quem administra clica, o WhatsApp abre com o texto, ele
+confere e envia — do próprio número, do celular dele, no corredor do hotel.
+
+Envio automático exigiria a API oficial paga, ou uma biblioteca não oficial que
+derruba o número da empresa. Para algumas dezenas de pessoas, o clique resolve:
+**o que não existia era o caminho, não a automação dele.**
+
+O lembrete vai **sem senha**, e isso é decisão. A senha provisória não é
+recuperável depois do cadastro; fingir que é levaria alguém a inventar uma, e
+senha inventada num aviso é pior do que aviso nenhum. Quem perdeu a senha pede,
+e o administrador redefine.
+
+O número é guardado normalizado (`5541999999999`) e exibido legível
+(`(41) 99999-9999`). Ele **não é único**: número de família repetido acontece,
+e recusar o cadastro por isso deixaria alguém sem conta. É o oposto do e-mail —
+aquele é chave de recuperação, este é só um caminho de aviso.
+
+## Reciclagem: o certificado ainda vale?
+
+Os treinamentos que mais importam num hotel **vencem** — manipulação de
+alimentos, brigada de incêndio, as NRs. Um certificado de 2024 não prova nada em
+2026, e é exatamente isso que um auditor pergunta.
+
+Até então a plataforma não tinha noção de validade: concluído era concluído para
+sempre. Agora, ao marcar um curso como obrigatório para um departamento, dá para
+dizer **de quantos em quantos meses ele precisa ser refeito**. Meses, e não dias,
+porque é assim que a norma fala — "reciclagem anual", "a cada dois anos".
+
+Quem está vencido ou vence em até **30 dias** aparece num painel no topo da
+Conformidade. A janela é maior que os 7 dias da conformidade comum de propósito:
+reciclagem exige turma, instrutor e escala coberta, e avisar em cima da hora
+seria avisar tarde demais para servir.
+
+### Por que ela detecta e não rematricula sozinha
+
+A tentação era zerar o progresso de quem venceu, para a pessoa reaparecer como
+pendente. Só que `recalculateCourseProgress` **apaga o certificado** quando o
+curso deixa de estar completo — então uma reciclagem automática destruiria,
+sozinha e em silêncio, o comprovante de que o treinamento foi feito no ano
+passado.
+
+É o oposto do que o recurso serve. Numa auditoria, *"fez em 2025 e está
+vencendo"* é uma resposta; *"não há registro"* não é. O princípio que o resto do
+sistema já segue — histórico e certificado sobrevivem a tudo — vale mais aqui do
+que a comodidade de não clicar.
+
+Então o painel diz **quem** precisa refazer, e a rematrícula continua sendo um
+ato de quem administra, pela tela de Matrículas, com o registro antigo intacto.
+
+## Relatório para auditoria
+
+Um botão na Conformidade gera o PDF que alguém vai pedir: **departamento →
+treinamento obrigatório → pessoa**, com situação, data de conclusão, vencimento
+e o **código de conferência** de cada certificado.
+
+A organização é essa, e não por pessoa, porque a auditoria chega perguntando de
+uma norma ("manipulação de alimentos, cozinha"), não de um funcionário.
+
+O código em cada linha é o que separa o documento de uma afirmação: quem recebe
+confere qualquer linha em `/validar`, sem login, e vê a mesma informação saindo
+da fonte.
+
+Respeita o filtro de departamento em tela, é servido com `cache-control:
+no-store` — um relatório afirma uma situação numa data, e servir o de ontem
+seria pior do que não servir — e a rota confere o papel **no banco**, não no
+token: a sessão dura 8 horas, e quem perdeu o acesso administrativo nesse
+intervalo não deve continuar baixando a folha da rede inteira.
 
 ## Datas e fuso horário
 
@@ -660,6 +747,9 @@ tocado**.
 | `tests/senha-provisoria.test.ts` | Formato e entropia da senha gerada, e a redefinição destravando conta bloqueada por tentativas. |
 | `tests/faixa-de-bytes.test.ts` | O trecho de arquivo pedido pelo cliente, contido no arquivo real — bordas, arquivo vazio, e a garantia de que nenhum tamanho sai negativo. |
 | `tests/teto-de-avisos.test.ts` | O limitador da rota de avisos: teto por janela, virada, e a enxurrada contínua que não pode reabrir a janela. |
+| `tests/whatsapp.test.ts` | Normalização do número (zero de operadora, DDI, formatação humana), faixa de DDD, e a garantia de que o lembrete não leva senha. |
+| `tests/reciclagem.test.ts` | Quando o certificado vence: meses de calendário, virada de ano, e o 31 de janeiro que não pode ganhar dias num mês curto. |
+| `tests/auditoria-pdf.test.ts` | O relatório sai como PDF válido e quebra em páginas — uma lista que perde a última pessoa da folha é pior que relatório nenhum. |
 | `tests/datas.test.ts` | O fuso da exibição: hora de São Paulo para instantes, e o dia digitado para prazos. Compara com valores fixos, e não com o relógio local, senão passaria na máquina do desenvolvedor e falharia no servidor. |
 | `tests/primeiro-acesso.test.ts` | A credencial virou acesso: a ordem entre "sem curso" e "nunca entrou" (ações de donos diferentes), administrador e inativo fora da conta, e a ordenação por tempo parado. |
 | `tests/conformidade.test.ts` | Quem está em dia: concluído vence prazo vencido, a borda do último dia, obrigação sem prazo, e a regra de que o resumo por e-mail não sai quando não há o que cobrar. |
