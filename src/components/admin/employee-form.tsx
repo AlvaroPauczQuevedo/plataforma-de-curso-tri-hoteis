@@ -6,7 +6,29 @@ import { ActionForm } from "@/components/shared/action-form";
 import { createEmployee, updateEmployee } from "@/lib/actions/employees";
 import { normalizarNomeDeUsuario, sugerirNomeDeUsuario } from "@/lib/nome-de-usuario";
 import { formatarTelefone } from "@/lib/whatsapp";
-import type { Department, User } from "@prisma/client";
+import type { Department, Role } from "@prisma/client";
+
+/**
+ * SÓ os campos que o formulário usa — e nunca o `User` inteiro do Prisma.
+ *
+ * Este é um componente de CLIENTE: tudo que chega como propriedade é
+ * serializado dentro do HTML e vai para o navegador. Recebendo `User`, o
+ * `passwordHash` de quem está sendo editado ia junto, em texto, na fonte da
+ * página — conferido numa base de carga, um hash bcrypt por edição aberta.
+ *
+ * Tipo do TypeScript não remove dado em execução: o que é passado é o que
+ * viaja. Por isso o contrato é estreito aqui, e a página projeta antes de
+ * passar.
+ */
+export type EmployeeParaFormulario = {
+  id: string;
+  name: string;
+  username: string;
+  telefone: string | null;
+  position: string | null;
+  departmentId: string | null;
+  role: Role;
+};
 
 export function EmployeeForm({
   departments,
@@ -14,7 +36,7 @@ export function EmployeeForm({
   extras = [],
 }: {
   departments: Department[];
-  employee?: User;
+  employee?: EmployeeParaFormulario;
   /** Departamentos adicionais já marcados para esta pessoa. */
   extras?: string[];
 }) {

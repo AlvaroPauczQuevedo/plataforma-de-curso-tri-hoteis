@@ -170,6 +170,28 @@ async function navegar() {
       continue;
     }
 
+    /*
+      Nenhuma tela pode conter hash de senha.
+
+      Esta conferência existe porque o vazamento JÁ ACONTECEU, e em silêncio:
+      `/admin/matriculas` passava a lista de contas a um componente de CLIENTE
+      com `include` em vez de `select`, e o registro inteiro — `passwordHash`
+      bcrypt, telefone e e-mail de toda a rede — ia serializado na fonte da
+      página. Numa base de 700 pessoas eram 701 hashes por acesso.
+
+      Nada acusava: a tela funcionava, o tipo do componente listava só cinco
+      campos, e tipo do TypeScript não remove dado em execução. Só apareceu ao
+      medir o tamanho da página sob carga.
+
+      Por isso a trava mora aqui, na fumaça que roda no CI a cada envio: é
+      barata, percorre toda tela que existe, e pega a reincidência no dia em
+      que alguém trocar um `select` por um `include` sem perceber o que muda.
+    */
+    if (html.includes("$2b$") || html.includes("passwordHash")) {
+      falhas.push(`${caminho} — VAZAMENTO: a página contém hash de senha`);
+      continue;
+    }
+
     console.log(`  ${caminho} → 200`);
 
     for (const link of linksDe(html)) {

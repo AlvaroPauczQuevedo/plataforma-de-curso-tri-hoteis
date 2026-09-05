@@ -124,9 +124,22 @@ export default async function FuncionarioDetailPage(
       {!motivo && (
         <section className="space-y-4 rounded-2xl border border-border bg-white p-6">
           <h2 className="font-semibold text-ink-900">Dados cadastrais</h2>
+          {/*
+            Projeção explícita, e não o registro inteiro: o formulário é
+            componente de cliente, e o que for passado vai serializado para o
+            navegador — inclusive o hash de senha, se ele viesse junto.
+          */}
           <EmployeeForm
             departments={departamentosDisponiveis}
-            employee={employee}
+            employee={{
+              id: employee.id,
+              name: employee.name,
+              username: employee.username,
+              telefone: employee.telefone,
+              position: employee.position,
+              departmentId: employee.departmentId,
+              role: employee.role,
+            }}
             extras={extrasDoUsuario}
           />
         </section>

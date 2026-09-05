@@ -35,18 +35,54 @@ export default async function MatriculasPage(
     funcionários — mudá-la alteraria os números de conformidade, e essa é uma
     decisão separada desta.
   */
+  /*
+    `select`, e NUNCA `include`, e a diferença aqui não é desempenho.
+
+    Esta lista é entregue ao `BulkEnrollForm`, que é componente de CLIENTE —
+    ou seja, tudo que entra nela é serializado dentro do HTML e chega ao
+    navegador. Com `include: { department: true }` vinha o registro inteiro de
+    cada conta: `passwordHash` (o hash bcrypt), `telefone` e `email` de toda a
+    rede, em texto, na fonte da página.
+
+    O tipo do componente lista só cinco campos, mas tipo do TypeScript não
+    remove dado em execução: o que é passado é o que viaja.
+
+    Medido numa base de 700 pessoas: 701 hashes bcrypt e 701 telefones na
+    página, 855 KB. Hash de senha não deve sair do servidor nem para quem
+    administra — bcrypt de senha fraca se quebra offline, e o telefone é dado
+    pessoal que nada nesta tela precisa.
+  */
   const [employees, courses] = await Promise.all([
     db.user.findMany({
       where: { active: true },
-      include: { department: true },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        role: true,
+        department: { select: { name: true } },
+      },
       orderBy: { name: "asc" },
     }),
     db.course.findMany({ where: { status: "PUBLISHED" }, orderBy: { title: "asc" } }),
   ]);
 
+  // Mesmo cuidado: só os campos que a tabela mostra. Estes ficam no servidor,
+  // mas trazer o registro inteiro de milhares de matrículas custa memória à
+  // toa — e o dia em que alguém passar isto a um componente de cliente, o
+  // vazamento volta pela porta dos fundos.
   const enrollments = await db.enrollment.findMany({
     where: searchParams.curso ? { courseId: searchParams.curso } : {},
-    include: { user: true, course: true },
+    select: {
+      id: true,
+      userId: true,
+      courseId: true,
+      mandatory: true,
+      dueDate: true,
+      assignedAt: true,
+      user: { select: { id: true, name: true, username: true } },
+      course: { select: { id: true, title: true } },
+    },
     orderBy: { assignedAt: "desc" },
   });
 
