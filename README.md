@@ -103,6 +103,38 @@ npx prisma db seed          # popula com dados de demonstração
 npx tsx prisma/limpar-dados.ts   # remove tudo, preservando o administrador
 ```
 
+## Curso de boas-vindas
+
+```bash
+npx tsx prisma/curso-de-boas-vindas.ts --simular            # confere sem gravar
+npx tsx prisma/curso-de-boas-vindas.ts                      # cria
+npx tsx prisma/curso-de-boas-vindas.ts --matricular-todos   # cria e matricula
+```
+
+Cria o curso **"Como usar a Academia Corporativa"** — três módulos, sete aulas
+em texto e uma prova final de oito questões, com 70% de nota mínima.
+
+É o curso que explica a própria plataforma: como entrar com nome de usuário,
+onde ficam os cursos, como cada tipo de aula é concluída, o que é treinamento
+obrigatório, como a prova corrige e para que serve o QR do certificado. Serve
+de primeiro curso para quem acabou de receber a senha em papel — e faz a pessoa
+passar por todos os mecanismos uma vez antes de precisar deles a sério.
+
+Ele é `sequential`, de propósito: ensina que existem cursos em ordem sendo um.
+
+**O conteúdo é texto PLANO.** A tela do aluno renderiza `textContent` com
+`whitespace-pre-line` e nada mais — asterisco de negrito e cerquilha de título
+apareceriam crus para o funcionário. Ao editar o script, escreva como se
+escreve num bloco de notas.
+
+Roda por linha de comando, e não por uma tela, porque montar oito aulas e oito
+questões pelo formulário é meia hora de digitação — e o texto precisa poder ser
+corrigido e recriado sem esse custo. O script **recusa** se já houver curso com
+o mesmo título: recriar por cima duplicaria o conteúdo e o progresso de quem já
+o fez.
+
+O autor é a primeira conta protegida encontrada, ou outra via `--autor <usuário>`.
+
 ## Hierarquia de administradores
 
 Todo administrador **enxerga a plataforma inteira** — todos os usuários, todos
