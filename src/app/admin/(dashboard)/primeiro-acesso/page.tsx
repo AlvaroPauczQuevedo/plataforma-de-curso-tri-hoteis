@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SearchInput, SelectFilter, Pagination } from "@/components/admin/table-filters";
 import { levantarPrimeiroAcesso } from "@/lib/primeiro-acesso";
+import { BotaoWhatsApp } from "@/components/admin/botao-whatsapp";
+import { enderecoPublico } from "@/lib/email";
+import { mensagemDeLembrete } from "@/lib/whatsapp";
 
 const PAGE_SIZE = 25;
 
@@ -58,6 +61,7 @@ export default async function PrimeiroAcessoPage(props: {
       id: true,
       name: true,
       username: true,
+      telefone: true,
       department: { select: { name: true } },
     },
   });
@@ -142,6 +146,7 @@ export default async function PrimeiroAcessoPage(props: {
                   <th className="px-4 py-3 font-medium">Último acesso</th>
                   <th className="px-4 py-3 font-medium">Aulas concluídas</th>
                   <th className="px-4 py-3 font-medium">Situação</th>
+                  <th className="px-4 py-3 font-medium">Avisar</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -181,6 +186,23 @@ export default async function PrimeiroAcessoPage(props: {
                         {l.aulasConcluidas} de {l.matriculas} curso(s)
                       </td>
                       <td className="px-4 py-3">{selo[l.situacao]}</td>
+                      <td className="px-4 py-3">
+                        {/*
+                          O lembrete vai SEM senha: a original não é
+                          recuperável, e inventar uma num aviso seria pior do
+                          que não avisar. Quem precisa de senha nova pede, e o
+                          administrador redefine.
+                        */}
+                        <BotaoWhatsApp
+                          telefone={user?.telefone}
+                          rotulo="Avisar"
+                          mensagem={mensagemDeLembrete({
+                            nome: user?.name ?? "",
+                            username: user?.username ?? "",
+                            endereco: enderecoPublico(),
+                          })}
+                        />
+                      </td>
                     </tr>
                   );
                 })}

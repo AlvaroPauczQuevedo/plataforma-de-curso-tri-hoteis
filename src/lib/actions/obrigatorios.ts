@@ -19,7 +19,8 @@ import type { ActionResult } from "@/lib/actions/employees";
 export async function tornarObrigatorio(
   courseId: string,
   departmentId: string,
-  prazoDias: number | null
+  prazoDias: number | null,
+  validadeMeses: number | null = null
 ): Promise<ActionResult> {
   const admin = await requireAdmin();
 
@@ -33,6 +34,15 @@ export async function tornarObrigatorio(
     return { ok: false, error: "O prazo deve ser um número de dias maior que zero." };
   }
 
+  /*
+    Validade em MESES, e não em dias, porque é assim que a norma fala:
+    "reciclagem anual", "a cada dois anos". Converter para dias na tela faria
+    quem cadastra calcular 365 de cabeça e errar em ano bissexto.
+  */
+  if (validadeMeses !== null && (!Number.isInteger(validadeMeses) || validadeMeses < 1)) {
+    return { ok: false, error: "A validade deve ser um número de meses maior que zero." };
+  }
+
   const existente = await db.cursoObrigatorio.findUnique({
     where: { courseId_departmentId: { courseId, departmentId } },
   });
@@ -40,7 +50,9 @@ export async function tornarObrigatorio(
     return { ok: false, error: "Este curso já é obrigatório para este departamento." };
   }
 
-  await db.cursoObrigatorio.create({ data: { courseId, departmentId, prazoDias } });
+  await db.cursoObrigatorio.create({
+    data: { courseId, departmentId, prazoDias, validadeMeses },
+  });
 
   const resultado = await sincronizarCurso(courseId, admin.id);
 

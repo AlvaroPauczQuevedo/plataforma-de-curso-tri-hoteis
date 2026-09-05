@@ -16,6 +16,7 @@ type Obrigatoriedade = {
   departmentId: string;
   departamento: string;
   prazoDias: number | null;
+  validadeMeses: number | null;
   matriculados: number;
 };
 
@@ -43,6 +44,7 @@ export function ObrigatoriosPanel({
   const [erro, setErro] = useState<string | null>(null);
   const [departamento, setDepartamento] = useState("");
   const [prazo, setPrazo] = useState("");
+  const [validade, setValidade] = useState("");
 
   const jaUsados = new Set(atuais.map((a) => a.departmentId));
   const restantes = disponiveis.filter((d) => !jaUsados.has(d.id));
@@ -55,11 +57,13 @@ export function ObrigatoriosPanel({
     setErro(null);
     iniciar(async () => {
       const dias = prazo.trim() === "" ? null : Number(prazo);
-      const r = await tornarObrigatorio(courseId, departamento, dias);
+      const meses = validade.trim() === "" ? null : Number(validade);
+      const r = await tornarObrigatorio(courseId, departamento, dias, meses);
       if (!r.ok) setErro(r.error);
       else {
         setDepartamento("");
         setPrazo("");
+        setValidade("");
         router.refresh();
       }
     });
@@ -84,6 +88,9 @@ export function ObrigatoriosPanel({
                 <p className="text-xs text-ink-700/60">
                   {o.matriculados} funcionário(s) ativo(s) ·{" "}
                   {o.prazoDias ? `prazo de ${o.prazoDias} dia(s)` : "sem prazo"}
+                  {o.validadeMeses
+                    ? ` · reciclagem a cada ${o.validadeMeses} mês(es)`
+                    : " · sem reciclagem"}
                 </p>
               </div>
               <ActionButton
@@ -137,6 +144,22 @@ export function ObrigatoriosPanel({
               onChange={(e) => setPrazo(e.target.value)}
               placeholder="sem prazo"
               className={`w-full ${campoClasse}`}
+            />
+          </div>
+
+          <div className="w-36 space-y-1.5">
+            <label htmlFor="obrig-validade" className="text-xs font-medium text-ink-900">
+              Reciclagem (meses)
+            </label>
+            <input
+              id="obrig-validade"
+              type="number"
+              min={1}
+              value={validade}
+              onChange={(e) => setValidade(e.target.value)}
+              placeholder="não vence"
+              className={`w-full ${campoClasse}`}
+              title="De quantos em quantos meses o treinamento precisa ser refeito. Em branco, o certificado vale para sempre."
             />
           </div>
 

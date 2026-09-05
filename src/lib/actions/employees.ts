@@ -10,6 +10,7 @@ import { randomUUID } from "crypto";
 import { emailDeRedefinicao, emailDeSenhaProvisoria, enviarEmail } from "@/lib/email";
 import { sincronizarUsuario } from "@/lib/matricula-automatica";
 import { motivoDeNomeInvalido, normalizarNomeDeUsuario } from "@/lib/nome-de-usuario";
+import { motivoDeTelefoneInvalido, normalizarTelefone } from "@/lib/whatsapp";
 import {
   type Recusa,
   bloqueioDeAlteracao,
@@ -20,6 +21,7 @@ import {
 const employeeSchema = z.object({
   name: z.string().min(2, "Informe o nome completo."),
   username: z.string().min(1, "Informe o nome de usuário."),
+  telefone: z.string().optional(),
   position: z.string().optional(),
   departmentId: z.string().optional(),
   role: z.enum(["ADMIN", "EMPLOYEE"]).default("EMPLOYEE"),
@@ -41,6 +43,22 @@ function lerNomeDeUsuario(bruto: string): { ok: true; valor: string } | Recusa {
   const username = normalizarNomeDeUsuario(bruto);
   const motivo = motivoDeNomeInvalido(username);
   return motivo ? { ok: false, error: motivo } : { ok: true, valor: username };
+}
+
+/**
+ * Normaliza e confere o telefone, que é OPCIONAL.
+ *
+ * Vazio devolve `null` sem reclamar: é o estado de quem ainda não informou, e
+ * exigir o número travaria o cadastro de quem não o tem à mão. Preenchido, aí
+ * sim é conferido — número errado não dá erro em lugar nenhum, o link só abre
+ * uma conversa que não existe.
+ */
+function lerTelefone(bruto: string | null): { ok: true; valor: string | null } | Recusa {
+  if (!bruto?.trim()) return { ok: true, valor: null };
+
+  const telefone = normalizarTelefone(bruto);
+  const motivo = motivoDeTelefoneInvalido(telefone);
+  return motivo ? { ok: false, error: motivo } : { ok: true, valor: telefone };
 }
 
 /**
@@ -92,6 +110,7 @@ export async function createEmployee(formData: FormData): Promise<ActionResult> 
   const parsed = employeeSchema.safeParse({
     name: formData.get("name"),
     username: formData.get("username"),
+    telefone: formData.get("telefone") || undefined,
     position: formData.get("position") || undefined,
     departmentId: formData.get("departmentId") || undefined,
     role: formData.get("role") || "EMPLOYEE",
@@ -103,6 +122,9 @@ export async function createEmployee(formData: FormData): Promise<ActionResult> 
 
   const nome = lerNomeDeUsuario(parsed.data.username);
   if (!nome.ok) return nome;
+
+  const tel = lerTelefone(parsed.data.telefone ?? null);
+  if (!tel.ok) return tel;
 
   const vinculo = await bloqueioDeVinculo(
     admin.id,
@@ -128,6 +150,7 @@ export async function createEmployee(formData: FormData): Promise<ActionResult> 
     data: {
       name: parsed.data.name,
       username: nome.valor,
+      telefone: tel.valor,
       // Sem e-mail: a rede não tem caixa corporativa, e o endereço pessoal é
       // a própria pessoa quem cadastra no perfil, confirmando por link.
       position: parsed.data.position,
@@ -206,6 +229,7 @@ export async function updateEmployee(
   const parsed = employeeSchema.safeParse({
     name: formData.get("name"),
     username: formData.get("username"),
+    telefone: formData.get("telefone") || undefined,
     position: formData.get("position") || undefined,
     departmentId: formData.get("departmentId") || undefined,
     role: formData.get("role") || "EMPLOYEE",
@@ -217,6 +241,9 @@ export async function updateEmployee(
 
   const nome = lerNomeDeUsuario(parsed.data.username);
   if (!nome.ok) return nome;
+
+  const tel = lerTelefone(parsed.data.telefone ?? null);
+  if (!tel.ok) return tel;
 
   const vinculo = await bloqueioDeVinculo(
     admin.id,
@@ -249,6 +276,7 @@ export async function updateEmployee(
     data: {
       name: parsed.data.name,
       username: nome.valor,
+      telefone: tel.valor,
       position: parsed.data.position,
       departmentId: parsed.data.departmentId || null,
       role: parsed.data.role,

@@ -77,6 +77,19 @@ model User {
   /// duas pessoas registrem a MESMA caixa, o que daria a uma delas a
   /// recuperacao de senha da outra.
   email        String?  @unique
+
+  /// Celular com WhatsApp, so digitos e com DDI: 5541999999999.
+  ///
+  /// E o unico canal que alcanca esta rede. Ninguem tem e-mail corporativo, e
+  /// o pessoal tem e opcional — mas WhatsApp tem todo mundo. Sem isto nao ha
+  /// como avisar um funcionario de nada: nem da senha, nem de treinamento
+  /// vencendo. Guardado normalizado para o link `wa.me` nao depender de como
+  /// cada um digitou.
+  ///
+  /// NAO e unico de proposito: numero de familia repetido acontece, e recusar
+  /// o cadastro por isso deixaria alguem sem conta. O e-mail e o oposto —
+  /// aquele e chave de recuperacao, este e so um caminho de aviso.
+  telefone     String?
   passwordHash String
   role         Role     @default(EMPLOYEE)
   active       Boolean  @default(true)
@@ -216,6 +229,18 @@ model CursoObrigatorio {
 
   /// Dias a partir da matricula para concluir. Nulo significa sem prazo.
   prazoDias    Int?
+
+  /// De quantos em quantos meses o treinamento precisa ser refeito.
+  ///
+  /// Nulo = vale para sempre, que era o unico comportamento possivel antes.
+  ///
+  /// Existe porque os treinamentos que mais importam num hotel VENCEM:
+  /// manipulacao de alimentos, brigada de incendio, as NRs. Um certificado de
+  /// 2024 nao prova nada em 2026, e e exatamente isso que um auditor pergunta.
+  /// Sem este campo a plataforma era registro do que foi feito; com ele, ela
+  /// rematricula sozinha antes de a empresa ficar irregular.
+  validadeMeses Int?
+
   createdAt    DateTime   @default(now())
 
   @@unique([courseId, departmentId])

@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { ShieldCheck } from "lucide-react";
+import { FileDown, ShieldCheck } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,10 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { SearchInput, SelectFilter, Pagination } from "@/components/admin/table-filters";
 import { formatPrazo } from "@/lib/utils";
 import { levantarObrigacoes } from "@/lib/conformidade";
+import { BotaoWhatsApp } from "@/components/admin/botao-whatsapp";
+import { PainelDeReciclagem } from "@/components/admin/painel-de-reciclagem";
+import { enderecoPublico } from "@/lib/email";
+import { mensagemDePrazo } from "@/lib/whatsapp";
 
 const PAGE_SIZE = 25;
 
@@ -69,6 +73,7 @@ export default async function ConformidadePage(
         id: true,
         name: true,
         username: true,
+        telefone: true,
         department: { select: { name: true } },
       },
     }),
@@ -103,11 +108,29 @@ export default async function ConformidadePage(
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-ink-900">Conformidade</h1>
-        <p className="text-sm text-ink-700/70">
-          Treinamentos obrigatórios, nome a nome. {resumo.total} obrigação(ões) no total.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-ink-900">Conformidade</h1>
+          <p className="text-sm text-ink-700/70">
+            Treinamentos obrigatórios, nome a nome. {resumo.total} obrigação(ões) no total.
+          </p>
+        </div>
+
+        {/*
+          Link, e não botão: é um GET que devolve arquivo. Respeita o filtro de
+          departamento em tela — quem está olhando um setor quer o papel
+          daquele setor, não o da rede inteira.
+        */}
+        <a
+          href={`/api/relatorios/auditoria/pdf${
+            searchParams.departamento ? `?departamento=${searchParams.departamento}` : ""
+          }`}
+          className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm font-medium text-ink-900 transition hover:bg-surface-muted"
+          title="Gera o documento que a auditoria pede: por departamento e treinamento, quem está regular, com o código de conferência de cada certificado."
+        >
+          <FileDown className="h-4 w-4" />
+          Relatório para auditoria
+        </a>
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -118,6 +141,10 @@ export default async function ConformidadePage(
           </div>
         ))}
       </div>
+
+      <Suspense>
+        <PainelDeReciclagem departamentoId={searchParams.departamento} />
+      </Suspense>
 
       <Suspense>
         <div className="flex flex-wrap gap-3">
@@ -158,6 +185,7 @@ export default async function ConformidadePage(
                   <th className="px-4 py-3 font-medium">Progresso</th>
                   <th className="px-4 py-3 font-medium">Prazo</th>
                   <th className="px-4 py-3 font-medium">Situação</th>
+                  <th className="px-4 py-3 font-medium">Cobrar</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -212,6 +240,27 @@ export default async function ConformidadePage(
                       )}
                     </td>
                     <td className="px-4 py-3">{selo[l.situacao as keyof typeof selo]}</td>
+                    <td className="px-4 py-3">
+                      {/*
+                        Só aparece para quem realmente deve. Oferecer o botão a
+                        quem está em dia convidaria a cobrar quem não deve
+                        nada — e cobrança errada queima a cobrança certa.
+                      */}
+                      {l.situacao === "em_dia" ? (
+                        <span className="text-xs text-ink-700/30">—</span>
+                      ) : (
+                        <BotaoWhatsApp
+                          telefone={l.user?.telefone}
+                          rotulo="Cobrar"
+                          mensagem={mensagemDePrazo({
+                            nome: l.user?.name ?? "",
+                            curso: l.course?.title ?? "",
+                            diasRestantes: l.diasRestantes,
+                            endereco: enderecoPublico(),
+                          })}
+                        />
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

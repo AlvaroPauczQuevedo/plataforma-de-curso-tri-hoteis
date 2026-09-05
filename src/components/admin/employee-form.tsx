@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ActionForm } from "@/components/shared/action-form";
 import { createEmployee, updateEmployee } from "@/lib/actions/employees";
 import { normalizarNomeDeUsuario, sugerirNomeDeUsuario } from "@/lib/nome-de-usuario";
+import { formatarTelefone } from "@/lib/whatsapp";
 import type { Department, User } from "@prisma/client";
 
 export function EmployeeForm({
@@ -92,6 +93,27 @@ export function EmployeeForm({
             {isEdit
               ? "Alterar isto muda o login desta pessoa. Avise-a antes."
               : "É o que a pessoa digita para entrar. Anote junto com a senha provisória."}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <label htmlFor="telefone" className="text-sm font-medium text-ink-900">
+            WhatsApp <span className="font-normal text-ink-700/50">(opcional)</span>
+          </label>
+          <input
+            id="telefone"
+            name="telefone"
+            type="tel"
+            inputMode="tel"
+            defaultValue={formatarTelefone(employee?.telefone) === "—" ? "" : formatarTelefone(employee?.telefone)}
+            placeholder="(41) 99999-9999"
+            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
+          />
+          <p className="text-xs text-ink-700/60">
+            É por aqui que dá para enviar a senha e cobrar treinamento — esta rede não
+            tem e-mail.
           </p>
         </div>
       </div>

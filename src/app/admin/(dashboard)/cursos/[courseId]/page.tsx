@@ -97,6 +97,7 @@ export default async function CourseEditorPage(
     departmentId: o.departmentId,
     departamento: o.department.name,
     prazoDias: o.prazoDias,
+    validadeMeses: o.validadeMeses,
     matriculados: ativosPorDepartamento.get(o.departmentId) ?? 0,
   }));
 
