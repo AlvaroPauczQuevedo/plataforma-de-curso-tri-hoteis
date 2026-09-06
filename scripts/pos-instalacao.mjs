@@ -66,12 +66,32 @@ if (prisma("generate") !== 0) {
 const producao = process.env.NODE_ENV === "production";
 const forcado = /^(1|true|sim)$/i.test(process.env.MIGRAR_NA_INSTALACAO ?? "");
 
-if (!producao && !forcado) {
-  console.log("  [migracao] ambiente de desenvolvimento — nada a aplicar.");
-  process.exit(0);
-}
+/*
+  Tentar o MOTOR de migração é condicionado. CONFERIR o schema não é, e essa
+  separação foi comprada caro.
 
-console.log("  [migracao] aplicando migrações pendentes...");
+  Antes, quando nem NODE_ENV=production nem MIGRAR_NA_INSTALACAO estavam
+  definidas, este script saía aqui com process.exit(0) — sem migrar e sem
+  conferir. Nesta hospedagem NODE_ENV NÃO vem definida durante o npm install,
+  então o passo inteiro era pulado em silêncio a cada publicação. Foi assim
+  que a migração das unidades ficou para trás enquanto o código dela subia, e
+  o login parou para todo mundo: User.unidadeId não existia.
+
+  A condição continua valendo para o migrate deploy, porque ele é o motor e
+  atropelaria o prisma migrate dev de quem desenvolve. Já a conferência
+  seguida do aplicador pelo cliente é segura em qualquer ambiente: só executa
+  migração JÁ VERSIONADA que o banco ainda não tem — exatamente o que o fluxo
+  de desenvolvimento aplicaria em seguida.
+*/
+const tentarMotor = producao || forcado;
+
+if (!tentarMotor) {
+  console.log(
+    "  [migracao] fora de produção — sem `migrate deploy`, mas conferindo o schema mesmo assim."
+  );
+} else {
+  console.log("  [migracao] aplicando migrações pendentes...");
+}
 
 /*
   Não conferimos DATABASE_URL aqui de propósito. O CLI do Prisma tem sua
@@ -111,7 +131,7 @@ const TENTATIVAS = 4;
 const ESPERA_MS = 3000;
 
 let migrou = false;
-for (let tentativa = 1; tentativa <= TENTATIVAS; tentativa += 1) {
+for (let tentativa = 1; tentarMotor && tentativa <= TENTATIVAS; tentativa += 1) {
   if (prisma("migrate", "deploy") === 0) {
     migrou = true;
     break;
@@ -165,7 +185,9 @@ async function migracoesPendentes() {
 if (migrou) {
   console.log("  [migracao] banco em dia.");
 } else {
-  console.error(`\n  [migracao] \`prisma migrate deploy\` falhou ${TENTATIVAS} vezes.`);
+  if (tentarMotor) {
+    console.error(`\n  [migracao] \`prisma migrate deploy\` falhou ${TENTATIVAS} vezes.`);
+  }
 
   const pendentes = await migracoesPendentes();
 
@@ -174,8 +196,19 @@ if (migrou) {
     console.error("  Causa mais comum: DATABASE_URL ausente no ambiente de publicação.");
     console.error("  A publicação segue, mas confira a plataforma antes de usá-la.\n");
   } else if (pendentes.length === 0) {
-    console.log("  [migracao] ...mas NÃO HÁ NADA PENDENTE: o banco já está no schema atual.");
-    console.log("  A falha foi só disputa pelo arquivo (`database is locked`), sem efeito.");
+    /*
+      O texto muda conforme o motor ter sido tentado ou não. Sem isso, uma
+      instalação fora de produção anunciava que a falha tinha sido disputa
+      pelo arquivo — sem que falha alguma tivesse acontecido. Log que descreve
+      o que não houve é pior que log nenhum: manda procurar defeito onde não
+      existe, e foi um log mudo que já nos custou uma publicação às cegas.
+    */
+    if (tentarMotor) {
+      console.log("  [migracao] ...mas NÃO HÁ NADA PENDENTE: o banco já está no schema atual.");
+      console.log("  A falha foi só disputa pelo arquivo (`database is locked`), sem efeito.");
+    } else {
+      console.log("  [migracao] nada pendente: o banco já está no schema atual.");
+    }
     console.log("  Nenhuma ação necessária.\n");
     migrou = true; // para efeitos práticos, o banco está em dia
   } else {
