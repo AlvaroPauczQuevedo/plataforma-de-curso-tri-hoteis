@@ -76,6 +76,33 @@ export function comandosDe(sql: string): string[] {
 }
 
 /**
+ * O erro diz que o objeto que o comando criaria já existe?
+ *
+ * Existe para reconciliar um banco em DESVIO: schema que já contém parte do
+ * que uma migração criaria, sem que ela conste em `_prisma_migrations`. Foi o
+ * estado real da produção em 2026-09-06 — `CursoObrigatorio.validadeMeses` já
+ * estava lá, a migração não estava registrada, e o aplicador parava na primeira
+ * linha travando as três migrações seguintes. Login fora do ar por causa disso.
+ *
+ * Tolerar SÓ esta família de erros é o ponto. `duplicate column name`,
+ * `table já existe` e `index já existe` significam que o fim pretendido
+ * daquele comando já foi alcançado, então pular é seguir para o mesmo lugar.
+ * Qualquer outro erro — sintaxe, restrição violada, tabela ausente — continua
+ * interrompendo tudo, porque aí o banco NÃO está onde a migração queria.
+ *
+ * Ressalva assumida: um objeto de mesmo nome e forma diferente também passaria
+ * por aqui. É o preço de reconciliar desvio sem terminal no servidor, e por
+ * isso cada comando pulado é registrado e aparece em `/api/saude`.
+ */
+export function ehObjetoJaExistente(mensagem: string): boolean {
+  return (
+    /duplicate column name/i.test(mensagem) ||
+    /table \S+ already exists/i.test(mensagem) ||
+    /index \S+ already exists/i.test(mensagem)
+  );
+}
+
+/**
  * O mesmo checksum que o Prisma grava em `_prisma_migrations`: SHA-256 do
  * conteúdo do arquivo.
  *

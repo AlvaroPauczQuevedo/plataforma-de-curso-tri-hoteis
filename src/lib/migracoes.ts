@@ -24,7 +24,7 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { db } from "@/lib/db";
 import { ERROS_ROOT } from "@/lib/registro-de-erros";
-import { checksumDe, comandosDe } from "@/lib/sql-de-migracao";
+import { checksumDe, comandosDe, ehObjetoJaExistente } from "@/lib/sql-de-migracao";
 
 /*
   Caminho derivado de `process.cwd()`, que em `next start` é a raiz do projeto.
@@ -38,6 +38,12 @@ export type RelatorioDeMigracao = {
   quando: string;
   pendentesAntes: string[];
   aplicadas: string[];
+  /*
+    Comandos pulados por já existirem no banco. Vazio é o normal; cheio
+    significa que havia desvio e ele foi reconciliado — dado que precisa
+    ficar visível, não escondido num log que ninguém vai ler.
+  */
+  ignorados?: string[];
   erro?: string;
 };
 
@@ -151,6 +157,7 @@ export async function aplicarMigracoesNaSubida(): Promise<void> {
   );
 
   const aplicadas: string[] = [];
+  const ignorados: string[] = [];
 
   for (const nome of pendentes) {
     try {
@@ -159,7 +166,22 @@ export async function aplicarMigracoesNaSubida(): Promise<void> {
       const comandos = comandosDe(conteudo);
 
       for (const comando of comandos) {
-        await db.$executeRawUnsafe(comando);
+        try {
+          await db.$executeRawUnsafe(comando);
+        } catch (falha) {
+          const texto = (falha as Error)?.message ?? String(falha);
+
+          /*
+            Só "o objeto já existe" é tolerado, e isso reconcilia o banco em
+            desvio — schema que já tem parte da migração sem ela constar como
+            aplicada. Qualquer outro erro sobe e interrompe.
+          */
+          if (!ehObjetoJaExistente(texto)) throw falha;
+
+          const resumo = comando.split("\n")[0].slice(0, 80);
+          ignorados.push(`${nome}: ${resumo}`);
+          console.warn(`[migracao] ${nome}: já existia, seguindo — ${resumo}`);
+        }
       }
 
       /*
@@ -186,7 +208,7 @@ export async function aplicarMigracoesNaSubida(): Promise<void> {
         não completou produz um schema que ninguém sabe descrever.
       */
       const mensagem = (erro as Error)?.message ?? String(erro);
-      registrar({ quando, pendentesAntes: pendentes, aplicadas, erro: `${nome}: ${mensagem}` });
+      registrar({ quando, pendentesAntes: pendentes, aplicadas, ignorados, erro: `${nome}: ${mensagem}` });
       console.error(
         `[migracao] FALHOU em ${nome}: ${mensagem}. ` +
           `${aplicadas.length} aplicada(s) antes dela. ` +
@@ -196,6 +218,6 @@ export async function aplicarMigracoesNaSubida(): Promise<void> {
     }
   }
 
-  registrar({ quando, pendentesAntes: pendentes, aplicadas });
+  registrar({ quando, pendentesAntes: pendentes, aplicadas, ignorados });
   console.log(`[migracao] banco em dia — ${aplicadas.length} migração(ões) aplicada(s).`);
 }

@@ -167,7 +167,24 @@ async function main() {
       console.log(`  aplicando ${nome} (${comandos.length} comando(s))...`);
 
       for (const comando of comandos) {
-        await db.$executeRawUnsafe(comando);
+        try {
+          await db.$executeRawUnsafe(comando);
+        } catch (falha) {
+          /*
+            Mesma tolerância de src/lib/sql-de-migracao.ts, e pela mesma
+            razão: reconciliar banco em DESVIO, que já tem parte da migração
+            sem ela constar como aplicada. Só 'o objeto já existe' passa;
+            qualquer outro erro interrompe, porque aí o banco não está onde
+            a migração queria.
+          */
+          const texto = falha?.message ?? String(falha);
+          const jaExiste =
+            /duplicate column name/i.test(texto) ||
+            /table \S+ already exists/i.test(texto) ||
+            /index \S+ already exists/i.test(texto);
+          if (!jaExiste) throw falha;
+          console.log(`  ja existia, seguindo: ${comando.slice(0, 80)}`);
+        }
       }
 
       /*

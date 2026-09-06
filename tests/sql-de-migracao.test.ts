@@ -3,7 +3,11 @@ import { describe, it } from "node:test";
 import { DatabaseSync } from "node:sqlite";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { checksumDe, comandosDe } from "../src/lib/sql-de-migracao";
+import {
+  checksumDe,
+  comandosDe,
+  ehObjetoJaExistente,
+} from "../src/lib/sql-de-migracao";
 
 /**
  * O corte do arquivo de migração em comandos.
@@ -98,6 +102,78 @@ describe("O corte do SQL de migração", () => {
   it("descarta linhas de comentário", () => {
     const sql = '-- CreateTable\nCREATE TABLE "T" ("a" TEXT);';
     assert.deepEqual(comandosDe(sql), ['CREATE TABLE "T" ("a" TEXT)']);
+  });
+
+  it("reconhece só os erros de objeto já existente", () => {
+    // Mensagens reais do SQLite, como chegam pelo cliente do Prisma.
+    assert.ok(ehObjetoJaExistente("duplicate column name: validadeMeses"));
+    assert.ok(ehObjetoJaExistente('table "ConclusaoExterna" already exists'));
+    assert.ok(ehObjetoJaExistente('index "User_unidadeId_idx" already exists'));
+
+    // O resto tem de continuar interrompendo: nesses casos o banco NÃO está
+    // onde a migração queria, e seguir esconderia o problema.
+    assert.equal(ehObjetoJaExistente("no such table: User"), false);
+    assert.equal(ehObjetoJaExistente("UNIQUE constraint failed: User.username"), false);
+    assert.equal(ehObjetoJaExistente('near "CRETE": syntax error'), false);
+    assert.equal(ehObjetoJaExistente("database is locked"), false);
+  });
+
+  it("reconcilia um banco em desvio, como o da produção em 2026-09-06", () => {
+    /*
+      O estado real: tudo aplicado até `departamentos_adicionais`, mais a coluna
+      `validadeMeses` já presente sem que a migração que a cria constasse como
+      aplicada. O aplicador parava ali e as três migrações seguintes nunca
+      rodavam — inclusive a que cria `User.unidadeId`, sem a qual o login
+      inteiro falha.
+    */
+    const nomes = migracoes();
+    const corte = nomes.findIndex((n) => n.includes("whatsapp_e_reciclagem"));
+    assert.ok(corte > 0, "migração de referência não encontrada");
+
+    const db = new DatabaseSync(":memory:");
+    for (const nome of nomes.slice(0, corte)) {
+      db.exec(readFileSync(path.join(PASTA, nome, "migration.sql"), "utf8"));
+    }
+    // O desvio: a coluna já lá, a migração não registrada.
+    db.exec('ALTER TABLE "CursoObrigatorio" ADD COLUMN "validadeMeses" INTEGER');
+
+    const ignorados: string[] = [];
+    for (const nome of nomes.slice(corte)) {
+      for (const comando of comandosDe(
+        readFileSync(path.join(PASTA, nome, "migration.sql"), "utf8")
+      )) {
+        try {
+          db.exec(comando);
+        } catch (erro) {
+          const texto = (erro as Error).message;
+          if (!ehObjetoJaExistente(texto)) {
+            throw new Error(`${nome} parou em: ${texto}`);
+          }
+          ignorados.push(texto);
+        }
+      }
+    }
+
+    // Pulou exatamente o que já existia — nem mais, nem menos.
+    assert.equal(ignorados.length, 1);
+    assert.match(ignorados[0], /duplicate column name: validadeMeses/);
+
+    // E o schema chegou onde precisava: sem estas, o login não funciona.
+    const colunas = db
+      .prepare('PRAGMA table_info("User")')
+      .all()
+      .map((c) => (c as { name: string }).name);
+    assert.ok(colunas.includes("unidadeId"), "User.unidadeId não foi criada");
+    assert.ok(colunas.includes("telefone"), "User.telefone não foi criada");
+
+    const tabelas = db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
+      .all()
+      .map((t) => (t as { name: string }).name);
+    assert.ok(tabelas.includes("ConclusaoExterna"));
+    assert.ok(tabelas.includes("Unidade"));
+
+    db.close();
   });
 
   it("usa o mesmo checksum que o Prisma grava", () => {

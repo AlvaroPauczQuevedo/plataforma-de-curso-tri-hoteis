@@ -32,7 +32,7 @@ export const dynamic = "force-dynamic";
  * valor devolvido não for o desta linha, o que está no ar é build antigo — e
  * aí o problema é a publicação, não o código.
  */
-const MARCA = "2026-09-06-migracao-no-processo";
+const MARCA = "2026-09-06-reconcilia-desvio";
 
 export async function GET() {
   const resposta: Record<string, unknown> = { marca: MARCA };
