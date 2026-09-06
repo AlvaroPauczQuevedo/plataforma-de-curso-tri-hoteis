@@ -179,10 +179,44 @@ if (migrou) {
     console.log("  Nenhuma ação necessária.\n");
     migrou = true; // para efeitos práticos, o banco está em dia
   } else {
-    console.error(`  [migracao] AVISO: ${pendentes.length} migração(ões) PENDENTE(S):`);
+    console.error(`  [migracao] ${pendentes.length} migração(ões) PENDENTE(S):`);
     for (const nome of pendentes) console.error(`      ${nome}`);
-    console.error("  Telas que dependem do schema novo vão apresentar erro.");
-    console.error("  Resolva antes de usar a plataforma.\n");
+
+    /*
+      Última tentativa, por um caminho que o lock não bloqueia.
+
+      O motor de migração é um processo separado e é ele que não consegue o
+      arquivo; o CLIENTE do Prisma — o mesmo que a aplicação usa o tempo todo —
+      passa. `aplicar-migracoes.mjs` executa o SQL por ali e registra a linha
+      em `_prisma_migrations`, checksum incluído, para o `migrate` seguinte
+      reconhecer o que foi feito.
+
+      Isto deixou de ser precaução em 2026-09-06: subiu código consultando
+      `ConclusaoExterna` com a tabela inexistente e a tela de funcionário
+      quebrou em produção, porque a migração vinha falhando em silêncio a cada
+      publicação.
+    */
+    console.error("  [migracao] tentando aplicar pelo cliente, que o lock não bloqueia...\n");
+
+    const emergencia = spawnSync(
+      process.execPath,
+      [fileURLToPath(new URL("./aplicar-migracoes.mjs", import.meta.url))],
+      { stdio: "inherit", env: process.env }
+    );
+
+    if ((emergencia.status ?? 1) === 0) {
+      const aindaFaltam = await migracoesPendentes();
+      if (aindaFaltam && aindaFaltam.length === 0) {
+        console.log("  [migracao] banco em dia pela via alternativa.\n");
+        migrou = true;
+      }
+    }
+
+    if (!migrou) {
+      console.error("\n  [migracao] AVISO: as migrações continuam pendentes.");
+      console.error("  Telas que dependem do schema novo vão apresentar erro.");
+      console.error("  Resolva antes de usar a plataforma.\n");
+    }
   }
 }
 

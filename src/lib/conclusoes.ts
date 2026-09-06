@@ -64,16 +64,51 @@ export async function conclusoesPorCurso(courseIds: string[]): Promise<Map<strin
   const mapa = new Map<string, Conclusao>();
   if (courseIds.length === 0) return mapa;
 
-  const [certificados, externas] = await Promise.all([
-    db.certificate.findMany({
-      where: { courseId: { in: courseIds } },
-      select: { userId: true, courseId: true, issuedAt: true, code: true },
-    }),
-    db.conclusaoExterna.findMany({
+  const certificados = await db.certificate.findMany({
+    where: { courseId: { in: courseIds } },
+    select: { userId: true, courseId: true, issuedAt: true, code: true },
+  });
+
+  /*
+    A consulta do presencial é TOLERANTE a a tabela não existir.
+
+    Não é zelo abstrato: em 2026-09-06 subiu o código que consulta
+    `ConclusaoExterna` enquanto a migração falhava em silêncio a cada
+    publicação, e a tela de funcionário quebrou em produção. Como esta função
+    também sustenta a Conformidade, a Reciclagem e o relatório de auditoria,
+    uma tabela ausente derrubava QUATRO telas de uma vez.
+
+    Degradar é melhor do que quebrar: sem a tabela, a plataforma volta a
+    enxergar só o que ela mesma entregou — que é exatamente como funcionava
+    antes do recurso existir. O erro é gravado no log do servidor, e a
+    publicação seguinte, com a migração aplicada, restaura o comportamento
+    completo sozinha.
+
+    Só o "tabela não existe" (P2021) é tolerado. Qualquer outra falha sobe: um
+    catch largo aqui esconderia defeito de verdade atrás de um número errado
+    de pendências, que é o pior tipo de erro num relatório de conformidade.
+  */
+  let externas: {
+    userId: string;
+    courseId: string;
+    concluidoEm: Date;
+    instrutor: string | null;
+  }[] = [];
+
+  try {
+    externas = await db.conclusaoExterna.findMany({
       where: { courseId: { in: courseIds } },
       select: { userId: true, courseId: true, concluidoEm: true, instrutor: true },
-    }),
-  ]);
+    });
+  } catch (erro) {
+    const codigo = (erro as { code?: string })?.code;
+    if (codigo !== "P2021") throw erro;
+
+    console.error(
+      "[conclusoes] a tabela ConclusaoExterna não existe — o treinamento presencial " +
+        "está sendo ignorado. Aplique as migrações pendentes."
+    );
+  }
 
   for (const c of certificados) {
     mapa.set(chaveDeConclusao(c.userId, c.courseId), {

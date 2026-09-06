@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { BulkEnrollForm } from "@/components/admin/bulk-enroll-form";
 import { ActionButton } from "@/components/shared/action-button";
 import { SelectFilter, Pagination } from "@/components/admin/table-filters";
-import { removeEnrollment } from "@/lib/actions/enrollments";
+import { buscarPessoasParaMatricula, removeEnrollment } from "@/lib/actions/enrollments";
 import { formatPrazo } from "@/lib/utils";
 
 const PAGE_SIZE = 25;
@@ -36,34 +36,21 @@ export default async function MatriculasPage(
     decisão separada desta.
   */
   /*
-    `select`, e NUNCA `include`, e a diferença aqui não é desempenho.
+    A lista de pessoas NÃO vem inteira para cá.
 
-    Esta lista é entregue ao `BulkEnrollForm`, que é componente de CLIENTE —
-    ou seja, tudo que entra nela é serializado dentro do HTML e chega ao
-    navegador. Com `include: { department: true }` vinha o registro inteiro de
-    cada conta: `passwordHash` (o hash bcrypt), `telefone` e `email` de toda a
-    rede, em texto, na fonte da página.
+    O `BulkEnrollForm` é componente de cliente: tudo que ele recebe é
+    serializado dentro do HTML e viaja para o navegador. Antes esta consulta
+    trazia toda conta ativa — 700 delas passavam de 400 KB por abertura de
+    página, carregados no celular de quem só queria matricular três pessoas, e
+    crescendo em linha reta com a rede.
+    (Antes disso era pior: vinha `include`, e com ele o `passwordHash` de todo
+    mundo. Ver o guarda contra isso em `scripts/fumaca.mjs`.)
 
-    O tipo do componente lista só cinco campos, mas tipo do TypeScript não
-    remove dado em execução: o que é passado é o que viaja.
-
-    Medido numa base de 700 pessoas: 701 hashes bcrypt e 701 telefones na
-    página, 855 KB. Hash de senha não deve sair do servidor nem para quem
-    administra — bcrypt de senha fraca se quebra offline, e o telefone é dado
-    pessoal que nada nesta tela precisa.
+    Agora só a PRIMEIRA página vem daqui, para a lista não abrir vazia; a
+    busca seguinte acontece no servidor, por `buscarPessoasParaMatricula`.
   */
-  const [employees, courses] = await Promise.all([
-    db.user.findMany({
-      where: { active: true },
-      select: {
-        id: true,
-        name: true,
-        username: true,
-        role: true,
-        department: { select: { name: true } },
-      },
-      orderBy: { name: "asc" },
-    }),
+  const [pessoasIniciais, courses] = await Promise.all([
+    buscarPessoasParaMatricula(""),
     db.course.findMany({ where: { status: "PUBLISHED" }, orderBy: { title: "asc" } }),
   ]);
 
@@ -137,7 +124,7 @@ export default async function MatriculasPage(
 
       <section className="space-y-4 rounded-2xl border border-border bg-white p-6">
         <h2 className="font-semibold text-ink-900">Nova matrícula em massa</h2>
-        <BulkEnrollForm employees={employees} courses={courses} />
+        <BulkEnrollForm iniciais={pessoasIniciais} courses={courses} />
       </section>
 
       <section className="space-y-4">

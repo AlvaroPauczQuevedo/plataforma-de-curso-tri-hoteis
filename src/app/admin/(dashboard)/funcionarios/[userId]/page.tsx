@@ -62,28 +62,58 @@ export default async function FuncionarioDetailPage(
     componente, porque ele é de cliente — e o que chega nele viaja para o
     navegador.
   */
-  const conclusoesExternas = await db.conclusaoExterna.findMany({
-    where: { userId: employee.id },
-    select: {
-      id: true,
-      concluidoEm: true,
-      instrutor: true,
-      observacao: true,
-      course: { select: { title: true } },
-      registradoPor: { select: { name: true } },
-    },
-    orderBy: { concluidoEm: "desc" },
-  });
+  /*
+    Tolerante à tabela não existir, e isto foi aprendido do jeito ruim: em
+    2026-09-06 o código subiu antes de a migração aplicar, e esta tela inteira
+    quebrou em produção — cadastro, matrículas, histórico, tudo — por causa de
+    um painel opcional no rodapé.
 
-  const cursosParaReconhecer = await db.course.findMany({
-    where: {
-      status: "PUBLISHED",
-      // Um por pessoa e curso: o que já tem registro sai da lista.
-      conclusoesExternas: { none: { userId: employee.id } },
-    },
-    select: { id: true, title: true },
-    orderBy: { title: "asc" },
-  });
+    Sem a tabela, o painel some e o resto da ficha continua funcionando. Só o
+    "tabela não existe" (P2021) é tolerado; outra falha sobe, para defeito de
+    verdade não virar tela silenciosamente incompleta.
+  */
+  let conclusoesExternas: {
+    id: string;
+    concluidoEm: Date;
+    instrutor: string | null;
+    observacao: string | null;
+    course: { title: string };
+    registradoPor: { name: string };
+  }[] = [];
+  let cursosParaReconhecer: { id: string; title: string }[] = [];
+  let painelPresencialDisponivel = true;
+
+  try {
+    conclusoesExternas = await db.conclusaoExterna.findMany({
+      where: { userId: employee.id },
+      select: {
+        id: true,
+        concluidoEm: true,
+        instrutor: true,
+        observacao: true,
+        course: { select: { title: true } },
+        registradoPor: { select: { name: true } },
+      },
+      orderBy: { concluidoEm: "desc" },
+    });
+
+    cursosParaReconhecer = await db.course.findMany({
+      where: {
+        status: "PUBLISHED",
+        // Um por pessoa e curso: o que já tem registro sai da lista.
+        conclusoesExternas: { none: { userId: employee.id } },
+      },
+      select: { id: true, title: true },
+      orderBy: { title: "asc" },
+    });
+  } catch (erro) {
+    if ((erro as { code?: string })?.code !== "P2021") throw erro;
+    painelPresencialDisponivel = false;
+    console.error(
+      "[funcionario] a tabela ConclusaoExterna não existe — painel de treinamento " +
+        "presencial oculto. Aplique as migrações pendentes."
+    );
+  }
 
   const departments = await db.department.findMany({ orderBy: { name: "asc" } });
   const departamentosDisponiveis = departamentosPermitidos(ator, departments);
@@ -188,7 +218,7 @@ export default async function FuncionarioDetailPage(
         </section>
       )}
 
-      {!motivo && (
+      {!motivo && painelPresencialDisponivel && (
         <ConclusaoExternaPanel
           userId={employee.id}
           registros={conclusoesExternas.map((c) => ({

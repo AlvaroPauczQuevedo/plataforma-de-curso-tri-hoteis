@@ -7,6 +7,60 @@ import { logAdminActivity } from "@/lib/activity-log";
 import type { ActionResult } from "@/lib/actions/employees";
 import { recalculateCourseProgress } from "@/lib/progress";
 import { bloqueioDeCurso } from "@/lib/alcance-admin";
+// Constante e tipo moram fora daqui: "use server" só exporta função async.
+import { LIMITE_DA_BUSCA, type PessoaParaMatricula } from "@/lib/matricula-busca";
+
+/**
+ * Procura pessoas para a matrícula em massa.
+ *
+ * Existe porque a tela mandava TODA conta ativa dentro do HTML: o
+ * `BulkEnrollForm` é componente de cliente, então a lista inteira era
+ * serializada na página a cada abertura. Com 700 contas isso passava de 400 KB
+ * — carregados no celular de quem só queria matricular três pessoas — e crescia
+ * em linha reta com a rede.
+ *
+ * Devolve só o que a tela mostra, e no máximo `LIMITE_DA_BUSCA`.
+ */
+export async function buscarPessoasParaMatricula(
+  termo: string
+): Promise<PessoaParaMatricula[]> {
+  await requireAdmin();
+
+  const q = termo.trim();
+
+  /*
+    Administradores entram na lista, como antes.
+
+    Administrador também é aluno: faz o treinamento obrigatório do setor e o
+    curso sobre a própria plataforma. Filtrá-los aqui obrigaria a criar uma
+    segunda conta para a mesma pessoa, com o histórico partido em duas.
+  */
+  const pessoas = await db.user.findMany({
+    where: {
+      active: true,
+      ...(q
+        ? { OR: [{ name: { contains: q } }, { username: { contains: q } }] }
+        : {}),
+    },
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      role: true,
+      department: { select: { name: true } },
+    },
+    orderBy: { name: "asc" },
+    take: LIMITE_DA_BUSCA,
+  });
+
+  return pessoas.map((p) => ({
+    id: p.id,
+    name: p.name,
+    username: p.username,
+    role: p.role,
+    departamento: p.department?.name ?? null,
+  }));
+}
 
 export async function enrollUsers(params: {
   courseId: string;
