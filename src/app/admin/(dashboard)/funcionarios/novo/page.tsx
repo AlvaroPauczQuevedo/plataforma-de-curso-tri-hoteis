@@ -5,7 +5,7 @@ import { carregarAtorOuFalhar } from "@/lib/alcance-admin";
 import { requireAdmin } from "@/lib/session";
 import { Alert } from "@/components/ui/alert";
 import { EmployeeForm } from "@/components/admin/employee-form";
-import { departamentosPermitidos } from "@/lib/permissoes-usuario";
+import { departamentosPermitidos, unidadesPermitidas } from "@/lib/permissoes-usuario";
 
 export default async function NovoFuncionarioPage() {
   const admin = await requireAdmin();
@@ -16,6 +16,12 @@ export default async function NovoFuncionarioPage() {
   const departments = departamentosPermitidos(
     ator,
     await db.department.findMany({ orderBy: { name: "asc" } })
+  );
+
+  // Mesma razão: o gerente do Paranaguá não cadastra ninguém em Curitiba.
+  const unidades = unidadesPermitidas(
+    ator,
+    await db.unidade.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } })
   );
 
   return (
@@ -39,7 +45,7 @@ export default async function NovoFuncionarioPage() {
         </Alert>
       ) : (
         <div className="rounded-2xl border border-border bg-white p-6">
-          <EmployeeForm departments={departments} />
+          <EmployeeForm departments={departments} unidades={unidades} />
         </div>
       )}
     </div>

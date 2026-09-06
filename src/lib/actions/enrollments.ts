@@ -62,6 +62,51 @@ export async function buscarPessoasParaMatricula(
   }));
 }
 
+/**
+ * Todo mundo de um departamento, para matricular o setor inteiro de uma vez.
+ *
+ * SEM o teto de `LIMITE_DA_BUSCA`, ao contrário da busca por nome. O teto
+ * existe para a lista que se folheia; aqui a intenção é explícita — "este
+ * setor inteiro" — e devolver metade seria pior do que não devolver nada,
+ * porque a matrícula sairia incompleta com cara de completa.
+ *
+ * Alcança quem tem o setor como PRINCIPAL ou como ADICIONAL, a mesma regra da
+ * matrícula automática por curso obrigatório. Considerar só o principal
+ * deixaria de fora justamente quem atua em dois setores — que costuma ser
+ * quem mais precisa do treinamento dos dois.
+ */
+export async function pessoasDoDepartamento(
+  departmentId: string
+): Promise<PessoaParaMatricula[]> {
+  await requireAdmin();
+
+  const pessoas = await db.user.findMany({
+    where: {
+      active: true,
+      OR: [
+        { departmentId },
+        { departamentosExtras: { some: { departmentId } } },
+      ],
+    },
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      role: true,
+      department: { select: { name: true } },
+    },
+    orderBy: { name: "asc" },
+  });
+
+  return pessoas.map((p) => ({
+    id: p.id,
+    name: p.name,
+    username: p.username,
+    role: p.role,
+    departamento: p.department?.name ?? null,
+  }));
+}
+
 export async function enrollUsers(params: {
   courseId: string;
   userIds: string[];

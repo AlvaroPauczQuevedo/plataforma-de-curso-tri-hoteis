@@ -19,6 +19,7 @@ import { formatDateTime, formatPrazo } from "@/lib/utils";
 import {
   departamentosPermitidos,
   motivoDeBloqueio,
+  unidadesPermitidas,
 } from "@/lib/permissoes-usuario";
 
 export default async function FuncionarioDetailPage(
@@ -115,7 +116,11 @@ export default async function FuncionarioDetailPage(
     );
   }
 
-  const departments = await db.department.findMany({ orderBy: { name: "asc" } });
+  const [departments, todasAsUnidades] = await Promise.all([
+    db.department.findMany({ orderBy: { name: "asc" } }),
+    db.unidade.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
+  ]);
+  const unidades = unidadesPermitidas(ator, todasAsUnidades);
   const departamentosDisponiveis = departamentosPermitidos(ator, departments);
 
   const enrollments = await db.enrollment.findMany({
@@ -190,6 +195,7 @@ export default async function FuncionarioDetailPage(
           */}
           <EmployeeForm
             departments={departamentosDisponiveis}
+            unidades={unidades}
             employee={{
               id: employee.id,
               name: employee.name,
@@ -197,6 +203,7 @@ export default async function FuncionarioDetailPage(
               telefone: employee.telefone,
               position: employee.position,
               departmentId: employee.departmentId,
+              unidadeId: employee.unidadeId,
               role: employee.role,
             }}
             extras={extrasDoUsuario}

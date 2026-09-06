@@ -8,6 +8,8 @@ import { normalizarNomeDeUsuario, sugerirNomeDeUsuario } from "@/lib/nome-de-usu
 import { formatarTelefone } from "@/lib/whatsapp";
 import type { Department, Role } from "@prisma/client";
 
+type Unidade = { id: string; name: string };
+
 /**
  * SÓ os campos que o formulário usa — e nunca o `User` inteiro do Prisma.
  *
@@ -27,15 +29,18 @@ export type EmployeeParaFormulario = {
   telefone: string | null;
   position: string | null;
   departmentId: string | null;
+  unidadeId: string | null;
   role: Role;
 };
 
 export function EmployeeForm({
   departments,
+  unidades,
   employee,
   extras = [],
 }: {
   departments: Department[];
+  unidades: Unidade[];
   employee?: EmployeeParaFormulario;
   /** Departamentos adicionais já marcados para esta pessoa. */
   extras?: string[];
@@ -152,6 +157,32 @@ export function EmployeeForm({
             className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
           />
         </div>
+        <div className="space-y-1.5">
+          <label htmlFor="unidadeId" className="text-sm font-medium text-ink-900">
+            Hotel
+          </label>
+          <select
+            id="unidadeId"
+            name="unidadeId"
+            defaultValue={employee?.unidadeId ?? ""}
+            className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
+          >
+            <option value="">Selecione...</option>
+            {unidades.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-ink-700/60">
+            {unidades.length === 0
+              ? "Nenhum hotel cadastrado ainda — crie em Configurações."
+              : "O LUGAR onde a pessoa trabalha. O departamento abaixo é a função."}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <label htmlFor="departmentId" className="text-sm font-medium text-ink-900">
             Departamento

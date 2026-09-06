@@ -1,10 +1,12 @@
-import { Building2, Tags, ShieldCheck } from "lucide-react";
+import { Building2, Hotel, ShieldCheck, Tags } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import { notFound } from "next/navigation";
 import { QuickAddForm } from "@/components/admin/quick-add-form";
 import { DepartmentList } from "@/components/admin/department-list";
+import { UnidadeList } from "@/components/admin/unidade-list";
 import { createDepartment } from "@/lib/actions/employees";
+import { criarUnidade } from "@/lib/actions/unidades";
 import { ehProprietario } from "@/lib/alcance-admin";
 import { createCategory } from "@/lib/actions/courses";
 
@@ -26,7 +28,7 @@ export default async function ConfiguracoesPage() {
     departamento não pode ser excluído. Contar só usuários esconderia metade
     dos impedimentos e transformaria a recusa em surpresa.
   */
-  const [proprietario, departments, categories] = await Promise.all([
+  const [proprietario, departments, categories, unidades] = await Promise.all([
     ehProprietario(admin.id),
     db.department.findMany({
       include: {
@@ -38,14 +40,55 @@ export default async function ConfiguracoesPage() {
       include: { _count: { select: { courses: true } } },
       orderBy: { name: "asc" },
     }),
+    // Os dois contadores porque a tela precisa dizer POR QUE a unidade não
+    // pode ser excluída — e "atende aqui" conta tanto quanto "é daqui".
+    db.unidade.findMany({
+      include: { _count: { select: { users: true, membrosExtras: true } } },
+      orderBy: { name: "asc" },
+    }),
   ]);
 
   return (
     <div className="max-w-3xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-ink-900">Configurações da plataforma</h1>
-        <p className="text-sm text-ink-700/70">Gerencie departamentos, categorias e veja informações da conta.</p>
+        <p className="text-sm text-ink-700/70">
+          Gerencie hotéis, departamentos, categorias e veja informações da conta.
+        </p>
       </div>
+
+      {/*
+        Os hotéis vêm ANTES dos departamentos porque é a primeira coisa a
+        cadastrar: sem unidade criada, cada funcionário novo nasce sem lugar, e
+        corrigir isso depois exige reabrir ficha por ficha.
+      */}
+      <section className="space-y-4 rounded-2xl border border-border bg-white p-6">
+        <div className="flex items-center gap-2">
+          <Hotel className="h-5 w-5 text-brand-700" />
+          <h2 className="font-semibold text-ink-900">Hotéis da rede</h2>
+        </div>
+        {proprietario && (
+          <QuickAddForm action={criarUnidade} placeholder="Nome do hotel" />
+        )}
+        <UnidadeList
+          podeExcluir={proprietario}
+          unidades={unidades.map((u) => ({
+            id: u.id,
+            name: u.name,
+            usuarios: u._count.users,
+            extras: u._count.membrosExtras,
+          }))}
+        />
+        {proprietario && (
+          <p className="text-xs leading-relaxed text-ink-700/60">
+            A unidade é o LUGAR; o departamento é a FUNÇÃO. Uma pessoa é da
+            Recepção <em>e</em> do Hotel Paranaguá — as duas coisas, sem que uma
+            multiplique a outra. Um administrador com unidade definida alcança
+            aquele hotel inteiro; com unidade e departamento, alcança a
+            interseção dos dois.
+          </p>
+        )}
+      </section>
 
       <section className="space-y-4 rounded-2xl border border-border bg-white p-6">
         <div className="flex items-center gap-2">

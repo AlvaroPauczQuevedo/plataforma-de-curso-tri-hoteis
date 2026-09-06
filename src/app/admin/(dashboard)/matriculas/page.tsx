@@ -49,9 +49,11 @@ export default async function MatriculasPage(
     Agora só a PRIMEIRA página vem daqui, para a lista não abrir vazia; a
     busca seguinte acontece no servidor, por `buscarPessoasParaMatricula`.
   */
-  const [pessoasIniciais, courses] = await Promise.all([
+  const [pessoasIniciais, courses, departamentos] = await Promise.all([
     buscarPessoasParaMatricula(""),
     db.course.findMany({ where: { status: "PUBLISHED" }, orderBy: { title: "asc" } }),
+    // Só id e nome: a lista vai para o formulário, que é de cliente.
+    db.department.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
 
   // Mesmo cuidado: só os campos que a tabela mostra. Estes ficam no servidor,
@@ -124,7 +126,11 @@ export default async function MatriculasPage(
 
       <section className="space-y-4 rounded-2xl border border-border bg-white p-6">
         <h2 className="font-semibold text-ink-900">Nova matrícula em massa</h2>
-        <BulkEnrollForm iniciais={pessoasIniciais} courses={courses} />
+        <BulkEnrollForm
+          iniciais={pessoasIniciais}
+          courses={courses}
+          departamentos={departamentos}
+        />
       </section>
 
       <section className="space-y-4">

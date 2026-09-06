@@ -28,6 +28,13 @@ export type Ator = {
   id: string;
   protegido: boolean;
   departamentos: string[];
+  /**
+   * Unidades (hotéis) que este administrador alcança — principal e adicionais.
+   *
+   * Dimensão SEPARADA do departamento: um é o lugar, o outro é a função. Ver
+   * `dentroDoAlcance` para como as duas se combinam.
+   */
+  unidades: string[];
 };
 
 export type Alvo = {
@@ -35,6 +42,7 @@ export type Alvo = {
   name: string;
   protegido: boolean;
   departmentId: string | null;
+  unidadeId: string | null;
 };
 
 const SEM_DEPARTAMENTO_CONTEUDO =
@@ -44,6 +52,17 @@ const SEM_DEPARTAMENTO_CONTEUDO =
 const SEM_DEPARTAMENTO =
   "Sua conta ainda não tem departamento definido, então não alcança nenhum usuário. " +
   "Peça ao proprietário da plataforma para definir o seu departamento.";
+
+/**
+ * Nem departamento, nem unidade.
+ *
+ * Substitui `SEM_DEPARTAMENTO` no alcance sobre PESSOAS, porque agora há duas
+ * formas de ter alcance e citar só uma delas mandaria o gerente de hotel pedir
+ * a coisa errada ao proprietário.
+ */
+const SEM_ALCANCE =
+  "Sua conta ainda não tem departamento nem unidade definidos, então não alcança " +
+  "nenhum usuário. Peça ao proprietário da plataforma para definir o seu alcance.";
 
 /**
  * Devolve `null` quando o ator pode alterar o alvo, ou a frase que explica a
@@ -56,11 +75,47 @@ export function motivoDeBloqueio(alvo: Alvo, ator: Ator): string | null {
     return `${alvo.name} é uma conta protegida e só pode ser alterada pelo próprio titular.`;
   }
 
-  if (ator.protegido) return null; // o proprietário alcança todos os departamentos
-  if (ator.departamentos.length === 0) return SEM_DEPARTAMENTO;
+  if (ator.protegido) return null; // o proprietário alcança a rede inteira
 
-  if (!alvo.departmentId || !ator.departamentos.includes(alvo.departmentId)) {
-    return `${alvo.name} é de outro departamento. Você só altera usuários dos seus.`;
+  return motivoForaDoAlcance(alvo, ator);
+}
+
+/**
+ * A regra de alcance, com as DUAS dimensões.
+ *
+ * Cada dimensão **definida** restringe; a que estiver vazia não impõe nada:
+ *
+ *  - só departamentos → aquele setor, em toda a rede (o RH corporativo);
+ *  - só unidades      → aquele hotel inteiro, em todos os setores (o gerente
+ *                       da unidade, que é o caso de "cada hotel se administra");
+ *  - as duas          → a interseção: "Recepção do Paranaguá";
+ *  - nenhuma das duas → não alcança ninguém.
+ *
+ * **Interseção, e não união**, e a escolha é de segurança: acrescentar uma
+ * restrição deve ESTREITAR o alcance, nunca alargá-lo. Assim um erro de
+ * configuração produz "fulano não consegue editar quem deveria" — que aparece
+ * no primeiro uso e se conserta — em vez de "fulano editou quem não devia",
+ * que ninguém percebe.
+ *
+ * O último caso preserva o padrão seguro que já existia: conta administrativa
+ * recém-criada, sem nada definido, enxerga mas não altera.
+ */
+function motivoForaDoAlcance(alvo: Alvo, ator: Ator): string | null {
+  const temDepartamentos = ator.departamentos.length > 0;
+  const temUnidades = ator.unidades.length > 0;
+
+  if (!temDepartamentos && !temUnidades) return SEM_ALCANCE;
+
+  if (temDepartamentos) {
+    if (!alvo.departmentId || !ator.departamentos.includes(alvo.departmentId)) {
+      return `${alvo.name} é de outro departamento. Você só altera usuários dos seus.`;
+    }
+  }
+
+  if (temUnidades) {
+    if (!alvo.unidadeId || !ator.unidades.includes(alvo.unidadeId)) {
+      return `${alvo.name} é de outra unidade. Você só altera usuários dos hotéis que administra.`;
+    }
   }
 
   return null;
@@ -94,6 +149,25 @@ export function departamentosPermitidos<T extends { id: string }>(
 ): T[] {
   if (ator.protegido) return todos;
   return todos.filter((d) => ator.departamentos.includes(d.id));
+}
+
+/**
+ * Unidades que este ator pode escolher num formulário.
+ *
+ * Espelha `departamentosPermitidos`, com uma diferença que importa: quem **não
+ * tem unidade definida** vê todas. É o caso do RH corporativo, que administra
+ * um setor na rede inteira e precisa poder dizer em qual hotel a pessoa fica —
+ * sua restrição é o departamento, não o lugar.
+ *
+ * Já quem tem unidades definidas vê só as suas: o gerente do Paranaguá não
+ * cadastra ninguém em Curitiba. Sem este filtro, a tela ofereceria uma opção
+ * que a trava do servidor recusaria depois — e a recusa depois de preencher o
+ * formulário inteiro é a pior forma de dizer não.
+ */
+export function unidadesPermitidas<T extends { id: string }>(ator: Ator, todas: T[]): T[] {
+  if (ator.protegido) return todas;
+  if (ator.unidades.length === 0) return todas;
+  return todas.filter((u) => ator.unidades.includes(u.id));
 }
 
 /**

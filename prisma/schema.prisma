@@ -96,6 +96,14 @@ model User {
   position     String? // cargo
   departmentId String?
   department   Department? @relation(fields: [departmentId], references: [id])
+
+  /// Hotel a que a pessoa pertence. Nulo enquanto ninguem definiu.
+  ///
+  /// Separado do departamento de proposito: um e o LUGAR, o outro e a FUNCAO.
+  /// Relatorio por unidade usa este campo, e so ele — as unidades adicionais
+  /// ampliam alcance, nao contagem.
+  unidadeId    String?
+  unidade      Unidade?    @relation(fields: [unidadeId], references: [id])
   avatarUrl    String?
   lastLoginAt  DateTime?
 
@@ -143,6 +151,7 @@ model User {
   provasCriadas     Prova[]            @relation("ProvaCriadaPor")
   tentativasProva   TentativaProva[]
   departamentosExtras DepartamentoExtra[]
+  unidadesExtras      UnidadeExtra[]
 
   /// Quase toda consulta do painel filtra por departamento: alcance do
   /// administrador, relatorios, conformidade e matricula automatica. Sem o
@@ -150,6 +159,45 @@ model User {
   @@index([departmentId])
   /// Listagens separam funcionario de administrador e escondem inativo.
   @@index([role, active])
+  /// Mesmo motivo do indice de departamento: com 25 hoteis, a unidade entra
+  /// no filtro de quase toda tela e no alcance de quem administra.
+  @@index([unidadeId])
+}
+
+/// Uma unidade da rede — um hotel.
+///
+/// Dimensao SEPARADA do departamento, e nao um prefixo no nome dele. Com 25
+/// hoteis, misturar as duas coisas ("Paranagua — Recepcao") daria 25 x 6 = 150
+/// departamentos: a lista de selecao viraria impraticavel, a Conformidade sairia
+/// com 150 linhas, e marcar um curso como obrigatorio exigiria 150 cliques.
+///
+/// Separadas, uma pessoa e da *Recepcao* (funcao) E do *Hotel Paranagua*
+/// (lugar), sem que uma multiplique a outra.
+model Unidade {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  users         User[]
+  membrosExtras UnidadeExtra[]
+}
+
+/// Unidades adicionais de alguem que atende mais de um hotel.
+///
+/// Espelha `DepartamentoExtra`, e pela mesma razao: o vinculo principal fica em
+/// `User.unidadeId` porque relatorio precisa de UM lugar por pessoa — se alguem
+/// contasse em dois hoteis, a soma por unidade passaria do total de
+/// funcionarios, e numero que nao fecha nao se defende em auditoria.
+model UnidadeExtra {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unidadeId String
+  unidade   Unidade  @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, unidadeId])
+  @@index([unidadeId])
 }
 
 model Category {

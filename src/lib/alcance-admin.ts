@@ -27,6 +27,8 @@ const CAMPOS = {
   protegido: true,
   departmentId: true,
   departamentosExtras: { select: { departmentId: true } },
+  unidadeId: true,
+  unidadesExtras: { select: { unidadeId: true } },
 } as const;
 
 /**
@@ -41,6 +43,8 @@ function comoAtor(u: {
   protegido: boolean;
   departmentId: string | null;
   departamentosExtras: { departmentId: string }[];
+  unidadeId: string | null;
+  unidadesExtras: { unidadeId: string }[];
 }): Ator {
   return {
     id: u.id,
@@ -48,6 +52,13 @@ function comoAtor(u: {
     departamentos: [
       ...(u.departmentId ? [u.departmentId] : []),
       ...u.departamentosExtras.map((d) => d.departmentId),
+    ],
+    // Mesmo tratamento para o hotel: principal e adicionais valem igual para
+    // decidir alcance. A distinção entre eles só importa em relatório, onde a
+    // contagem tem de sair por UM lugar por pessoa.
+    unidades: [
+      ...(u.unidadeId ? [u.unidadeId] : []),
+      ...u.unidadesExtras.map((x) => x.unidadeId),
     ],
   };
 }

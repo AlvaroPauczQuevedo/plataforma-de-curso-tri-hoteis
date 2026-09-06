@@ -2,13 +2,27 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
+import { Users, X } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { buscarPessoasParaMatricula, enrollUsers } from "@/lib/actions/enrollments";
+import {
+  buscarPessoasParaMatricula,
+  enrollUsers,
+  pessoasDoDepartamento,
+} from "@/lib/actions/enrollments";
 import { LIMITE_DA_BUSCA, type PessoaParaMatricula } from "@/lib/matricula-busca";
 
 type Course = { id: string; title: string };
+type Departamento = { id: string; name: string };
+
+/**
+ * Quantas etiquetas mostrar antes de recolher.
+ *
+ * Matricular um setor inteiro pode somar oitenta pessoas de uma vez, e oitenta
+ * etiquetas viram uma parede que empurra o botão de matricular para fora da
+ * tela. Recolher mantém a contagem visível, que é o que importa conferir.
+ */
+const ETIQUETAS_VISIVEIS = 12;
 
 /** Espera entre a última tecla e a consulta. */
 const ATRASO_MS = 300;
@@ -33,10 +47,12 @@ const campoClasse =
 export function BulkEnrollForm({
   courses,
   iniciais,
+  departamentos,
 }: {
   courses: Course[];
   /** Primeira página, renderizada no servidor: a lista não abre vazia. */
   iniciais: PessoaParaMatricula[];
+  departamentos: Departamento[];
 }) {
   const [courseId, setCourseId] = useState("");
   const [mandatory, setMandatory] = useState(false);
@@ -48,6 +64,11 @@ export function BulkEnrollForm({
 
   /** id -> nome. O nome é guardado porque a lista em tela muda. */
   const [selecionados, setSelecionados] = useState<Map<string, string>>(new Map());
+
+  const [departamento, setDepartamento] = useState("");
+  const [adicionandoSetor, iniciarSetor] = useTransition();
+  const [avisoDoSetor, setAvisoDoSetor] = useState<string | null>(null);
+  const [mostrarTodas, setMostrarTodas] = useState(false);
 
   const [pendente, iniciar] = useTransition();
   const [resultado, setResultado] = useState<
@@ -103,6 +124,40 @@ export function BulkEnrollForm({
     });
   }
 
+  /**
+   * Junta o setor inteiro à seleção, sem substituir o que já estava marcado.
+   *
+   * Somar, e não trocar, porque o caso real é montar uma turma a partir de
+   * dois setores — "cozinha e lavanderia" — e um clique que apagasse o
+   * anterior obrigaria a refazer tudo sem avisar.
+   */
+  function adicionarSetor() {
+    if (!departamento) return;
+    const nome = departamentos.find((d) => d.id === departamento)?.name ?? "o setor";
+
+    iniciarSetor(async () => {
+      const pessoasDoSetor = await pessoasDoDepartamento(departamento);
+
+      let novas = 0;
+      setSelecionados((antes) => {
+        const proximo = new Map(antes);
+        for (const p of pessoasDoSetor) {
+          if (!proximo.has(p.id)) novas += 1;
+          proximo.set(p.id, p.name);
+        }
+        return proximo;
+      });
+
+      const jaEstavam = pessoasDoSetor.length - novas;
+      setAvisoDoSetor(
+        pessoasDoSetor.length === 0
+          ? `Não há ninguém ativo em ${nome}.`
+          : `${novas} pessoa(s) de ${nome} adicionada(s)` +
+              (jaEstavam > 0 ? `; ${jaEstavam} já estava(m) na seleção.` : ".")
+      );
+    });
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!courseId || selecionados.size === 0) {
@@ -119,6 +174,7 @@ export function BulkEnrollForm({
       setResultado(res);
       if (res.ok) {
         setSelecionados(new Map());
+        setAvisoDoSetor(null);
         router.refresh();
       }
     });
@@ -196,8 +252,11 @@ export function BulkEnrollForm({
           desmarcar alguém que saiu do resultado atual.
         */}
         {selecionados.size > 0 && (
-          <div className="flex flex-wrap gap-1.5 rounded-xl border border-border bg-surface-muted/50 p-2.5">
-            {[...selecionados.entries()].map(([id, nome]) => (
+          <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-border bg-surface-muted/50 p-2.5">
+            {(mostrarTodas
+              ? [...selecionados.entries()]
+              : [...selecionados.entries()].slice(0, ETIQUETAS_VISIVEIS)
+            ).map(([id, nome]) => (
               <button
                 key={id}
                 type="button"
@@ -215,8 +274,76 @@ export function BulkEnrollForm({
                 <X className="h-3 w-3" />
               </button>
             ))}
+
+            {selecionados.size > ETIQUETAS_VISIVEIS && (
+              <button
+                type="button"
+                onClick={() => setMostrarTodas((v) => !v)}
+                className="rounded-lg px-2 py-1 text-xs font-medium text-brand-700 hover:underline"
+              >
+                {mostrarTodas
+                  ? "mostrar menos"
+                  : `e mais ${selecionados.size - ETIQUETAS_VISIVEIS}`}
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => {
+                setSelecionados(new Map());
+                setAvisoDoSetor(null);
+              }}
+              className="ml-auto rounded-lg px-2 py-1 text-xs font-medium text-ink-700/60 hover:text-danger-600 hover:underline"
+            >
+              limpar seleção
+            </button>
           </div>
         )}
+
+        {/*
+          Matricular um setor inteiro.
+
+          Vem ANTES da busca porque é o caminho mais curto para o caso mais
+          comum — treinamento obrigatório costuma ser por setor, não por
+          pessoa escolhida a dedo. Quem precisa de nomes soltos usa a busca
+          abaixo, e as duas somam na mesma seleção.
+        */}
+        {departamentos.length > 0 && (
+          <div className="flex flex-wrap items-end gap-2 rounded-xl border border-border bg-surface-muted/40 p-3">
+            <div className="min-w-[180px] flex-1 space-y-1.5">
+              <label htmlFor="setor-inteiro" className="text-xs font-medium text-ink-900">
+                Adicionar um departamento inteiro
+              </label>
+              <select
+                id="setor-inteiro"
+                value={departamento}
+                onChange={(e) => {
+                  setDepartamento(e.target.value);
+                  setAvisoDoSetor(null);
+                }}
+                className={campoClasse}
+              >
+                <option value="">Escolha um departamento...</option>
+                {departamentos.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={adicionarSetor}
+              disabled={!departamento || adicionandoSetor}
+            >
+              <Users className="h-4 w-4" />
+              {adicionandoSetor ? "Somando..." : "Somar à seleção"}
+            </Button>
+          </div>
+        )}
+
+        {avisoDoSetor && <p className="text-xs text-brand-700">{avisoDoSetor}</p>}
 
         <input
           value={busca}
