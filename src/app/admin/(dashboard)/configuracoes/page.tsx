@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { QuickAddForm } from "@/components/admin/quick-add-form";
 import { DepartmentList } from "@/components/admin/department-list";
 import { UnidadeList } from "@/components/admin/unidade-list";
+import { UnidadeLoteForm } from "@/components/admin/unidade-lote-form";
 import { createDepartment } from "@/lib/actions/employees";
 import { criarUnidade } from "@/lib/actions/unidades";
 import { ehProprietario } from "@/lib/alcance-admin";
@@ -68,7 +69,10 @@ export default async function ConfiguracoesPage() {
           <h2 className="font-semibold text-ink-900">Hotéis da rede</h2>
         </div>
         {proprietario && (
-          <QuickAddForm action={criarUnidade} placeholder="Nome do hotel" />
+          <div className="space-y-3">
+            <QuickAddForm action={criarUnidade} placeholder="Nome do hotel" />
+            <UnidadeLoteForm />
+          </div>
         )}
         <UnidadeList
           podeExcluir={proprietario}
