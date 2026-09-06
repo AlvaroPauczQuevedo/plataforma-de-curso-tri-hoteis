@@ -16,13 +16,21 @@ import type { RelatorioDeAuditoria } from "../src/lib/auditoria";
 
 const AGORA = new Date("2026-09-05T12:00:00.000Z");
 
-function pessoa(nome: string, situacao: "concluido" | "vencido" | "pendente" | "atrasado") {
+function pessoa(
+  nome: string,
+  situacao: "concluido" | "vencido" | "pendente" | "atrasado",
+  origem: "plataforma" | "externa" = "plataforma"
+) {
+  const concluiu = situacao === "concluido" || situacao === "vencido";
   return {
     nome,
     username: nome.toLowerCase().replace(/\s+/g, "."),
     situacao,
-    concluidoEm: situacao === "concluido" || situacao === "vencido" ? new Date("2025-06-01T12:00:00Z") : null,
-    codigo: situacao === "concluido" || situacao === "vencido" ? "CERT-2025-A1B2C3D4E5" : null,
+    concluidoEm: concluiu ? new Date("2025-06-01T12:00:00Z") : null,
+    // Presencial não tem código: a plataforma não certifica o que não entregou.
+    codigo: concluiu && origem === "plataforma" ? "CERT-2025-A1B2C3D4E5" : null,
+    origem: concluiu ? origem : null,
+    instrutor: concluiu && origem === "externa" ? "Corpo de Bombeiros" : null,
     venceEm: situacao === "vencido" ? new Date("2026-06-01T12:00:00Z") : null,
     prazo: null,
   };
@@ -109,6 +117,37 @@ describe("Quebra de página", () => {
       relatorioCom([pessoa("Maria Aparecida das Dores do Nascimento Silva Sauro Filha", "concluido")])
     );
     assert.equal(Buffer.from(bytes.slice(0, 5)).toString(), "%PDF-");
+  });
+});
+
+describe("Treinamento presencial", () => {
+  /**
+   * Presencial entra no relatório SEM código de conferência — a plataforma não
+   * certifica o que não entregou. O documento precisa dizer isso em vez de
+   * deixar a célula vazia, senão parece falta de dado justamente na coluna que
+   * dá valor ao papel.
+   */
+  it("sai no documento junto com o da plataforma", async () => {
+    const bytes = await gerarAuditoriaPdf(
+      relatorioCom([
+        pessoa("Ana Plataforma", "concluido", "plataforma"),
+        pessoa("Bruno Presencial", "concluido", "externa"),
+      ])
+    );
+
+    assert.equal(Buffer.from(bytes.slice(0, 5)).toString(), "%PDF-");
+    assert.equal(await paginasDe(bytes), 1);
+  });
+
+  it("presencial conta como regular no total do bloco", async () => {
+    const r = relatorioCom([
+      pessoa("Ana Plataforma", "concluido", "plataforma"),
+      pessoa("Bruno Presencial", "concluido", "externa"),
+      pessoa("Carla Pendente", "pendente"),
+    ]);
+
+    assert.equal(r.regulares, 2, "quem fez presencialmente está regular");
+    assert.equal(r.total, 3);
   });
 });
 

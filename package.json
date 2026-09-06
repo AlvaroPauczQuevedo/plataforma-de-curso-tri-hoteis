@@ -13,6 +13,7 @@
     "dev:local": "next dev",
     "start:local": "next start",
     "backup": "node scripts/backup.mjs",
+    "backup:conferir": "node scripts/restaurar-backup.mjs",
     "senha:redefinir": "tsx scripts/redefinir-senha.mjs",
     "curso:boas-vindas": "node prisma/curso-de-boas-vindas.mjs",
     "conformidade:resumo": "tsx scripts/resumo-conformidade.mjs",

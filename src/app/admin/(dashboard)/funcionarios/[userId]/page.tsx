@@ -9,6 +9,7 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { EmployeeForm } from "@/components/admin/employee-form";
+import { ConclusaoExternaPanel } from "@/components/admin/conclusao-externa-panel";
 import { EmployeeStatusActions } from "@/components/admin/employee-status-actions";
 import { EnrollSingleForm } from "@/components/admin/enroll-form";
 import { ActionButton } from "@/components/shared/action-button";
@@ -55,6 +56,34 @@ export default async function FuncionarioDetailPage(
       select: { departmentId: true },
     })
   ).map((d) => d.departmentId);
+
+  /*
+    Treinamento reconhecido fora da plataforma. Buscado aqui, e não dentro do
+    componente, porque ele é de cliente — e o que chega nele viaja para o
+    navegador.
+  */
+  const conclusoesExternas = await db.conclusaoExterna.findMany({
+    where: { userId: employee.id },
+    select: {
+      id: true,
+      concluidoEm: true,
+      instrutor: true,
+      observacao: true,
+      course: { select: { title: true } },
+      registradoPor: { select: { name: true } },
+    },
+    orderBy: { concluidoEm: "desc" },
+  });
+
+  const cursosParaReconhecer = await db.course.findMany({
+    where: {
+      status: "PUBLISHED",
+      // Um por pessoa e curso: o que já tem registro sai da lista.
+      conclusoesExternas: { none: { userId: employee.id } },
+    },
+    select: { id: true, title: true },
+    orderBy: { title: "asc" },
+  });
 
   const departments = await db.department.findMany({ orderBy: { name: "asc" } });
   const departamentosDisponiveis = departamentosPermitidos(ator, departments);
@@ -157,6 +186,21 @@ export default async function FuncionarioDetailPage(
             <EnrollSingleForm userId={employee.id} courses={availableCourses} />
           )}
         </section>
+      )}
+
+      {!motivo && (
+        <ConclusaoExternaPanel
+          userId={employee.id}
+          registros={conclusoesExternas.map((c) => ({
+            id: c.id,
+            curso: c.course.title,
+            concluidoEm: c.concluidoEm,
+            instrutor: c.instrutor,
+            observacao: c.observacao,
+            registradoPor: c.registradoPor.name,
+          }))}
+          cursos={cursosParaReconhecer}
+        />
       )}
 
       <section className="space-y-4 rounded-2xl border border-border bg-white p-6">

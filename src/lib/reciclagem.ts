@@ -30,6 +30,7 @@
  * antigo intacto.
  */
 import { db } from "@/lib/db";
+import { conclusoesPorCurso, type OrigemDaConclusao } from "@/lib/conclusoes";
 
 const DIA_EM_MS = 24 * 60 * 60 * 1000;
 
@@ -46,6 +47,8 @@ export type SituacaoDeReciclagem = "vigente" | "vencendo" | "vencido";
 export type LinhaDeReciclagem = {
   userId: string;
   courseId: string;
+  /** De onde veio a conclusão: a plataforma, ou um treinamento presencial. */
+  origem: OrigemDaConclusao;
   emitidoEm: Date;
   venceEm: Date;
   diasRestantes: number;
@@ -153,30 +156,40 @@ export async function levantarReciclagem(
     setoresPorCurso.get(o.courseId)!.add(o.departmentId);
   }
 
-  const certificados = await db.certificate.findMany({
+  /*
+    As duas origens, pela função compartilhada.
+
+    Antes esta consulta olhava só `Certificate`, e treinamento presencial
+    ficava invisível para a reciclagem: quem fez brigada de incêndio numa sala
+    nunca era cobrado para refazer, porque a plataforma não sabia que ele
+    tinha feito da primeira vez.
+  */
+  const conclusoes = await conclusoesPorCurso([...validadePorCurso.keys()]);
+
+  const pessoas = await db.user.findMany({
     where: {
-      courseId: { in: [...validadePorCurso.keys()] },
-      user: { active: true, role: "EMPLOYEE" },
+      active: true,
+      role: "EMPLOYEE",
+      id: { in: [...new Set([...conclusoes.values()].map((c) => c.userId))] },
     },
     select: {
-      userId: true,
-      courseId: true,
-      issuedAt: true,
-      user: {
-        select: {
-          departmentId: true,
-          departamentosExtras: { select: { departmentId: true } },
-        },
-      },
+      id: true,
+      departmentId: true,
+      departamentosExtras: { select: { departmentId: true } },
     },
   });
+  const pessoaPor = new Map(pessoas.map((p) => [p.id, p]));
 
   const linhas: LinhaDeReciclagem[] = [];
 
-  for (const cert of certificados) {
+  for (const cert of conclusoes.values()) {
+    const pessoa = pessoaPor.get(cert.userId);
+    // Fora da lista: inativo, administrador, ou quem já não existe.
+    if (!pessoa) continue;
+
     const setoresDaPessoa = new Set([
-      ...(cert.user.departmentId ? [cert.user.departmentId] : []),
-      ...cert.user.departamentosExtras.map((d) => d.departmentId),
+      ...(pessoa.departmentId ? [pessoa.departmentId] : []),
+      ...pessoa.departamentosExtras.map((d) => d.departmentId),
     ]);
 
     // A obrigatoriedade tem de alcançar ESTA pessoa: quem deixou o setor não
@@ -188,7 +201,7 @@ export async function levantarReciclagem(
 
     const validadeMeses = validadePorCurso.get(cert.courseId)!;
     const { situacao, venceEm: vencimento, diasRestantes } = situacaoDaReciclagem({
-      emitidoEm: cert.issuedAt,
+      emitidoEm: cert.em,
       validadeMeses,
       agora,
     });
@@ -196,7 +209,8 @@ export async function levantarReciclagem(
     linhas.push({
       userId: cert.userId,
       courseId: cert.courseId,
-      emitidoEm: cert.issuedAt,
+      origem: cert.origem,
+      emitidoEm: cert.em,
       venceEm: vencimento,
       diasRestantes,
       situacao,

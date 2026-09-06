@@ -11,6 +11,7 @@
  * misturá-lo inflaria o número de pendências até o relatório virar ruído.
  */
 import { db } from "@/lib/db";
+import { chaveDeConclusao, conclusoesPorCurso } from "@/lib/conclusoes";
 import type { Prisma } from "@prisma/client";
 
 const DIA_EM_MS = 24 * 60 * 60 * 1000;
@@ -61,8 +62,24 @@ export function situacaoDaObrigacao(entrada: {
   percent: number;
   dueDate: Date | null;
   agora: Date;
+  /**
+   * Conclusão reconhecida fora da plataforma — treinamento presencial.
+   *
+   * Entra como parâmetro, e não como consulta aqui dentro, para a função
+   * seguir pura: é o que permite exercitar a virada de um prazo em teste sem
+   * esperar um dia, e a razão de a regra ter saído da tela.
+   */
+  concluidoExternamente?: boolean;
 }): { situacao: Situacao; concluido: boolean; diasRestantes: number | null } {
-  const concluido = entrada.percent >= 100;
+  /*
+    Presencial conta como concluído.
+
+    Sem isto, a Conformidade cobrava quem JÁ tinha feito o treinamento — só
+    que numa sala, com instrutor, do jeito que brigada de incêndio e
+    manipulação de alimentos são feitos numa rede hoteleira. A pergunta aqui
+    é "a pessoa está treinada?", não "a plataforma ensinou?".
+  */
+  const concluido = entrada.percent >= 100 || entrada.concluidoExternamente === true;
 
   const diasRestantes = entrada.dueDate
     ? Math.ceil((entrada.dueDate.getTime() - entrada.agora.getTime()) / DIA_EM_MS)
@@ -131,12 +148,22 @@ export async function levantarObrigacoes(
 
   const percentPor = new Map(progressos.map((p) => [`${p.userId}:${p.courseId}`, p.percent]));
 
+  // Conclusões das DUAS origens, pela mesma função que a Reciclagem e o
+  // relatório de auditoria usam — três telas respondendo à mesma pergunta
+  // precisam responder igual.
+  const conclusoes = await conclusoesPorCurso([
+    ...new Set(obrigatorias.map((m) => m.courseId)),
+  ]);
+
   const linhas: Obrigacao[] = obrigatorias.map((m) => {
     const percent = percentPor.get(`${m.userId}:${m.courseId}`) ?? 0;
+    const externa = conclusoes.get(chaveDeConclusao(m.userId, m.courseId));
+
     const { situacao, concluido, diasRestantes } = situacaoDaObrigacao({
       percent,
       dueDate: m.dueDate,
       agora,
+      concluidoExternamente: externa?.origem === "externa",
     });
     return { ...m, percent, concluido, diasRestantes, situacao };
   });

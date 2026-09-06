@@ -210,7 +210,21 @@ export async function gerarAuditoriaPdf(relatorio: RelatorioDeAuditoria): Promis
         font: regular,
         color: CINZA,
       });
-      page!.drawText(p.codigo ?? "—", {
+      /*
+        Sem código, diz POR QUE não há.
+
+        Treinamento presencial não gera certificado da plataforma — ela não
+        pode certificar o que não entregou. Deixar a célula vazia pareceria
+        falta de dado justamente na coluna que dá valor ao documento; dizer
+        "presencial" e o instrutor explica de onde vem a prova.
+      */
+      const conferencia = p.codigo
+        ? p.codigo
+        : p.origem === "externa"
+          ? `presencial${p.instrutor ? ` — ${p.instrutor}` : ""}`
+          : "—";
+
+      page!.drawText(cortar(conferencia, regular, 8, L - MARGEM - colunas[4].x), {
         x: colunas[4].x,
         y,
         size: 8,

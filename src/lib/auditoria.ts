@@ -15,6 +15,7 @@
  * `/validar`, sem login, e vê a mesma informação saindo da fonte.
  */
 import { db } from "@/lib/db";
+import { chaveDeConclusao, conclusoesPorCurso, type OrigemDaConclusao } from "@/lib/conclusoes";
 import { situacaoDaReciclagem } from "@/lib/reciclagem";
 
 export type SituacaoDeAuditoria = "concluido" | "vencido" | "pendente" | "atrasado";
@@ -25,8 +26,12 @@ export type PessoaAuditada = {
   situacao: SituacaoDeAuditoria;
   /** Quando concluiu. Nulo para quem não concluiu. */
   concluidoEm: Date | null;
-  /** Código de conferência pública. Nulo sem certificado. */
+  /** Código de conferência pública. Nulo no treinamento presencial. */
   codigo: string | null;
+  /** De onde veio a conclusão. Nulo para quem ainda não concluiu. */
+  origem: OrigemDaConclusao | null;
+  /** Quem aplicou o treinamento presencial. */
+  instrutor: string | null;
   /** Só quando o treinamento tem reciclagem. */
   venceEm: Date | null;
   /** Prazo da matrícula, para quem ainda não concluiu. */
@@ -103,29 +108,30 @@ export async function levantarAuditoria(
 
     const ids = pessoas.map((p) => p.id);
 
-    const [certificados, matriculas] = await Promise.all([
-      db.certificate.findMany({
-        where: { courseId: o.courseId, userId: { in: ids } },
-        select: { userId: true, code: true, issuedAt: true },
-      }),
+    /*
+      As duas origens. Um relatório de auditoria que ignorasse o treinamento
+      presencial sairia INCOMPLETO afirmando estar completo — marcando como
+      pendente gente que fez brigada de incêndio numa sala, com instrutor.
+    */
+    const [conclusoes, matriculas] = await Promise.all([
+      conclusoesPorCurso([o.courseId]),
       db.enrollment.findMany({
         where: { courseId: o.courseId, userId: { in: ids } },
         select: { userId: true, dueDate: true },
       }),
     ]);
 
-    const certPor = new Map(certificados.map((c) => [c.userId, c]));
     const prazoPor = new Map(matriculas.map((m) => [m.userId, m.dueDate]));
 
     const auditadas: PessoaAuditada[] = pessoas.map((p) => {
-      const cert = certPor.get(p.id);
+      const cert = conclusoes.get(chaveDeConclusao(p.id, o.courseId));
       const prazo = prazoPor.get(p.id) ?? null;
 
       if (cert) {
         // Concluiu. Só deixa de valer se o treinamento tiver reciclagem.
         const vencimento = o.validadeMeses
           ? situacaoDaReciclagem({
-              emitidoEm: cert.issuedAt,
+              emitidoEm: cert.em,
               validadeMeses: o.validadeMeses,
               agora,
             })
@@ -135,8 +141,10 @@ export async function levantarAuditoria(
           nome: p.name,
           username: p.username,
           situacao: vencimento?.situacao === "vencido" ? "vencido" : "concluido",
-          concluidoEm: cert.issuedAt,
-          codigo: cert.code,
+          concluidoEm: cert.em,
+          codigo: cert.codigo,
+          origem: cert.origem,
+          instrutor: cert.instrutor,
           venceEm: vencimento?.venceEm ?? null,
           prazo,
         };
@@ -148,6 +156,8 @@ export async function levantarAuditoria(
         situacao: prazo && prazo < agora ? "atrasado" : "pendente",
         concluidoEm: null,
         codigo: null,
+        origem: null,
+        instrutor: null,
         venceEm: null,
         prazo,
       };

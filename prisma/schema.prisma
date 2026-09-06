@@ -135,6 +135,8 @@ model User {
   certificates      Certificate[]
   passwordResets    PasswordResetToken[]
   confirmacoesEmail EmailConfirmacao[]
+  conclusoesExternas ConclusaoExterna[]
+  conclusoesRegistradas ConclusaoExterna[] @relation("ConclusaoRegistradaPor")
   accessLogs        AccessLog[]
   adminActivity     AdminActivityLog[]
   uploadedFiles     FileAsset[]
@@ -172,6 +174,7 @@ model FileAsset {
   coverForCourses Course[] @relation("CourseCover")
   videoForLessons Lesson[] @relation("LessonVideo")
   pdfForLessons   Lesson[] @relation("LessonPdf")
+  comprovantesExternos ConclusaoExterna[] @relation("ComprovanteExterno")
 }
 
 model Course {
@@ -205,6 +208,7 @@ model Course {
   enrollments     Enrollment[]
   courseProgress  CourseProgress[]
   certificates    Certificate[]
+  conclusoesExternas ConclusaoExterna[]
 
   @@index([status])
   /// Mesmo motivo do indice em User: o departamento decide quem enxerga e
@@ -347,6 +351,54 @@ model CourseProgress {
 
   @@unique([userId, courseId])
   @@index([userId])
+}
+
+/// Treinamento feito FORA da plataforma, reconhecido aqui.
+///
+/// Existe porque a plataforma só conhecia o que ela mesma entregou — e numa
+/// rede hoteleira boa parte do treinamento obrigatorio e presencial: brigada
+/// de incendio exige pratica, manipulacao de alimentos costuma ser em sala.
+///
+/// Sem isto, a Conformidade marcava "pendente" quem tinha feito o curso, e o
+/// relatorio de auditoria saia INCOMPLETO — afirmando com confianca uma foto
+/// parcial, que e pior do que uma foto que se sabe parcial.
+///
+/// NAO emite certificado da plataforma, de proposito: ela nao pode certificar
+/// o que nao entregou. O comprovante e o documento anexado aqui, de quem
+/// aplicou o treinamento. Para efeito de conformidade e de reciclagem, porem,
+/// vale como conclusao — e `concluidoEm` e a data que conta a validade.
+model ConclusaoExterna {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId     String
+  course       Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  /// Quando a pessoa concluiu de fato, e nao quando alguem registrou aqui.
+  /// E desta data que a reciclagem conta a validade.
+  concluidoEm  DateTime
+
+  /// Quem aplicou: instrutor, empresa, sindicato.
+  instrutor    String?
+  observacao   String?
+
+  /// Comprovante digitalizado. Opcional — nem todo treinamento antigo tem
+  /// papel guardado, e exigir o anexo deixaria de fora justamente o histórico
+  /// que se quer resgatar.
+  comprovanteId String?
+  comprovante   FileAsset? @relation("ComprovanteExterno", fields: [comprovanteId], references: [id])
+
+  /// Quem lancou. O registro afirma algo sobre conformidade, entao precisa ter
+  /// dono — e ele aparece no relatorio de auditoria.
+  registradoPorId String
+  registradoPor   User   @relation("ConclusaoRegistradaPor", fields: [registradoPorId], references: [id])
+
+  createdAt    DateTime @default(now())
+
+  /// Uma por pessoa e curso: reconhecer duas vezes o mesmo treinamento
+  /// duplicaria a pessoa em todo relatorio.
+  @@unique([userId, courseId])
+  @@index([courseId])
 }
 
 model Certificate {

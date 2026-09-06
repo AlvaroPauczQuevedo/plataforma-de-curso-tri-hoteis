@@ -563,6 +563,41 @@ que a comodidade de não clicar.
 Então o painel diz **quem** precisa refazer, e a rematrícula continua sendo um
 ato de quem administra, pela tela de Matrículas, com o registro antigo intacto.
 
+## Treinamento presencial
+
+A plataforma só conhecia o que ela mesma entregou. Numa rede hoteleira, boa
+parte do treinamento obrigatório acontece **em sala** — brigada de incêndio
+exige prática, manipulação de alimentos costuma ser presencial.
+
+O efeito era grave e silencioso: a Conformidade cobrava quem **já tinha feito**
+o curso, e o relatório de auditoria saía incompleto afirmando estar completo.
+
+Em *Usuários → (pessoa) → Treinamento presencial* dá para reconhecer o que foi
+feito fora: curso, data da conclusão, quem aplicou e uma observação. A partir
+daí ele conta como concluído na Conformidade, na Reciclagem e no relatório.
+
+### Três decisões que valem entender
+
+**Não emite certificado da plataforma.** Ela não pode certificar o que não
+entregou — não viu a aula, não corrigiu prova. O comprovante é o documento de
+quem aplicou. No relatório, a coluna de conferência mostra `presencial — <quem
+aplicou>` em vez de um código, para a célula vazia não parecer falta de dado
+justamente onde o documento ganha valor.
+
+**A data é a da conclusão, não a do lançamento.** É dela que a reciclagem conta
+a validade. Quem fez brigada há treze meses aparece como vencido no mesmo dia
+em que o registro é criado — que é o correto.
+
+**As três telas leem a mesma fonte** (`src/lib/conclusoes.ts`). Antes, cada uma
+consultava um lugar diferente: progresso do curso, certificado, certificado de
+novo. Bastava acrescentar uma quarta origem para divergirem — e divergência
+aqui aparece do pior jeito: a tela dizendo doze pendentes e o papel dizendo
+nove, sem ninguém saber qual vale.
+
+Tendo as duas origens — fez presencialmente e depois refez aqui —, vale a
+**mais recente**: escolher a antiga marcaria como vencido quem acabou de
+reciclar.
+
 ## Relatório para auditoria
 
 Um botão na Conformidade gera o PDF que alguém vai pedir: **departamento →
@@ -747,6 +782,7 @@ tocado**.
 | `tests/senha-provisoria.test.ts` | Formato e entropia da senha gerada, e a redefinição destravando conta bloqueada por tentativas. |
 | `tests/faixa-de-bytes.test.ts` | O trecho de arquivo pedido pelo cliente, contido no arquivo real — bordas, arquivo vazio, e a garantia de que nenhum tamanho sai negativo. |
 | `tests/teto-de-avisos.test.ts` | O limitador da rota de avisos: teto por janela, virada, e a enxurrada contínua que não pode reabrir a janela. |
+| `tests/conclusao-externa.test.ts` | Treinamento presencial: a regra pura, a fonte compartilhada, e a garantia de que Conformidade, Reciclagem e auditoria concordam sobre quem está regular. |
 | `tests/whatsapp.test.ts` | Normalização do número (zero de operadora, DDI, formatação humana), faixa de DDD, e a garantia de que o lembrete não leva senha. |
 | `tests/reciclagem.test.ts` | Quando o certificado vence: meses de calendário, virada de ano, e o 31 de janeiro que não pode ganhar dias num mês curto. |
 | `tests/auditoria-pdf.test.ts` | O relatório sai como PDF válido e quebra em páginas — uma lista que perde a última pessoa da folha é pior que relatório nenhum. |
@@ -960,6 +996,37 @@ Pode rodar com a plataforma no ar.
 
 Para restaurar: pare a plataforma, coloque `dev.db` no caminho de `DATABASE_URL`
 e a pasta `uploads` no caminho de `STORAGE_DIR`.
+
+### Conferir se o backup presta
+
+```bash
+npm run backup:conferir              # o mais recente
+npm run backup:conferir -- caminho   # um específico
+```
+
+Restaura numa pasta **temporária** e examina lá. Nunca escreve no banco em uso
+nem na pasta de uploads viva — e recusa rodar se o alvo coincidir com qualquer
+um dos dois.
+
+Existe porque `npm run backup` rodava havia meses sem reclamar e **restaurar
+nunca tinha sido testado**. Backup que ninguém restaurou não é backup, é
+esperança: a hora de descobrir que o arquivo está truncado não pode ser a hora
+em que ele é necessário.
+
+| Conferência | Pega |
+| --- | --- |
+| `PRAGMA integrity_check` | corrupção e truncamento, o que uma cópia interrompida produz |
+| Cada `FileAsset` tem seu arquivo | **banco e uploads que não viajaram juntos** |
+| Tamanhos batem com o registro | cópia parcial de arquivo |
+| `_prisma_migrations` × `prisma/migrations` | backup mais antigo que o código |
+| Há contas e cursos | banco íntegro e vazio, que passaria em tudo acima |
+
+A segunda é a que mais importa, e é a falha que o próprio backup avisa ser
+possível: a plataforma sobe, as telas abrem, e só quem clica no vídeo descobre
+que ele não veio.
+
+Sai com código **1** quando algo reprova, então serve para agendar junto do
+backup — um cron que grava sem conferir só descobre o problema tarde demais.
 
 O script **apaga sozinho os backups antigos**, mantendo os `BACKUP_KEEP` mais
 recentes (padrão 14) — sem isso, um backup diário encheria o disco em poucos
