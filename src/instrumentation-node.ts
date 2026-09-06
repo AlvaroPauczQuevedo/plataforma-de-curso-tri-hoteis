@@ -16,6 +16,7 @@ import {
   limparErrosAntigos,
 } from "@/lib/registro-de-erros";
 import { db } from "@/lib/db";
+import { aplicarMigracoesNaSubida } from "@/lib/migracoes";
 
 await limparErrosAntigos();
 
@@ -48,6 +49,30 @@ try {
 } catch (erro) {
   console.error("[banco] nao foi possivel ligar o WAL:", (erro as Error)?.message);
 }
+
+/**
+ * Aplica migrações pendentes antes da primeira requisição.
+ *
+ * Depois do WAL de propósito: a migração do Prisma para SQLite reescreve
+ * tabela inteira (cria `new_User`, copia, derruba a antiga, renomeia), e é bem
+ * mais tranquilo fazer isso com leitura e escrita já sem disputa.
+ *
+ * NÃO é condicionado a `NODE_ENV === "production"`, e essa foi a decisão
+ * central aqui. Confiar em NODE_ENV é exatamente o que fez
+ * `scripts/pos-instalacao.mjs` nos deixar na mão: se a variável não estiver
+ * definida no ambiente, ele pula a migração sem dizer nada. Repetir a mesma
+ * condição neste arquivo seria repetir a mesma falha — a rede de segurança
+ * deixaria de funcionar justamente na hospedagem para a qual ela existe.
+ *
+ * Em desenvolvimento o efeito é inofensivo: aplica migrações que já estão
+ * versionadas, que é o que `prisma migrate dev` faria em seguida. Sem nada
+ * pendente — o caso normal — o custo é uma consulta e uma leitura de pasta.
+ *
+ * Fica no caminho da subida, e não em segundo plano, porque servir requisição
+ * com o banco desatualizado é o problema que estamos resolvendo. Alguns
+ * segundos a mais para subir valem menos do que a primeira tela quebrada.
+ */
+await aplicarMigracoesNaSubida();
 
 const originalErro = console.error.bind(console);
 
