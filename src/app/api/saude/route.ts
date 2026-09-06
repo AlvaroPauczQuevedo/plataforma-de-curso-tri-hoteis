@@ -17,7 +17,7 @@
  */
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { migracoesPendentes } from "@/lib/migracoes";
+import { migracoesPendentes, ultimoRelatorioDeMigracao } from "@/lib/migracoes";
 
 /*
   Nunca em cache: a resposta é sobre o estado de AGORA. Uma resposta guardada
@@ -32,7 +32,7 @@ export const dynamic = "force-dynamic";
  * valor devolvido não for o desta linha, o que está no ar é build antigo — e
  * aí o problema é a publicação, não o código.
  */
-const MARCA = "2026-09-06-saude-1";
+const MARCA = "2026-09-06-migracao-no-processo";
 
 export async function GET() {
   const resposta: Record<string, unknown> = { marca: MARCA };
@@ -52,6 +52,16 @@ export async function GET() {
       cwd: process.cwd(),
     };
   }
+
+  /*
+    O que a subida tentou fazer, e no que deu.
+
+    É a diferença entre "o banco está atrasado" e "o banco está atrasado
+    PORQUE tal migração falhou com tal erro". Sem isto, descobrir o segundo
+    exige o log do painel colado à mão — o vaivém que esta rota veio encerrar.
+    Nulo significa que a rotina de subida não chegou a rodar neste processo.
+  */
+  resposta.ultimaSubida = ultimoRelatorioDeMigracao();
 
   /*
     A consulta que o login faz.

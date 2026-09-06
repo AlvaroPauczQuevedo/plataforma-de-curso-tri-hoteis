@@ -55,7 +55,15 @@ function comandosDe(sql) {
 
   for (const linha of sql.split(/\r?\n/)) {
     const semComentario = dentroDeTexto ? linha : linha.replace(/^\s*--.*$/, "");
-    if (!dentroDeTexto && semComentario.trim() === "") continue;
+
+    /*
+      Linha em branco ENTRE comandos é descartada; dentro de um comando ela é
+      preservada, porque o SQLite guarda o texto do CREATE TABLE como recebeu.
+      Mesma regra de src/lib/sql-de-migracao.ts, que é quem aplica na subida
+      do servidor — as duas precisam produzir exatamente o mesmo DDL.
+    */
+    const entreComandos = atual.trim() === "";
+    if (!dentroDeTexto && semComentario.trim() === "" && entreComandos) continue;
 
     for (let i = 0; i < semComentario.length; i += 1) {
       const c = semComentario[i];
