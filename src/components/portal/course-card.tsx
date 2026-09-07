@@ -34,7 +34,7 @@ export function CourseCard({
   return (
     <Link
       href={`/cursos/${id}`}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+      className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
     >
       <div className="relative h-36 w-full overflow-hidden bg-gradient-to-br from-ink-900 to-brand-700">
         {coverUrl ? (
@@ -59,7 +59,7 @@ export function CourseCard({
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="space-y-1">
           {categoryName && (
-            <p className="text-xs font-medium uppercase tracking-wide text-brand-700">
+            <p className="text-xs font-medium uppercase tracking-wide text-brand-texto">
               {categoryName}
             </p>
           )}

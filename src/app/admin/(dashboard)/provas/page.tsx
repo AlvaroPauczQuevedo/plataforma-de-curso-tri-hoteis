@@ -45,7 +45,7 @@ export default async function ProvasPage() {
           description="Crie uma prova para avaliar o que a equipe aprendeu. A correção é automática e a nota fica registrada."
         />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-border bg-white">
+        <div className="overflow-hidden rounded-2xl border border-border bg-surface">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-ink-700/50">
@@ -81,7 +81,7 @@ export default async function ProvasPage() {
                   <td className="px-4 py-3 text-right">
                     <Link
                       href={`/admin/provas/${p.id}`}
-                      className="text-sm font-medium text-brand-700 hover:underline"
+                      className="text-sm font-medium text-brand-texto hover:underline"
                     >
                       Abrir
                     </Link>

@@ -19,7 +19,7 @@ export default async function AdminLoginPage(
           Não é administrador?{" "}
           <Link
             href="/login"
-            className="inline-flex items-center gap-1 font-medium text-brand-700 hover:underline"
+            className="inline-flex items-center gap-1 font-medium text-brand-texto hover:underline"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Voltar para o acesso do funcionário

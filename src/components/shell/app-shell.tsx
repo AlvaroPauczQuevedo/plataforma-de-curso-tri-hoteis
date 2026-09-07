@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronDown, LogOut, Menu, User, X, type LucideIcon } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { SeletorDeTema } from "@/components/shell/seletor-de-tema";
 
 /**
  * Casca da aplicação: menu lateral escuro, barra superior e barra inferior no
@@ -145,6 +146,11 @@ export function AppShell({
           </button>
 
           <div className="topo__acoes">
+            {/*
+              Antes das ações da tela e do menu do usuário: é um controle da
+              casca, igual em toda página, e fica no mesmo lugar sempre.
+            */}
+            <SeletorDeTema />
             {acoesTopo}
             <div className="relative" ref={refUsuario}>
               <button
@@ -162,7 +168,7 @@ export function AppShell({
               </button>
 
               {menuUsuario && (
-                <div className="absolute right-0 top-[46px] z-40 w-56 overflow-hidden rounded-xl border border-border bg-white shadow-lg">
+                <div className="absolute right-0 top-[46px] z-40 w-56 overflow-hidden rounded-xl border border-border bg-surface shadow-lg">
                   <div className="border-b border-border px-4 py-3">
                     <div className="text-sm font-medium text-ink-900">{usuario.nome}</div>
                   </div>

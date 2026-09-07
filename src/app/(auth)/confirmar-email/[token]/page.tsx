@@ -36,7 +36,7 @@ export default async function ConfirmarEmailPage(props: {
       }
       footer={
         <p className="text-center text-xs text-ink-700/60">
-          <Link href="/login" className="font-medium text-brand-700 hover:underline">
+          <Link href="/login" className="font-medium text-brand-texto hover:underline">
             Ir para o login
           </Link>
         </p>

@@ -15,7 +15,7 @@ export default async function LoginPage(
       footer={
         <p className="text-center text-xs text-ink-700/60">
           É administrador?{" "}
-          <Link href="/admin/login" className="font-medium text-brand-700 hover:underline">
+          <Link href="/admin/login" className="font-medium text-brand-texto hover:underline">
             Acesse o painel administrativo
           </Link>
         </p>

@@ -15,7 +15,7 @@ export function CoursesTabs({
   counts: Record<string, number>;
 }) {
   return (
-    <div className="flex gap-1 overflow-x-auto rounded-xl bg-white p-1 border border-border w-fit">
+    <div className="flex gap-1 overflow-x-auto rounded-xl bg-surface p-1 border border-border w-fit">
       {tabs.map((tab) => {
         const active = current === tab.key;
         return (

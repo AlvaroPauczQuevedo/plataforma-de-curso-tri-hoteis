@@ -84,7 +84,7 @@ export function LoginForm({
             Senha
           </label>
           {variant === "employee" && (
-            <a href="/esqueci-senha" className="text-xs font-medium text-brand-700 hover:underline">
+            <a href="/esqueci-senha" className="text-xs font-medium text-brand-texto hover:underline">
               Esqueci minha senha
             </a>
           )}

@@ -489,6 +489,20 @@ export async function generatePasswordResetLink(
  * é confirmação, é formalidade.
  */
 export async function impactoDaExclusao(userId: string) {
+  /*
+    Exige sessão administrativa mesmo sendo só leitura.
+
+    A função é chamada de um componente de servidor, onde quem chega já passou
+    por `requireAdmin` — mas ela mora num arquivo `"use server"`, e isso a
+    publica como endpoint: quem souber o identificador da action a alcança de
+    fora, com o `userId` que quiser. Sem esta linha, dava para varrer contas
+    perguntando quantos certificados e tentativas de prova cada uma tem.
+
+    Foi a única das dez funções deste arquivo que estava sem a trava, e passou
+    despercebida justamente por ser leitura.
+  */
+  await requireAdmin();
+
   const [
     matriculas,
     certificados,

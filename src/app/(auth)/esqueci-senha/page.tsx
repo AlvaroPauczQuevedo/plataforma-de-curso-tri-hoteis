@@ -29,7 +29,7 @@ export default function ForgotPasswordPage() {
       subtitle="Informe o e-mail pessoal que você cadastrou no seu perfil. Se você nunca cadastrou um, procure o RH — só ele pode redefinir sua senha."
       footer={
         <p className="text-center text-xs text-ink-700/60">
-          <Link href="/login" className="font-medium text-brand-700 hover:underline">
+          <Link href="/login" className="font-medium text-brand-texto hover:underline">
             Voltar para o login
           </Link>
         </p>

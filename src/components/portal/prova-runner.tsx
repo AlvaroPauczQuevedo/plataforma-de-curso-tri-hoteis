@@ -100,7 +100,7 @@ export function ProvaRunner({
             return (
               <div
                 key={q.questaoId}
-                className="rounded-2xl border border-border bg-white p-4"
+                className="rounded-2xl border border-border bg-surface p-4"
               >
                 <div className="flex items-start gap-2">
                   {q.acertou ? (
@@ -154,7 +154,7 @@ export function ProvaRunner({
       {questoes.map((q, i) => (
         <fieldset
           key={q.id}
-          className="space-y-2 rounded-2xl border border-border bg-white p-5"
+          className="space-y-2 rounded-2xl border border-border bg-surface p-5"
         >
           <legend className="text-sm font-medium text-ink-900">
             {i + 1}. {q.enunciado}
@@ -169,7 +169,7 @@ export function ProvaRunner({
                 name={q.id}
                 checked={respostas[q.id] === a.id}
                 onChange={() => setRespostas((r) => ({ ...r, [q.id]: a.id }))}
-                className="h-4 w-4 border-border text-brand-700"
+                className="h-4 w-4 border-border text-brand-texto"
               />
               {a.texto}
             </label>

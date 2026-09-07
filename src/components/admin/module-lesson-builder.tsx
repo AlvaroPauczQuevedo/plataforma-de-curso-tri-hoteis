@@ -127,7 +127,7 @@ export function ModuleLessonBuilder({
           value={newModuleTitle}
           onChange={(e) => setNewModuleTitle(e.target.value)}
           placeholder="Nome do novo módulo (ex: Módulo 4 — Avaliação)"
-          className="flex-1 rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
+          className="flex-1 rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
         />
         <button
           type="button"
@@ -165,14 +165,14 @@ function SortableModuleCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={`overflow-hidden rounded-2xl border border-border bg-white ${isDragging ? "shadow-lg opacity-90" : ""}`}
+      className={`overflow-hidden rounded-2xl border border-border bg-surface ${isDragging ? "shadow-lg opacity-90" : ""}`}
     >
       <div className="flex items-center gap-2 border-b border-border bg-surface-muted/60 px-3 py-2.5">
         <button
           type="button"
           {...attributes}
           {...listeners}
-          className="cursor-grab touch-none rounded p-1.5 text-ink-700/40 hover:bg-white hover:text-ink-700"
+          className="cursor-grab touch-none rounded p-1.5 text-ink-700/40 hover:bg-surface hover:text-ink-700"
           title="Arrastar para reordenar"
         >
           <GripVertical className="h-4 w-4" />
@@ -186,7 +186,7 @@ function SortableModuleCard({
               updateModuleTitle(module.id, title.trim()).then(() => router.refresh());
             }
           }}
-          className="flex-1 rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm font-medium text-ink-900 outline-none focus:border-border focus:bg-white"
+          className="flex-1 rounded-lg border border-transparent bg-transparent px-2 py-1 text-sm font-medium text-ink-900 outline-none focus:border-border focus:bg-surface"
         />
         <ActionButton
           action={() => deleteModule(module.id)}
@@ -216,7 +216,7 @@ function SortableModuleCard({
           <button
             type="button"
             onClick={() => setShowAddLesson(true)}
-            className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-700/10"
+            className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-brand-texto hover:bg-brand-700/10"
           >
             <Plus className="h-3.5 w-3.5" />
             Adicionar aula
@@ -316,7 +316,7 @@ function SortableLessonRow({
     <li
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-2.5 rounded-xl border border-border bg-white px-3 py-2.5 ${isDragging ? "shadow-md opacity-90" : ""}`}
+      className={`flex items-center gap-2.5 rounded-xl border border-border bg-surface px-3 py-2.5 ${isDragging ? "shadow-md opacity-90" : ""}`}
     >
       <button
         type="button"
@@ -326,7 +326,7 @@ function SortableLessonRow({
       >
         <GripVertical className="h-3.5 w-3.5" />
       </button>
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-700/10 text-brand-700">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-700/10 text-brand-texto">
         <Icon className="h-3.5 w-3.5" />
       </div>
       <span className="min-w-0 flex-1 truncate text-sm text-ink-900">{lesson.title}</span>

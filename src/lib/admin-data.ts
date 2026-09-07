@@ -34,10 +34,27 @@ export async function getDashboardStats() {
     db.courseProgress.count({ where: { percent: { gt: 0, lt: 100 } } }),
     db.courseProgress.count({ where: { percent: { gte: 100 } } }),
     db.courseProgress.aggregate({ _avg: { percent: true } }),
+    /*
+      Projeção explícita, e não `include: { admin: true }`.
+
+      O `include` trazia o registro inteiro do administrador — `passwordHash`
+      junto — para exibir apenas o nome. Hoje isto é renderizado por um
+      componente de servidor, então nada disso chega ao navegador; mas foi
+      exatamente essa forma que, numa tela de cliente, vazou 701 hashes em
+      2026-09. Selecionar o que se usa tira a tela da lista de candidatas ao
+      mesmo acidente.
+    */
     db.adminActivityLog.findMany({
       orderBy: { createdAt: "desc" },
       take: 8,
-      include: { admin: true },
+      select: {
+        id: true,
+        action: true,
+        targetType: true,
+        details: true,
+        createdAt: true,
+        admin: { select: { name: true } },
+      },
     }),
   ]);
 

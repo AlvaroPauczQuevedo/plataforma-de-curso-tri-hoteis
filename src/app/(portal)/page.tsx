@@ -25,7 +25,7 @@ export default async function PortalHomePage() {
 
   return (
     <div className="space-y-8">
-      <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-ink-950 via-ink-900 to-brand-700 p-6 text-white sm:p-8">
+      <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-escuro-950 via-escuro-900 to-brand-700 p-6 text-white sm:p-8">
         <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
             <p className="text-sm text-white/70">Bem-vindo(a) de volta,</p>
@@ -46,7 +46,7 @@ export default async function PortalHomePage() {
               }
               variant="primary"
               size="lg"
-              className="bg-white text-ink-900 hover:bg-white/90"
+              className="bg-white text-escuro-900 hover:bg-white/90"
             >
               <PlayCircle className="h-5 w-5" />
               Continuar estudando
@@ -98,7 +98,7 @@ export default async function PortalHomePage() {
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-ink-900">Cursos em andamento</h2>
           {items.length > 0 && (
-            <Link href="/meus-cursos" className="text-sm font-medium text-brand-700 hover:underline">
+            <Link href="/meus-cursos" className="text-sm font-medium text-brand-texto hover:underline">
               Ver todos
             </Link>
           )}
@@ -149,7 +149,7 @@ export default async function PortalHomePage() {
             {recentlyCompleted.slice(0, 3).map((item) => (
               <div
                 key={item.course.id}
-                className="flex items-center gap-3 rounded-2xl border border-border bg-white p-4"
+                className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-4"
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success-100">
                   <Award className="h-5 w-5 text-success-600" />

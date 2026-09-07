@@ -124,7 +124,7 @@ export default async function MatriculasPage(
         <p className="text-sm text-ink-700/70">Libere cursos para um ou vários funcionários de uma vez.</p>
       </div>
 
-      <section className="space-y-4 rounded-2xl border border-border bg-white p-6">
+      <section className="space-y-4 rounded-2xl border border-border bg-surface p-6">
         <h2 className="font-semibold text-ink-900">Nova matrícula em massa</h2>
         <BulkEnrollForm
           iniciais={pessoasIniciais}
@@ -160,7 +160,7 @@ export default async function MatriculasPage(
         {filtered.length === 0 ? (
           <EmptyState icon={ClipboardList} title="Nenhuma matrícula encontrada" />
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-border bg-white">
+          <div className="overflow-hidden rounded-2xl border border-border bg-surface">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="bg-surface-muted/60 text-xs uppercase tracking-wide text-ink-700/60">

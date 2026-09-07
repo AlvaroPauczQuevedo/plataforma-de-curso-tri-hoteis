@@ -117,7 +117,7 @@ export default async function FuncionariosPage(
       {employees.length === 0 ? (
         <EmptyState icon={Users} title="Nenhuma conta encontrada" description="Ajuste os filtros ou cadastre um novo usuário." />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-border bg-white">
+        <div className="overflow-hidden rounded-2xl border border-border bg-surface">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-surface-muted/60 text-xs uppercase tracking-wide text-ink-700/60">
@@ -169,7 +169,7 @@ export default async function FuncionariosPage(
                     <td className="px-4 py-3 text-right">
                       <Link
                         href={`/admin/funcionarios/${emp.id}`}
-                        className="text-sm font-medium text-brand-700 hover:underline"
+                        className="text-sm font-medium text-brand-texto hover:underline"
                       >
                         Ver / editar
                       </Link>

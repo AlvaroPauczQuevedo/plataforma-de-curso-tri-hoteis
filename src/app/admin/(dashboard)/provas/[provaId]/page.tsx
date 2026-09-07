@@ -85,7 +85,7 @@ export default async function ProvaPage(props: { params: Promise<{ provaId: stri
             <Alert tone="warning">{impedimentoParaPublicar}</Alert>
           )}
 
-          <section className="space-y-4 rounded-2xl border border-border bg-white p-6">
+          <section className="space-y-4 rounded-2xl border border-border bg-surface p-6">
             <h2 className="font-semibold text-ink-900">Informações da prova</h2>
             <ProvaForm prova={prova} departamentos={departamentos} />
           </section>
@@ -123,7 +123,7 @@ export default async function ProvaPage(props: { params: Promise<{ provaId: stri
               </ol>
             )}
 
-            <div className="rounded-2xl border border-border bg-white p-6">
+            <div className="rounded-2xl border border-border bg-surface p-6">
               <h3 className="mb-3 font-semibold text-ink-900">Adicionar questão</h3>
               <QuestaoForm provaId={prova.id} />
             </div>

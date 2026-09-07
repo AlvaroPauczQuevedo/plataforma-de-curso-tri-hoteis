@@ -85,9 +85,9 @@ export function FileUploadField({
         disabled={uploading}
         className="flex w-full items-center gap-3 rounded-xl border border-dashed border-border bg-surface-muted/50 px-4 py-3 text-left text-sm transition hover:bg-surface-muted"
       >
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface">
           {uploading ? (
-            <Loader2 className="h-4 w-4 animate-spin text-brand-700" />
+            <Loader2 className="h-4 w-4 animate-spin text-brand-texto" />
           ) : fileId ? (
             <CheckCircle2 className="h-4 w-4 text-success-600" />
           ) : (

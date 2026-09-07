@@ -86,7 +86,7 @@ export default async function FazerProvaPage(
       </a>
 
       {anteriores.length > 0 && (
-        <section className="rounded-2xl border border-border bg-white p-5">
+        <section className="rounded-2xl border border-border bg-surface p-5">
           <h2 className="mb-3 font-semibold text-ink-900">
             Suas últimas {ULTIMAS} tentativas nesta prova
           </h2>

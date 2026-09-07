@@ -236,7 +236,7 @@ export function BulkEnrollForm({
             <button
               type="button"
               onClick={alternarVisiveis}
-              className="text-xs font-medium text-brand-700 hover:underline"
+              className="text-xs font-medium text-brand-texto hover:underline"
             >
               {visiveisTodasMarcadas ? "Desmarcar os desta busca" : "Marcar os desta busca"}
             </button>
@@ -267,7 +267,7 @@ export function BulkEnrollForm({
                     return proximo;
                   })
                 }
-                className="inline-flex items-center gap-1 rounded-lg bg-white px-2 py-1 text-xs text-ink-900 ring-1 ring-border hover:bg-danger-100"
+                className="inline-flex items-center gap-1 rounded-lg bg-surface px-2 py-1 text-xs text-ink-900 ring-1 ring-border hover:bg-danger-100"
                 title="Remover da seleção"
               >
                 {nome}
@@ -279,7 +279,7 @@ export function BulkEnrollForm({
               <button
                 type="button"
                 onClick={() => setMostrarTodas((v) => !v)}
-                className="rounded-lg px-2 py-1 text-xs font-medium text-brand-700 hover:underline"
+                className="rounded-lg px-2 py-1 text-xs font-medium text-brand-texto hover:underline"
               >
                 {mostrarTodas
                   ? "mostrar menos"
@@ -343,7 +343,7 @@ export function BulkEnrollForm({
           </div>
         )}
 
-        {avisoDoSetor && <p className="text-xs text-brand-700">{avisoDoSetor}</p>}
+        {avisoDoSetor && <p className="text-xs text-brand-texto">{avisoDoSetor}</p>}
 
         <input
           value={busca}

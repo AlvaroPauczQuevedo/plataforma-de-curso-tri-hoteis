@@ -21,7 +21,7 @@ export default async function PerfilPage() {
         <p className="text-sm text-ink-700/70">Gerencie suas informações pessoais e sua senha.</p>
       </div>
 
-      <section className="space-y-5 rounded-2xl border border-border bg-white p-6">
+      <section className="space-y-5 rounded-2xl border border-border bg-surface p-6">
         <AvatarUploader name={user.name} avatarUrl={user.avatarUrl} />
 
         <ActionForm action={updateProfile} submitLabel="Salvar alterações">
@@ -85,7 +85,7 @@ export default async function PerfilPage() {
 
       <EmailPessoalCard email={user.email} envioDisponivel={envioDisponivel()} />
 
-      <section className="space-y-5 rounded-2xl border border-border bg-white p-6">
+      <section className="space-y-5 rounded-2xl border border-border bg-surface p-6">
         <div>
           <h2 className="font-semibold text-ink-900">Alterar senha</h2>
           <p className="text-sm text-ink-700/60">Use uma senha com pelo menos 6 caracteres.</p>

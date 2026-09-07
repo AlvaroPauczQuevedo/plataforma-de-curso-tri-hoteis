@@ -96,7 +96,7 @@ export function QuestaoForm({
               checked={correta === i}
               onChange={() => setCorreta(i)}
               aria-label={`Marcar alternativa ${i + 1} como correta`}
-              className="h-4 w-4 shrink-0 border-border text-brand-700"
+              className="h-4 w-4 shrink-0 border-border text-brand-texto"
             />
             {/* Vazio para alternativa nova; o servidor trata isso como criação. */}
             <input type="hidden" name="alternativaId" value={linha.id} />
@@ -129,7 +129,7 @@ export function QuestaoForm({
             onClick={() =>
               setLinhas((l) => [...l, { id: "", texto: "", correta: false }])
             }
-            className="flex items-center gap-1.5 text-xs font-medium text-brand-700 hover:underline"
+            className="flex items-center gap-1.5 text-xs font-medium text-brand-texto hover:underline"
           >
             <Plus className="h-3.5 w-3.5" />
             Mais uma alternativa

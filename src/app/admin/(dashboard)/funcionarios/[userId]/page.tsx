@@ -143,7 +143,7 @@ export default async function FuncionarioDetailPage(
 
   return (
     <div className="max-w-4xl space-y-6">
-      <Link href="/admin/funcionarios" className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-700 hover:text-brand-700">
+      <Link href="/admin/funcionarios" className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-700 hover:text-brand-texto">
         <ChevronLeft className="h-4 w-4" />
         Voltar
       </Link>
@@ -186,7 +186,7 @@ export default async function FuncionarioDetailPage(
       )}
 
       {!motivo && (
-        <section className="space-y-4 rounded-2xl border border-border bg-white p-6">
+        <section className="space-y-4 rounded-2xl border border-border bg-surface p-6">
           <h2 className="font-semibold text-ink-900">Dados cadastrais</h2>
           {/*
             Projeção explícita, e não o registro inteiro: o formulário é
@@ -212,7 +212,7 @@ export default async function FuncionarioDetailPage(
       )}
 
       {!motivo && (
-        <section className="space-y-4 rounded-2xl border border-border bg-white p-6">
+        <section className="space-y-4 rounded-2xl border border-border bg-surface p-6">
           <h2 className="font-semibold text-ink-900">Matricular em novo curso</h2>
         {availableCourses.length === 0 ? (
           <p className="text-sm text-ink-700/60">
@@ -240,7 +240,7 @@ export default async function FuncionarioDetailPage(
         />
       )}
 
-      <section className="space-y-4 rounded-2xl border border-border bg-white p-6">
+      <section className="space-y-4 rounded-2xl border border-border bg-surface p-6">
         <h2 className="font-semibold text-ink-900">Histórico de treinamentos ({enrollments.length})</h2>
         {enrollments.length === 0 ? (
           <p className="text-sm text-ink-700/60">Nenhum curso matriculado ainda.</p>

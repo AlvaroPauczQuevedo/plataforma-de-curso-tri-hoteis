@@ -61,7 +61,7 @@ export default async function ProvasPage() {
       </div>
 
       {ultimasNotas.length > 0 && (
-        <section className="rounded-2xl border border-border bg-white p-5">
+        <section className="rounded-2xl border border-border bg-surface p-5">
           <h2 className="mb-3 font-semibold text-ink-900">
             Suas últimas {ULTIMAS} provas realizadas
           </h2>
@@ -100,7 +100,7 @@ export default async function ProvasPage() {
             return (
               <div
                 key={p.id}
-                className="flex flex-col gap-3 rounded-2xl border border-border bg-white p-5"
+                className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-5"
               >
                 <div>
                   <h3 className="font-semibold text-ink-900">{p.titulo}</h3>

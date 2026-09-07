@@ -96,13 +96,13 @@ export default async function LessonPlayerPage(
       <aside className="order-2 space-y-4 lg:order-1">
         <Link
           href={`/cursos/${courseId}`}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-700 hover:text-brand-700"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-700 hover:text-brand-texto"
         >
           <ChevronLeft className="h-4 w-4" />
           Voltar ao curso
         </Link>
 
-        <div className="overflow-hidden rounded-2xl border border-border bg-white">
+        <div className="overflow-hidden rounded-2xl border border-border bg-surface">
           <div className="border-b border-border px-4 py-3">
             <p className="truncate text-sm font-semibold text-ink-900">{course.title}</p>
           </div>
@@ -124,7 +124,7 @@ export default async function LessonPlayerPage(
                           className={cn(
                             "flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors",
                             active
-                              ? "bg-brand-700/10 text-brand-700 font-medium"
+                              ? "bg-brand-700/10 text-brand-texto font-medium"
                               : "text-ink-700 hover:bg-surface-muted"
                           )}
                         >
@@ -214,7 +214,7 @@ export default async function LessonPlayerPage(
                 )}
 
                 {tentativasDaProva.length > 0 && (
-                  <div className="rounded-2xl border border-border bg-white p-5">
+                  <div className="rounded-2xl border border-border bg-surface p-5">
                     <h2 className="mb-3 font-semibold text-ink-900">
                       {tentativasDaProva.length === 1
                         ? "Sua tentativa anterior"
@@ -261,7 +261,7 @@ export default async function LessonPlayerPage(
 
         {lesson.type === "TEXT" && (
           <div className="space-y-4">
-            <div className="whitespace-pre-line rounded-2xl border border-border bg-white p-6 text-ink-800 leading-relaxed">
+            <div className="whitespace-pre-line rounded-2xl border border-border bg-surface p-6 text-ink-800 leading-relaxed">
               {lesson.textContent}
             </div>
             <MarkCompleteButton lessonId={lesson.id} completed={Boolean(currentProgress?.completed)} />
@@ -272,7 +272,7 @@ export default async function LessonPlayerPage(
           {prevLesson ? (
             <Link
               href={`/cursos/${courseId}/aulas/${prevLesson.id}`}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-700 hover:text-brand-700"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-700 hover:text-brand-texto"
             >
               <ChevronLeft className="h-4 w-4" />
               Aula anterior
@@ -283,7 +283,7 @@ export default async function LessonPlayerPage(
           {nextLesson ? (
             <Link
               href={`/cursos/${courseId}/aulas/${nextLesson.id}`}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-700 hover:text-brand-700"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-700 hover:text-brand-texto"
             >
               Próxima aula
               <ChevronRight className="h-4 w-4" />
@@ -291,7 +291,7 @@ export default async function LessonPlayerPage(
           ) : (
             <Link
               href={`/cursos/${courseId}`}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:underline"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-texto hover:underline"
             >
               Ver resumo do curso
               <ChevronRight className="h-4 w-4" />

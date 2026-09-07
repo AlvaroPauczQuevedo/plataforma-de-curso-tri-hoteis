@@ -105,7 +105,7 @@ export default async function CourseEditorPage(
 
   return (
     <div className="max-w-4xl space-y-6">
-      <Link href="/admin/cursos" className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-700 hover:text-brand-700">
+      <Link href="/admin/cursos" className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-700 hover:text-brand-texto">
         <ChevronLeft className="h-4 w-4" />
         Voltar
       </Link>
@@ -135,7 +135,7 @@ export default async function CourseEditorPage(
         />
       )}
 
-      <section className="space-y-4 rounded-2xl border border-border bg-white p-6">
+      <section className="space-y-4 rounded-2xl border border-border bg-surface p-6">
         <h2 className="font-semibold text-ink-900">Informações básicas</h2>
         {motivo ? (
           <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
@@ -158,7 +158,7 @@ export default async function CourseEditorPage(
       </section>
 
       {!motivo && (
-        <section className="space-y-4 rounded-2xl border border-border bg-white p-6">
+        <section className="space-y-4 rounded-2xl border border-border bg-surface p-6">
           <div>
             <h2 className="font-semibold text-ink-900">Treinamento obrigatório</h2>
             <p className="text-sm text-ink-700/60">
@@ -181,7 +181,7 @@ export default async function CourseEditorPage(
           )}
         </div>
         {motivo ? (
-          <ul className="divide-y divide-border rounded-2xl border border-border bg-white">
+          <ul className="divide-y divide-border rounded-2xl border border-border bg-surface">
             {course.modules.map((m) => (
               <li key={m.id} className="px-6 py-4">
                 <p className="font-medium text-ink-900">{m.title}</p>

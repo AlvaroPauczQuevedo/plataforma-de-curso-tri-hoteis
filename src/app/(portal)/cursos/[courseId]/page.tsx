@@ -95,7 +95,7 @@ export default async function CourseDetailPage(
 
   return (
     <div className="space-y-6">
-      <div className="overflow-hidden rounded-2xl border border-border bg-white">
+      <div className="overflow-hidden rounded-2xl border border-border bg-surface">
         <div className="relative h-44 bg-gradient-to-br from-ink-900 to-brand-700 sm:h-56">
           {course.coverFile && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -166,7 +166,7 @@ export default async function CourseDetailPage(
       <div className="space-y-4">
         <h2 className="text-lg font-semibold text-ink-900">Conteúdo do curso</h2>
         {course.modules.map((module, moduleIdx) => (
-          <div key={module.id} className="overflow-hidden rounded-2xl border border-border bg-white">
+          <div key={module.id} className="overflow-hidden rounded-2xl border border-border bg-surface">
             <div className="border-b border-border bg-surface-muted/60 px-5 py-3">
               <p className="text-sm font-semibold text-ink-900">
                 Módulo {moduleIdx + 1}: {module.title}
@@ -188,7 +188,7 @@ export default async function CourseDetailPage(
                           ? "bg-success-100 text-success-600"
                           : isLocked
                           ? "bg-surface-muted text-ink-700/40"
-                          : "bg-brand-700/10 text-brand-700"
+                          : "bg-brand-700/10 text-brand-texto"
                       }`}
                     >
                       {isDone ? (

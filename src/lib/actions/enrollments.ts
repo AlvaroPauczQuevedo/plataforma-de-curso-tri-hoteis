@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import { logAdminActivity } from "@/lib/activity-log";
 import type { ActionResult } from "@/lib/actions/employees";
-import { recalculateCourseProgress } from "@/lib/progress";
+import { recalcularProgressoDeVarios } from "@/lib/progress";
 import { bloqueioDeCurso } from "@/lib/alcance-admin";
 // Constante e tipo moram fora daqui: "use server" só exporta função async.
 import { LIMITE_DA_BUSCA, type PessoaParaMatricula } from "@/lib/matricula-busca";
@@ -154,9 +154,8 @@ export async function enrollUsers(params: {
     )
   );
 
-  for (const userId of userIds) {
-    await recalculateCourseProgress(userId, courseId);
-  }
+  // Uma leitura da estrutura do curso para o lote inteiro, não uma por pessoa.
+  await recalcularProgressoDeVarios(userIds, courseId);
 
   const course = await db.course.findUnique({ where: { id: courseId } });
 

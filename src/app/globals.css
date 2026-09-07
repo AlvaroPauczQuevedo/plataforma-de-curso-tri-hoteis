@@ -51,6 +51,43 @@
   --color-surface: #ffffff;
   --color-surface-muted: #f5f3f1;
   --color-border: #e7e3df;
+
+  /* ---------------------------------------------------------------
+     Tokens de PAPEL, criados para o tema escuro
+     ---------------------------------------------------------------
+     Os tokens acima nomeiam COR ("ink-900" é um grafite). Estes nomeiam
+     FUNÇÃO, e existem porque a mesma cor cumpre papéis que invertem em
+     direções opostas quando o tema muda.
+
+     O caso que obrigou a separação: `brand-700` era o laranja do texto
+     (52 usos) e o fundo do botão (18 usos). No escuro, texto laranja
+     precisa CLAREAR para ser legível, e fundo de botão precisa CONTINUAR
+     escuro para aguentar texto branco em cima. Um token só não serve aos
+     dois; com um só, ou o texto some ou o botão fica ilegível.
+     --------------------------------------------------------------- */
+
+  /* O laranja quando é TEXTO. Fundo de botão continua usando brand-700. */
+  --color-brand-texto: #cc4a00;
+
+  /* Faltava: `text-success-700` era usado sem token e não pintava nada. */
+  --color-success-700: #15803d;
+
+  /*
+    Grafite que NÃO inverte: superfícies escuras por decisão de marca — o
+    gradiente do hero e o painel da tela de login, que levam texto branco
+    nos dois temas. Invertê-los deixaria texto branco sobre fundo branco.
+  */
+  --color-escuro-950: #14100e;
+  --color-escuro-900: #1c1917;
+
+  /*
+    A superfície que CONTRASTA com a página, e o texto que vai sobre ela:
+    selo "conta protegida", botão secundário. No claro é escura com texto
+    branco; no escuro é clara com texto escuro. Sem inverter, o selo escuro
+    sumiria dentro de um cartão escuro.
+  */
+  --color-inverso: #1c1917;
+  --color-inverso-texto: #ffffff;
 }
 
 @theme inline {
@@ -82,7 +119,109 @@
   --color-surface: var(--color-surface);
   --color-surface-muted: var(--color-surface-muted);
   --color-border: var(--color-border);
+
+  --color-brand-texto: var(--color-brand-texto);
+  --color-success-700: var(--color-success-700);
+  --color-escuro-950: var(--color-escuro-950);
+  --color-escuro-900: var(--color-escuro-900);
+  --color-inverso: var(--color-inverso);
+  --color-inverso-texto: var(--color-inverso-texto);
 }
+
+/* =====================================================================
+   Tema escuro
+   ---------------------------------------------------------------------
+   Um bloco só, preso a `[data-theme="dark"]`, e não dois blocos com
+   `prefers-color-scheme` duplicando os mesmos valores.
+
+   Isso é possível porque quem resolve a preferência é o script que roda
+   antes da primeira pintura (ver `src/app/layout.tsx`): ele lê a escolha
+   salva e, quando ela é "sistema", consulta o sistema operacional e
+   estampa já o resultado — "light" ou "dark". O CSS nunca precisa saber
+   o que é "sistema".
+
+   Vale porque a alternativa é manter a mesma lista de cores em dois
+   lugares, e paleta duplicada divergindo em silêncio é como um tema
+   escuro apodrece: alguém acerta uma cor num bloco e esquece o outro.
+
+   O QUE INVERTE E O QUE NÃO:
+
+   - `ink-*` inverte. São 486 usos como cor de texto contra 6 como fundo;
+     o papel real do token é "texto", e o nome é herança.
+   - `surface`, `surface-muted`, `border`, `background` invertem: são a
+     página e os cartões.
+   - `escuro-*` NÃO inverte: é superfície escura por decisão de marca.
+   - `brand-700` NÃO inverte: é fundo de botão com texto branco em cima,
+     e clareá-lo arruinaria o contraste. Quem clareia é `brand-texto`.
+   - Estados clareiam o bastante para servir de texto sobre fundo escuro,
+     mas `danger-600` para num vermelho médio, porque ele também é fundo
+     do botão de exclusão e ainda precisa aguentar texto branco.
+   ===================================================================== */
+
+:root[data-theme="dark"] {
+  --background: #14100e;
+  --foreground: #f5f3f1;
+
+  /* O grafite vira a escala de texto: 900 é o texto forte, 700 o suave. */
+  --color-ink-950: #ffffff;
+  --color-ink-900: #f5f3f1;
+  --color-ink-800: #e7e3df;
+  --color-ink-700: #bdb6b0;
+
+  /*
+    O laranja puro da marca fica; o de texto sobe para um tom claro. #ff9557
+    dá cerca de 7:1 sobre o fundo da página — o #cc4a00 do tema claro daria
+    2,6:1 ali, ilegível.
+  */
+  --color-brand-texto: #ff9557;
+
+  /* Tons 50/100 eram fundos suaves claros; no escuro precisam ser velaturas. */
+  --color-brand-50: #2a1a10;
+  --color-brand-100: #3a2114;
+
+  --color-success-600: #4ade80;
+  --color-success-700: #4ade80;
+  --color-success-100: #102a1a;
+  --color-warning-600: #fbbf24;
+  --color-warning-100: #2e2409;
+  --color-danger-600: #ef4444;
+  --color-danger-100: #331414;
+
+  --color-surface: #201c1a;
+  --color-surface-muted: #2a2523;
+  --color-border: #3a3431;
+
+  /* Inverte: no escuro a superfície de contraste é clara. */
+  --color-inverso: #f5f3f1;
+  --color-inverso-texto: #1c1917;
+
+  /* -------- Casca compartilhada com a intranet -------- */
+  --texto: #f5f3f1;
+  --texto-suave: #bdb6b0;
+  --texto-fraco: #8f8880;
+  --borda: #3a3431;
+  --borda-forte: #4a4340;
+  --superficie: #201c1a;
+  --superficie-alt: #2a2523;
+  --cor-primaria-clara: #33210f;
+
+  /*
+    O menu lateral NÃO muda. Ele já é grafite escuro nos dois temas, é
+    parte da identidade, e no escuro fica um pouco mais escuro que a
+    página — o que o mantém legível como painel em vez de sumir nela.
+  */
+  --barra-lateral: #17130f;
+
+  --sombra-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+/*
+  Diz ao navegador em que tema a página está.
+  Sem isto, barra de rolagem, campos de formulário e menus nativos
+  continuam desenhados no tema claro dentro de uma página escura.
+*/
+:root[data-theme="dark"] { color-scheme: dark; }
+:root[data-theme="light"] { color-scheme: light; }
 
 body {
   background: var(--background);

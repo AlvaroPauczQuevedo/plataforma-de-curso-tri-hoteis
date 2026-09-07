@@ -103,7 +103,7 @@ export default async function ResultadosDaProvaPage(
               {estatistica.questoes.map((q) => (
                 <li
                   key={q.questaoId}
-                  className="rounded-2xl border border-border bg-white px-4 py-3"
+                  className="rounded-2xl border border-border bg-surface px-4 py-3"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <p className="text-sm text-ink-900">{q.enunciado}</p>
@@ -134,7 +134,7 @@ export default async function ResultadosDaProvaPage(
               </p>
             </div>
 
-            <div className="overflow-hidden rounded-2xl border border-border bg-white">
+            <div className="overflow-hidden rounded-2xl border border-border bg-surface">
               <table className="w-full text-sm">
                 <thead className="bg-surface-muted text-left text-xs uppercase tracking-wide text-ink-700/60">
                   <tr>
@@ -175,7 +175,7 @@ export default async function ResultadosDaProvaPage(
 
 function Indicador({ titulo, valor }: { titulo: string; valor: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-white px-5 py-4">
+    <div className="rounded-2xl border border-border bg-surface px-5 py-4">
       <p className="text-xs uppercase tracking-wide text-ink-700/50">{titulo}</p>
       <p className="mt-1 text-2xl font-semibold text-ink-900">{valor}</p>
     </div>

@@ -27,7 +27,7 @@ export default async function HistoricoPage() {
           description="Assim que você concluir aulas, elas aparecerão aqui em ordem cronológica."
         />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-border bg-white">
+        <div className="overflow-hidden rounded-2xl border border-border bg-surface">
           <ul className="divide-y divide-border">
             {lessonProgress.map((p) => (
               <li key={p.id} className="flex items-center gap-3 px-5 py-4">
@@ -55,7 +55,7 @@ export default async function HistoricoPage() {
             <LogIn className="h-5 w-5" />
             Últimos acessos
           </h2>
-          <div className="overflow-hidden rounded-2xl border border-border bg-white">
+          <div className="overflow-hidden rounded-2xl border border-border bg-surface">
             <ul className="divide-y divide-border">
               {accessLogs.slice(0, 8).map((log) => (
                 <li key={log.id} className="flex items-center justify-between px-5 py-3 text-sm">

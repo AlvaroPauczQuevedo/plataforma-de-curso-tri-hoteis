@@ -35,7 +35,7 @@ export default async function CertificadosPage() {
           {certificates.map((cert) => (
             <div
               key={cert.id}
-              className="flex flex-col gap-4 rounded-2xl border border-border bg-white p-5 shadow-sm"
+              className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-5 shadow-sm"
             >
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-brand-700 to-brand-500">
                 <Award className="h-5 w-5 text-white" />
@@ -52,7 +52,7 @@ export default async function CertificadosPage() {
                 */}
                 <Link
                   href={`/validar/${cert.code}`}
-                  className="text-xs font-medium text-brand-700 hover:underline"
+                  className="text-xs font-medium text-brand-texto hover:underline"
                 >
                   Link para comprovar autenticidade
                 </Link>

@@ -12,9 +12,9 @@ const variantClasses: Record<Variant, string> = {
   primary:
     "bg-brand-700 text-white hover:bg-brand-800 shadow-sm shadow-brand-700/25 disabled:bg-brand-700/50",
   secondary:
-    "bg-ink-900 text-white hover:bg-ink-800 disabled:bg-ink-900/50",
+    "bg-inverso text-inverso-texto hover:bg-inverso/90 disabled:bg-inverso/50",
   outline:
-    "border border-border bg-white text-ink-900 hover:bg-surface-muted disabled:opacity-50",
+    "border border-border bg-surface text-ink-900 hover:bg-surface-muted disabled:opacity-50",
   ghost: "text-ink-700 hover:bg-surface-muted disabled:opacity-50",
   danger: "bg-danger-600 text-white hover:bg-danger-600/90 disabled:bg-danger-600/50",
 };

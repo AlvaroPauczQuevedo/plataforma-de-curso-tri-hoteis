@@ -63,9 +63,9 @@ export default async function ConfiguracoesPage() {
         cadastrar: sem unidade criada, cada funcionário novo nasce sem lugar, e
         corrigir isso depois exige reabrir ficha por ficha.
       */}
-      <section className="space-y-4 rounded-2xl border border-border bg-white p-6">
+      <section className="space-y-4 rounded-2xl border border-border bg-surface p-6">
         <div className="flex items-center gap-2">
-          <Hotel className="h-5 w-5 text-brand-700" />
+          <Hotel className="h-5 w-5 text-brand-texto" />
           <h2 className="font-semibold text-ink-900">Hotéis da rede</h2>
         </div>
         {proprietario && (
@@ -94,9 +94,9 @@ export default async function ConfiguracoesPage() {
         )}
       </section>
 
-      <section className="space-y-4 rounded-2xl border border-border bg-white p-6">
+      <section className="space-y-4 rounded-2xl border border-border bg-surface p-6">
         <div className="flex items-center gap-2">
-          <Building2 className="h-5 w-5 text-brand-700" />
+          <Building2 className="h-5 w-5 text-brand-texto" />
           <h2 className="font-semibold text-ink-900">Departamentos</h2>
         </div>
         {proprietario && (
@@ -121,9 +121,9 @@ export default async function ConfiguracoesPage() {
         )}
       </section>
 
-      <section className="space-y-4 rounded-2xl border border-border bg-white p-6">
+      <section className="space-y-4 rounded-2xl border border-border bg-surface p-6">
         <div className="flex items-center gap-2">
-          <Tags className="h-5 w-5 text-brand-700" />
+          <Tags className="h-5 w-5 text-brand-texto" />
           <h2 className="font-semibold text-ink-900">Categorias de curso</h2>
         </div>
         <QuickAddForm action={createCategory} placeholder="Nome da nova categoria" />
@@ -137,9 +137,9 @@ export default async function ConfiguracoesPage() {
         </ul>
       </section>
 
-      <section className="space-y-3 rounded-2xl border border-border bg-white p-6">
+      <section className="space-y-3 rounded-2xl border border-border bg-surface p-6">
         <div className="flex items-center gap-2">
-          <ShieldCheck className="h-5 w-5 text-brand-700" />
+          <ShieldCheck className="h-5 w-5 text-brand-texto" />
           <h2 className="font-semibold text-ink-900">Conta administrativa</h2>
         </div>
         <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">

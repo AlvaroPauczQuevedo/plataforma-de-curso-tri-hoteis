@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import { logAdminActivity } from "@/lib/activity-log";
 import { bloqueioDeCurso, bloqueioDeVinculo } from "@/lib/alcance-admin";
-import { sincronizarCurso, sincronizarTudo } from "@/lib/matricula-automatica";
+import { sincronizarCurso } from "@/lib/matricula-automatica";
 import type { ActionResult } from "@/lib/actions/employees";
 
 /**
@@ -107,21 +107,5 @@ export async function removerObrigatoriedade(
     message:
       "Obrigatoriedade removida. Quem já estava matriculado continua — " +
       "remova individualmente se for o caso.",
-  };
-}
-
-/** Recria as matrículas obrigatórias que estiverem faltando na plataforma toda. */
-export async function sincronizarObrigatorios(): Promise<ActionResult> {
-  const admin = await requireAdmin();
-
-  const resultado = await sincronizarTudo(admin.id);
-
-  revalidatePath("/admin/matriculas");
-  return {
-    ok: true,
-    message:
-      resultado.criadas > 0
-        ? `${resultado.criadas} matrícula(s) criada(s).`
-        : "Nada a fazer: todas as matrículas obrigatórias já existem.",
   };
 }

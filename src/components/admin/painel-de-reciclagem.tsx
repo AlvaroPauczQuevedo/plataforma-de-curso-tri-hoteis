@@ -62,7 +62,7 @@ export async function PainelDeReciclagem({ departamentoId }: { departamentoId?: 
         </div>
       </div>
 
-      <ul className="divide-y divide-warning-600/15 rounded-xl border border-warning-600/20 bg-white">
+      <ul className="divide-y divide-warning-600/15 rounded-xl border border-warning-600/20 bg-surface">
         {aCobrar.slice(0, TETO).map((l) => {
           const user = usuarioPor.get(l.userId);
           const curso = cursoPor.get(l.courseId);
@@ -74,7 +74,7 @@ export async function PainelDeReciclagem({ departamentoId }: { departamentoId?: 
               <div className="min-w-0">
                 <Link
                   href={`/admin/funcionarios/${l.userId}`}
-                  className="text-sm font-medium text-ink-900 hover:text-brand-700"
+                  className="text-sm font-medium text-ink-900 hover:text-brand-texto"
                 >
                   {user?.name ?? "—"}
                 </Link>

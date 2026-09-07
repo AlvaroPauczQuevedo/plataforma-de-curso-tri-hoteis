@@ -86,7 +86,7 @@ export default async function CursosPage(
             <Link
               key={course.id}
               href={`/admin/cursos/${course.id}`}
-              className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
               <div className="relative h-28 bg-gradient-to-br from-ink-900 to-brand-700">
                 {course.coverFile && (
@@ -103,7 +103,7 @@ export default async function CursosPage(
               </div>
               <div className="flex flex-1 flex-col gap-2 p-4">
                 {course.category && (
-                  <p className="text-xs font-medium uppercase tracking-wide text-brand-700">
+                  <p className="text-xs font-medium uppercase tracking-wide text-brand-texto">
                     {course.category.name}
                   </p>
                 )}

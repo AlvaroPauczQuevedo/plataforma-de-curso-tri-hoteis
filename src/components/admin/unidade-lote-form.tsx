@@ -61,7 +61,7 @@ export function UnidadeLoteForm() {
       <button
         type="button"
         onClick={() => setAberto(true)}
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:text-brand-600"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-texto hover:text-brand-600"
       >
         <ListPlus className="h-4 w-4" />
         Cadastrar vários de uma vez

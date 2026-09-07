@@ -139,7 +139,7 @@ export default async function RelatoriosPage() {
         {courseReport.length === 0 ? (
           <EmptyState icon={BarChart3} title="Nenhum curso cadastrado" />
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-border bg-white">
+          <div className="overflow-hidden rounded-2xl border border-border bg-surface">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="bg-surface-muted/60 text-xs uppercase tracking-wide text-ink-700/60">
@@ -182,7 +182,7 @@ export default async function RelatoriosPage() {
         {departmentReport.length === 0 ? (
           <EmptyState icon={BarChart3} title="Nenhum departamento cadastrado" />
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-border bg-white">
+          <div className="overflow-hidden rounded-2xl border border-border bg-surface">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="bg-surface-muted/60 text-xs uppercase tracking-wide text-ink-700/60">

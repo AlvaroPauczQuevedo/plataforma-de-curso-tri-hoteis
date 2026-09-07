@@ -58,9 +58,9 @@ export function ConclusaoExternaPanel({
   }
 
   return (
-    <section className="space-y-4 rounded-2xl border border-border bg-white p-6">
+    <section className="space-y-4 rounded-2xl border border-border bg-surface p-6">
       <div className="flex items-start gap-3">
-        <GraduationCap className="mt-0.5 h-5 w-5 shrink-0 text-brand-700" />
+        <GraduationCap className="mt-0.5 h-5 w-5 shrink-0 text-brand-texto" />
         <div>
           <h2 className="font-semibold text-ink-900">Treinamento presencial</h2>
           <p className="text-sm text-ink-700/70">

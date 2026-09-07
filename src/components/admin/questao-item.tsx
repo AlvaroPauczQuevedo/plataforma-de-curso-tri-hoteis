@@ -32,9 +32,9 @@ export function QuestaoItem({
 
   if (editando) {
     return (
-      <li className="rounded-2xl border border-brand-600/40 bg-white p-4">
+      <li className="rounded-2xl border border-brand-600/40 bg-surface p-4">
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-xs font-medium uppercase tracking-wide text-brand-700">
+          <span className="text-xs font-medium uppercase tracking-wide text-brand-texto">
             Corrigindo a questão {numero}
           </span>
           <button
@@ -56,7 +56,7 @@ export function QuestaoItem({
   }
 
   return (
-    <li className="rounded-2xl border border-border bg-white p-4">
+    <li className="rounded-2xl border border-border bg-surface p-4">
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm font-medium text-ink-900">
           {numero}. {questao.enunciado}
@@ -67,7 +67,7 @@ export function QuestaoItem({
             type="button"
             onClick={() => setEditando(true)}
             aria-label={`Corrigir a questão ${numero}`}
-            className="rounded-lg p-1.5 text-ink-700/60 transition hover:bg-surface-muted hover:text-brand-700"
+            className="rounded-lg p-1.5 text-ink-700/60 transition hover:bg-surface-muted hover:text-brand-texto"
           >
             <Pencil className="h-4 w-4" />
           </button>

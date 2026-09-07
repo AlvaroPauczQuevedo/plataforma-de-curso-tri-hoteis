@@ -38,7 +38,7 @@ export default function ResetPasswordPage(
       subtitle="Escolha uma nova senha para acessar sua conta."
       footer={
         <p className="text-center text-xs text-ink-700/60">
-          <Link href="/login" className="font-medium text-brand-700 hover:underline">
+          <Link href="/login" className="font-medium text-brand-texto hover:underline">
             Voltar para o login
           </Link>
         </p>

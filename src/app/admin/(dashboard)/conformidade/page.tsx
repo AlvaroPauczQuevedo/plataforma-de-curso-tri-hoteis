@@ -125,7 +125,7 @@ export default async function ConformidadePage(
           href={`/api/relatorios/auditoria/pdf${
             searchParams.departamento ? `?departamento=${searchParams.departamento}` : ""
           }`}
-          className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm font-medium text-ink-900 transition hover:bg-surface-muted"
+          className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm font-medium text-ink-900 transition hover:bg-surface-muted"
           title="Gera o documento que a auditoria pede: por departamento e treinamento, quem está regular, com o código de conferência de cada certificado."
         >
           <FileDown className="h-4 w-4" />
@@ -135,7 +135,7 @@ export default async function ConformidadePage(
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {cartoes.map((c) => (
-          <div key={c.rotulo} className="rounded-2xl border border-border bg-white p-4">
+          <div key={c.rotulo} className="rounded-2xl border border-border bg-surface p-4">
             <p className="text-xs uppercase tracking-wide text-ink-700/60">{c.rotulo}</p>
             <p className={`mt-1 text-2xl font-semibold tabular-nums ${c.cor}`}>{c.valor}</p>
           </div>
@@ -174,7 +174,7 @@ export default async function ConformidadePage(
           description="Marque cursos como obrigatórios na tela do curso para que apareçam aqui."
         />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-border bg-white">
+        <div className="overflow-hidden rounded-2xl border border-border bg-surface">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-surface-muted/60 text-xs uppercase tracking-wide text-ink-700/60">
@@ -194,7 +194,7 @@ export default async function ConformidadePage(
                     <td className="px-4 py-3">
                       <Link
                         href={`/admin/funcionarios/${l.userId}`}
-                        className="font-medium text-ink-900 hover:text-brand-700"
+                        className="font-medium text-ink-900 hover:text-brand-texto"
                       >
                         {l.user?.name ?? "—"}
                       </Link>
@@ -206,7 +206,7 @@ export default async function ConformidadePage(
                     <td className="px-4 py-3">
                       <Link
                         href={`/admin/cursos/${l.courseId}`}
-                        className="text-ink-700 hover:text-brand-700"
+                        className="text-ink-700 hover:text-brand-texto"
                       >
                         {l.course?.title ?? "—"}
                       </Link>

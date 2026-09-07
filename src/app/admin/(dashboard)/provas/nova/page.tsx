@@ -35,7 +35,7 @@ export default async function NovaProvaPage() {
         </p>
       </div>
 
-      <div className="rounded-2xl border border-border bg-white p-6">
+      <div className="rounded-2xl border border-border bg-surface p-6">
         <ProvaForm departamentos={departamentos} />
       </div>
     </div>

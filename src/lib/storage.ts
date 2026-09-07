@@ -1,5 +1,4 @@
 import { writeFile, mkdir } from "fs/promises";
-import { createReadStream, statSync } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 
@@ -50,14 +49,6 @@ export async function saveUploadedFile(
 
 export function absoluteStoragePath(storagePath: string) {
   return path.join(STORAGE_ROOT, storagePath);
-}
-
-export function fileSizeOf(storagePath: string) {
-  return statSync(absoluteStoragePath(storagePath)).size;
-}
-
-export function readFileStream(storagePath: string, range?: { start: number; end: number }) {
-  return createReadStream(absoluteStoragePath(storagePath), range);
 }
 
 export const MAX_UPLOAD_BYTES =

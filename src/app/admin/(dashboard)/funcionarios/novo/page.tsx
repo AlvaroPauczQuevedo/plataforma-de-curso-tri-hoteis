@@ -26,7 +26,7 @@ export default async function NovoFuncionarioPage() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <Link href="/admin/funcionarios" className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-700 hover:text-brand-700">
+      <Link href="/admin/funcionarios" className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-700 hover:text-brand-texto">
         <ChevronLeft className="h-4 w-4" />
         Voltar
       </Link>
@@ -44,7 +44,7 @@ export default async function NovoFuncionarioPage() {
           um usuário. Peça ao proprietário da plataforma para definir o seu departamento.
         </Alert>
       ) : (
-        <div className="rounded-2xl border border-border bg-white p-6">
+        <div className="rounded-2xl border border-border bg-surface p-6">
           <EmployeeForm departments={departments} unidades={unidades} />
         </div>
       )}

@@ -41,7 +41,7 @@ export function LessonForm({
             name="title"
             required
             defaultValue={lesson?.title}
-            className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
           />
         </div>
         <div className="flex items-end pb-2">
@@ -63,7 +63,7 @@ export function LessonForm({
           name="type"
           value={type}
           onChange={(e) => setType(e.target.value as typeof type)}
-          className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20 sm:w-56"
+          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20 sm:w-56"
         >
           <option value="VIDEO">Vídeo</option>
           <option value="PDF">PDF</option>
@@ -73,7 +73,7 @@ export function LessonForm({
       </div>
 
       {type === "VIDEO" && (
-        <div className="space-y-3 rounded-lg border border-border bg-white p-3">
+        <div className="space-y-3 rounded-lg border border-border bg-surface p-3">
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-ink-900">Origem do vídeo</label>
             <select
@@ -109,7 +109,7 @@ export function LessonForm({
       )}
 
       {type === "PROVA" && (
-        <div className="space-y-1.5 rounded-lg border border-border bg-white p-3">
+        <div className="space-y-1.5 rounded-lg border border-border bg-surface p-3">
           <label htmlFor="provaId" className="text-xs font-medium text-ink-900">
             Qual prova esta aula aplica
           </label>
@@ -142,7 +142,7 @@ export function LessonForm({
       )}
 
       {type === "PDF" && (
-        <div className="rounded-lg border border-border bg-white p-3">
+        <div className="rounded-lg border border-border bg-surface p-3">
           <FileUploadField
             kind="pdfs"
             name="pdfFileId"
@@ -154,7 +154,7 @@ export function LessonForm({
       )}
 
       {type === "TEXT" && (
-        <div className="space-y-1.5 rounded-lg border border-border bg-white p-3">
+        <div className="space-y-1.5 rounded-lg border border-border bg-surface p-3">
           <label className="text-xs font-medium text-ink-900">Conteúdo em texto</label>
           <textarea
             name="textContent"

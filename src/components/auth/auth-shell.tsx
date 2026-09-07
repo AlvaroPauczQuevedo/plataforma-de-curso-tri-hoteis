@@ -15,7 +15,7 @@ export function AuthShell({
 }) {
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
-      <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-ink-950 via-ink-900 to-brand-700 p-12 text-white lg:flex">
+      <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-escuro-950 via-escuro-900 to-brand-700 p-12 text-white lg:flex">
         <div className="absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_20%_20%,white,transparent_35%),radial-gradient(circle_at_80%_60%,white,transparent_30%)]" />
         <div className="relative flex items-center gap-3">
           <Logo size={44} />
@@ -50,7 +50,7 @@ export function AuthShell({
 
           <div className="space-y-2">
             {badge && (
-              <span className="inline-block rounded-full bg-brand-700/10 px-2.5 py-1 text-xs font-medium text-brand-700">
+              <span className="inline-block rounded-full bg-brand-700/10 px-2.5 py-1 text-xs font-medium text-brand-texto">
                 {badge}
               </span>
             )}
@@ -58,7 +58,7 @@ export function AuthShell({
             <p className="text-sm text-ink-700/70">{subtitle}</p>
           </div>
 
-          <div className="rounded-2xl border border-border bg-white p-6 shadow-sm">{children}</div>
+          <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">{children}</div>
 
           {footer}
         </div>

@@ -138,6 +138,33 @@ export async function recalculateCourseProgress(userId: string, courseId: string
 }
 
 /**
+ * O mesmo recálculo, para várias pessoas no MESMO curso.
+ *
+ * A estrutura do curso — módulos, aulas obrigatórias, prova exigida — é lida
+ * uma vez só e reaproveitada. Chamar `recalculateCourseProgress` num laço
+ * relê essa estrutura a cada pessoa, e ela não muda entre uma e outra.
+ *
+ * Passou a importar quando a matrícula ganhou a opção de trazer um
+ * departamento inteiro: antes ninguém matriculava sessenta pessoas de uma vez,
+ * e sessenta leituras idênticas em sequência não incomodavam ninguém.
+ *
+ * O laço continua sequencial de propósito. Cada volta escreve progresso e pode
+ * emitir ou revogar certificado; disparar tudo em paralelo contra um SQLite
+ * troca a espera por disputa de escrita, que é pior — foi o que motivou ligar
+ * o WAL na subida do servidor.
+ */
+export async function recalcularProgressoDeVarios(userIds: string[], courseId: string) {
+  const curso = await lerEstrutura(courseId);
+  if (!curso) return 0;
+
+  for (const userId of userIds) {
+    await aplicarProgresso(userId, curso);
+  }
+
+  return userIds.length;
+}
+
+/**
  * Refaz o progresso de todo mundo matriculado no curso.
  *
  * O percentual mora em CourseProgress e só era refeito quando alguém mexia
@@ -149,38 +176,19 @@ export async function recalculateCourseProgress(userId: string, courseId: string
  * que ele nunca fez. O certificado é a peça que a auditoria olha, então o
  * número não pode ficar para trás da regra.
  *
- * A estrutura do curso é lida UMA vez, fora do laço: ela não muda no meio da
- * varredura, e reler por pessoa era a maior parte do custo daqui.
- *
- * O laço continua em série de propósito: são muitas escritas no SQLite e
- * mudança de estrutura é rara, então vale mais não disputar o banco do que
- * terminar alguns milissegundos antes.
+ * A diferença para `recalcularProgressoDeVarios` é só quem entra na conta:
+ * ali quem chama traz a lista, aqui a lista é "todo mundo matriculado". O
+ * recálculo em si é o mesmo, e passar por lá é o que garante que continue
+ * sendo — duas cópias do laço divergiriam na primeira correção feita só numa.
  */
 export async function ressincronizarProgressoDoCurso(courseId: string) {
-  const curso = await lerEstrutura(courseId);
-  if (!curso) return 0;
-
   const matriculados = await db.enrollment.findMany({
     where: { courseId },
     select: { userId: true },
   });
 
-  for (const { userId } of matriculados) {
-    await aplicarProgresso(userId, curso);
-  }
-
-  return matriculados.length;
-}
-
-export function courseCounters(
-  allLessons: { id: string; required: boolean }[],
-  completedLessonIds: Set<string>
-) {
-  const required = allLessons.filter((l) => l.required);
-  const completed = required.filter((l) => completedLessonIds.has(l.id));
-  return {
-    totalRequired: required.length,
-    completedRequired: completed.length,
-    remaining: required.length - completed.length,
-  };
+  return recalcularProgressoDeVarios(
+    matriculados.map((m) => m.userId),
+    courseId
+  );
 }

@@ -46,7 +46,7 @@ export default async function ErrosPage() {
           {erros.map((erro, indice) => (
             <details
               key={`${erro.quando}-${indice}`}
-              className="overflow-hidden rounded-2xl border border-border bg-white"
+              className="overflow-hidden rounded-2xl border border-border bg-surface"
             >
               <summary className="cursor-pointer list-none px-5 py-4 hover:bg-surface-muted">
                 <div className="flex flex-wrap items-center gap-2">

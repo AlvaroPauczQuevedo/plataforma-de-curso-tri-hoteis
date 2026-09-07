@@ -36,7 +36,7 @@ export default async function AtividadesPage() {
       {logs.length === 0 ? (
         <EmptyState icon={History} title="Nenhuma atividade registrada ainda" />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-border bg-white">
+        <div className="overflow-hidden rounded-2xl border border-border bg-surface">
           <ul className="divide-y divide-border">
             {logs.map((log) => (
               <li key={log.id} className="px-5 py-4">

@@ -3,7 +3,9 @@ import { getDashboardStats } from "@/lib/admin-data";
 import { requireAdmin } from "@/lib/session";
 import { ehProprietario } from "@/lib/alcance-admin";
 import { StatCard } from "@/components/admin/stat-card";
-import { StatusPieChart, DepartmentBarChart } from "@/components/admin/charts";
+// Carregados sob demanda: ver charts-preguicosos.tsx — são 392 KB que
+// atrasavam justamente a tela em que se cai depois de entrar.
+import { StatusPieChart, DepartmentBarChart } from "@/components/admin/charts-preguicosos";
 import { formatDateTime } from "@/lib/utils";
 import { rotuloDaAtividade } from "@/lib/rotulos-atividade";
 
@@ -52,12 +54,12 @@ export default async function AdminDashboardPage() {
       </div>
 
       <div className={proprietario ? "grid gap-4 lg:grid-cols-2" : "grid gap-4"}>
-        <div className="rounded-2xl border border-border bg-white p-5">
+        <div className="rounded-2xl border border-border bg-surface p-5">
           <h2 className="mb-3 font-semibold text-ink-900">Status das matrículas</h2>
           <StatusPieChart data={stats.statusBreakdown} />
         </div>
         {proprietario && (
-          <div className="rounded-2xl border border-border bg-white p-5">
+          <div className="rounded-2xl border border-border bg-surface p-5">
             <h2 className="mb-3 font-semibold text-ink-900">Funcionários por departamento</h2>
             <DepartmentBarChart data={stats.departmentCounts} />
           </div>
@@ -65,7 +67,7 @@ export default async function AdminDashboardPage() {
       </div>
 
       <div className={proprietario ? "grid gap-4 lg:grid-cols-2" : "grid gap-4"}>
-        <div className="rounded-2xl border border-border bg-white p-5">
+        <div className="rounded-2xl border border-border bg-surface p-5">
           <h2 className="mb-3 font-semibold text-ink-900">Cursos mais acessados</h2>
           {stats.mostAccessed.length === 0 ? (
             <p className="py-8 text-center text-sm text-ink-700/50">Nenhuma matrícula registrada ainda.</p>
@@ -73,7 +75,7 @@ export default async function AdminDashboardPage() {
             <ul className="space-y-3">
               {stats.mostAccessed.map((item, idx) => (
                 <li key={item.course.id} className="flex items-center gap-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-700/10 text-xs font-semibold text-brand-700">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-700/10 text-xs font-semibold text-brand-texto">
                     {idx + 1}
                   </span>
                   <span className="flex-1 truncate text-sm text-ink-900">{item.course.title}</span>
@@ -85,7 +87,7 @@ export default async function AdminDashboardPage() {
         </div>
 
         {proprietario && (
-          <div className="rounded-2xl border border-border bg-white p-5">
+          <div className="rounded-2xl border border-border bg-surface p-5">
             <h2 className="mb-3 font-semibold text-ink-900">Atividades recentes</h2>
             {stats.recentActivity.length === 0 ? (
               <p className="py-8 text-center text-sm text-ink-700/50">Nenhuma atividade registrada ainda.</p>
