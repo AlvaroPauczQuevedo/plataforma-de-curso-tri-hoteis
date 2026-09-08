@@ -31,6 +31,7 @@ export default async function PrimeiroAcessoPage(props: {
     q?: string;
     departamento?: string;
     situacao?: string;
+    hotel?: string;
     page?: string;
   }>;
 }) {
@@ -39,12 +40,14 @@ export default async function PrimeiroAcessoPage(props: {
 
   const page = Math.max(1, Number(searchParams.page ?? 1));
 
-  const [{ linhas, resumo }, departamentos] = await Promise.all([
+  const [{ linhas, resumo }, departamentos, unidades] = await Promise.all([
     levantarPrimeiroAcesso({
       q: searchParams.q,
       departamentoId: searchParams.departamento,
+      unidadeId: searchParams.hotel,
     }),
     db.department.findMany({ orderBy: { name: "asc" } }),
+    db.unidade.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
 
   const filtradas = searchParams.situacao
@@ -114,6 +117,11 @@ export default async function PrimeiroAcessoPage(props: {
             paramKey="departamento"
             placeholder="Todos os departamentos"
             options={departamentos.map((d) => ({ value: d.id, label: d.name }))}
+          />
+          <SelectFilter
+            paramKey="hotel"
+            placeholder="Todos os hotéis"
+            options={unidades.map((u) => ({ value: u.id, label: u.name }))}
           />
           <SelectFilter
             paramKey="situacao"

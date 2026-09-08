@@ -87,7 +87,12 @@ export function resumirAcessos(linhas: LinhaDeAcesso[]): ResumoDeAcesso {
   return resumo;
 }
 
-export type FiltroDeAcesso = { q?: string; departamentoId?: string };
+export type FiltroDeAcesso = {
+  q?: string;
+  departamentoId?: string;
+  /** O hotel. Dimensão separada do departamento: um é o lugar, o outro a função. */
+  unidadeId?: string;
+};
 
 /**
  * Levanta a situação de acesso de todo funcionário ativo.
@@ -108,6 +113,13 @@ export async function levantarPrimeiroAcesso(
     active: true,
     role: "EMPLOYEE",
     ...(filtro.departamentoId ? { departmentId: filtro.departamentoId } : {}),
+    /*
+      Hotel e departamento se SOMAM, não se substituem: "Recepção do Canela"
+      é a interseção dos dois, que é como um gerente de unidade pensa a
+      própria equipe. Trocar um pelo outro devolveria a rede inteira de um
+      setor quando a pergunta era sobre uma casa só.
+    */
+    ...(filtro.unidadeId ? { unidadeId: filtro.unidadeId } : {}),
     ...(filtro.q
       ? { OR: [{ name: { contains: filtro.q } }, { username: { contains: filtro.q } }] }
       : {}),

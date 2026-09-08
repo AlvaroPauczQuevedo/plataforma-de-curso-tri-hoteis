@@ -104,6 +104,8 @@ export type FiltroDeConformidade = {
   /** Busca por nome ou e-mail do funcionário. */
   q?: string;
   departamentoId?: string;
+  /** O hotel. Dimensão separada do departamento: um é o lugar, o outro a função. */
+  unidadeId?: string;
 };
 
 /**
@@ -123,6 +125,13 @@ export async function levantarObrigacoes(
     active: true,
     role: "EMPLOYEE",
     ...(filtro.departamentoId ? { departmentId: filtro.departamentoId } : {}),
+    /*
+      Hotel e departamento se SOMAM, não se substituem: "Recepção do Canela"
+      é a interseção dos dois, que é como um gerente de unidade pensa a
+      própria equipe. Trocar um pelo outro devolveria a rede inteira de um
+      setor quando a pergunta era sobre uma casa só.
+    */
+    ...(filtro.unidadeId ? { unidadeId: filtro.unidadeId } : {}),
     ...(filtro.q
       ? { OR: [{ name: { contains: filtro.q } }, { username: { contains: filtro.q } }] }
       : {}),

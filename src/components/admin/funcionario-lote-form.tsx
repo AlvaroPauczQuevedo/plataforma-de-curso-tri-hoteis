@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ListPlus } from "lucide-react";
+import { Check, Copy, ListPlus } from "lucide-react";
 import { criarFuncionariosEmLote } from "@/lib/actions/employees";
 import type { PessoaCadastrada } from "@/lib/cadastro-em-lote";
 import { lerPessoas } from "@/lib/lote-de-funcionarios";
@@ -31,6 +31,7 @@ export function FuncionarioLoteForm({
   const [unidadeId, setUnidadeId] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [pessoas, setPessoas] = useState<PessoaCadastrada[] | null>(null);
+  const [copiado, setCopiado] = useState(false);
   const [pendente, iniciar] = useTransition();
   const router = useRouter();
 
@@ -81,6 +82,41 @@ export function FuncionarioLoteForm({
   }
 
   const cadastrados = pessoas?.filter((p) => p.senha) ?? [];
+
+  /**
+   * Copia a lista num formato que cola em planilha.
+   *
+   * Separado por tabulação e com cabeçalho: colado no Excel ou no Sheets cai em
+   * três colunas sozinho, e colado num campo de texto continua legível. É o
+   * caminho real — ninguém entrega sessenta senhas lendo da tela.
+   *
+   * Existe porque a senha provisória não é gravada em lugar nenhum: fechada a
+   * tela, a única saída é redefinir uma por uma. Uma tabela sem como copiar era
+   * um convite a esse trabalho.
+   */
+  async function copiar() {
+    const linhas = [
+      ["Nome", "Usuário", "Senha provisória"].join("\t"),
+      ...cadastrados.map((p) => [p.nome, p.usuario, p.senha].join("\t")),
+    ].join("\n");
+
+    try {
+      await navigator.clipboard.writeText(linhas);
+      setCopiado(true);
+      // Volta ao normal para o botão poder ser usado de novo sem recarregar.
+      setTimeout(() => setCopiado(false), 2000);
+    } catch {
+      /*
+        Área de transferência negada (permissão do navegador, contexto não
+        seguro). Selecionar o texto é o que sobra, e some sem avisar seria
+        pior: a pessoa acharia que copiou e fecharia a tela.
+      */
+      setErro(
+        "O navegador não permitiu copiar. Selecione a tabela e copie à mão " +
+          "antes de fechar — as senhas não aparecem de novo."
+      );
+    }
+  }
 
   return (
     <form
@@ -170,11 +206,30 @@ export function FuncionarioLoteForm({
       {pessoas && pessoas.length > 0 && (
         <div className="space-y-2">
           {cadastrados.length > 0 && (
-            <p className="text-xs text-success-600">
-              {cadastrados.length} pessoa(s) cadastrada(s). Anote as senhas
-              abaixo <strong>antes de fechar</strong> — elas não são guardadas em
-              lugar nenhum e não aparecem de novo.
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-success-600">
+                {cadastrados.length} pessoa(s) cadastrada(s). Copie as senhas{" "}
+                <strong>antes de fechar</strong> — elas não são guardadas em
+                lugar nenhum e não aparecem de novo.
+              </p>
+              <button
+                type="button"
+                onClick={copiar}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-xs font-medium text-ink-900 hover:bg-surface-muted"
+              >
+                {copiado ? (
+                  <>
+                    <Check className="h-3.5 w-3.5 text-success-600" />
+                    Copiado
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-3.5 w-3.5" />
+                    Copiar lista
+                  </>
+                )}
+              </button>
+            </div>
           )}
 
           <div className="overflow-x-auto rounded-xl border border-border bg-surface">

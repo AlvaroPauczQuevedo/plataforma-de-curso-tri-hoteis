@@ -15,7 +15,7 @@ const PAGE_SIZE = 25;
 
 export default async function MatriculasPage(
   props: {
-    searchParams: Promise<{ curso?: string; status?: string; page?: string }>;
+    searchParams: Promise<{ curso?: string; status?: string; hotel?: string; page?: string }>;
   }
 ) {
   const searchParams = await props.searchParams;
@@ -49,11 +49,12 @@ export default async function MatriculasPage(
     Agora só a PRIMEIRA página vem daqui, para a lista não abrir vazia; a
     busca seguinte acontece no servidor, por `buscarPessoasParaMatricula`.
   */
-  const [pessoasIniciais, courses, departamentos] = await Promise.all([
+  const [pessoasIniciais, courses, departamentos, unidades] = await Promise.all([
     buscarPessoasParaMatricula(""),
     db.course.findMany({ where: { status: "PUBLISHED" }, orderBy: { title: "asc" } }),
     // Só id e nome: a lista vai para o formulário, que é de cliente.
     db.department.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    db.unidade.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
 
   // Mesmo cuidado: só os campos que a tabela mostra. Estes ficam no servidor,
@@ -61,7 +62,15 @@ export default async function MatriculasPage(
   // toa — e o dia em que alguém passar isto a um componente de cliente, o
   // vazamento volta pela porta dos fundos.
   const enrollments = await db.enrollment.findMany({
-    where: searchParams.curso ? { courseId: searchParams.curso } : {},
+    /*
+      O hotel filtra pela PESSOA matriculada, não pela matrícula: quem tem
+      unidade é o funcionário, e a matrícula só o liga a um curso. Sem passar
+      pela relação, o filtro não teria em que coluna se apoiar.
+    */
+    where: {
+      ...(searchParams.curso ? { courseId: searchParams.curso } : {}),
+      ...(searchParams.hotel ? { user: { unidadeId: searchParams.hotel } } : {}),
+    },
     select: {
       id: true,
       userId: true,
@@ -142,6 +151,11 @@ export default async function MatriculasPage(
                 paramKey="curso"
                 placeholder="Todos os cursos"
                 options={courses.map((c) => ({ value: c.id, label: c.title }))}
+              />
+              <SelectFilter
+                paramKey="hotel"
+                placeholder="Todos os hotéis"
+                options={unidades.map((u) => ({ value: u.id, label: u.name }))}
               />
               <SelectFilter
                 paramKey="status"

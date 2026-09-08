@@ -21,6 +21,7 @@ export default async function FuncionariosPage(
       departamento?: string;
       status?: string;
       papel?: string;
+      hotel?: string;
       page?: string;
     }>;
   }
@@ -48,10 +49,16 @@ export default async function FuncionariosPage(
         }
       : {}),
     ...(searchParams.departamento ? { departmentId: searchParams.departamento } : {}),
+    /*
+      Hotel e departamento se somam: "Recepção do Canela" é a interseção
+      dos dois. Um substituindo o outro devolveria a rede inteira de um
+      setor quando a pergunta era sobre uma casa só.
+    */
+    ...(searchParams.hotel ? { unidadeId: searchParams.hotel } : {}),
     ...(searchParams.status ? { active: searchParams.status === "ativo" } : {}),
   };
 
-  const [employees, total, departments] = await Promise.all([
+  const [employees, total, departments, unidades] = await Promise.all([
     db.user.findMany({
       where,
       include: { department: true, _count: { select: { enrollments: true } } },
@@ -61,6 +68,7 @@ export default async function FuncionariosPage(
     }),
     db.user.count({ where }),
     db.department.findMany({ orderBy: { name: "asc" } }),
+    db.unidade.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -94,6 +102,11 @@ export default async function FuncionariosPage(
             paramKey="departamento"
             placeholder="Todos os departamentos"
             options={departments.map((d) => ({ value: d.id, label: d.name }))}
+          />
+          <SelectFilter
+            paramKey="hotel"
+            placeholder="Todos os hotéis"
+            options={unidades.map((u) => ({ value: u.id, label: u.name }))}
           />
           <SelectFilter
             paramKey="status"

@@ -32,6 +32,7 @@ export default async function ConformidadePage(
       q?: string;
       departamento?: string;
       situacao?: string;
+      hotel?: string;
       page?: string;
     }>;
   }
@@ -47,12 +48,14 @@ export default async function ConformidadePage(
     apareceria do pior jeito: a tela dizendo doze atrasados e o e-mail dizendo
     nove, sem ninguém saber qual vale.
   */
-  const [{ linhas, resumo }, departamentos] = await Promise.all([
+  const [{ linhas, resumo }, departamentos, unidades] = await Promise.all([
     levantarObrigacoes({
       q: searchParams.q,
       departamentoId: searchParams.departamento,
+      unidadeId: searchParams.hotel,
     }),
     db.department.findMany({ orderBy: { name: "asc" } }),
+    db.unidade.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
 
   const filtradas = searchParams.situacao
@@ -153,6 +156,11 @@ export default async function ConformidadePage(
             paramKey="departamento"
             placeholder="Todos os departamentos"
             options={departamentos.map((d) => ({ value: d.id, label: d.name }))}
+          />
+          <SelectFilter
+            paramKey="hotel"
+            placeholder="Todos os hotéis"
+            options={unidades.map((u) => ({ value: u.id, label: u.name }))}
           />
           <SelectFilter
             paramKey="situacao"
