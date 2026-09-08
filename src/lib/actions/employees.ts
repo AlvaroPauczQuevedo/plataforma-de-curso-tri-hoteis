@@ -10,6 +10,10 @@ import { randomUUID } from "crypto";
 import { emailDeRedefinicao, emailDeSenhaProvisoria, enviarEmail } from "@/lib/email";
 import { sincronizarUsuario } from "@/lib/matricula-automatica";
 import { motivoDeNomeInvalido, normalizarNomeDeUsuario } from "@/lib/nome-de-usuario";
+import {
+  executarLoteDeFuncionarios,
+  type ResultadoDoLoteDePessoas,
+} from "@/lib/cadastro-em-lote";
 import { motivoDeTelefoneInvalido, normalizarTelefone } from "@/lib/whatsapp";
 import {
   type Recusa,
@@ -719,4 +723,36 @@ export async function deleteDepartment(departmentId: string): Promise<ActionResu
   revalidatePath("/admin/funcionarios");
   revalidatePath("/admin/configuracoes");
   return { ok: true, message: `Departamento "${departamento.name}" excluído.` };
+}
+
+/**
+ * Cadastro de vários funcionários de uma vez, uma pessoa por linha.
+ *
+ * Esta função é só a FRONTEIRA: confere a sessão e o alcance do administrador,
+ * e entrega o trabalho para `executarLoteDeFuncionarios`. A regra mora lá
+ * porque ali ela é testável — aqui, só com uma sessão de verdade.
+ */
+export async function criarFuncionariosEmLote(params: {
+  texto: string;
+  unidadeId?: string | null;
+  departmentId?: string | null;
+}): Promise<ResultadoDoLoteDePessoas> {
+  const admin = await requireAdmin();
+
+  /*
+    Mesma trava do cadastro individual: quem só administra um departamento não
+    pode criar gente fora dele. Sem isto o lote viraria a porta dos fundos para
+    a regra que o formulário de uma pessoa respeita.
+  */
+  const vinculo = await bloqueioDeVinculo(admin.id, params.departmentId || null);
+  if (vinculo) return vinculo;
+
+  const resultado = await executarLoteDeFuncionarios({ adminId: admin.id, ...params });
+
+  if (resultado.ok) {
+    revalidatePath("/admin/funcionarios");
+    revalidatePath("/admin/primeiro-acesso");
+  }
+
+  return resultado;
 }

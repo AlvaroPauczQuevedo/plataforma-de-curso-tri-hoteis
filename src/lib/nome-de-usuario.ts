@@ -89,10 +89,25 @@ export function motivoDeNomeInvalido(nome: string): string | null {
  */
 const CONECTIVOS = new Set(["de", "da", "do", "das", "dos", "e"]);
 
-export function sugerirNomeDeUsuario(nomeCompleto: string): string {
-  const partes = normalizarNomeDeUsuario(nomeCompleto)
+/**
+ * As partes de um nome que valem como identificador.
+ *
+ * Conectivo sai fora: "da" e "dos" não distinguem ninguém, só alongam o login.
+ *
+ * Exportada porque o cadastro em lote precisa exatamente da mesma leitura para
+ * desempatar homônimos pelo nome do meio. Reimplementar lá deu
+ * "joao.pereira.da.silva" onde esta função daria "joao.pereira.silva" — duas
+ * ideias do que é um nome, e a errada é a que a pessoa teria de digitar todo
+ * dia para entrar.
+ */
+export function partesDoNome(nomeCompleto: string): string[] {
+  return normalizarNomeDeUsuario(nomeCompleto)
     .split(".")
     .filter((parte) => parte && !CONECTIVOS.has(parte));
+}
+
+export function sugerirNomeDeUsuario(nomeCompleto: string): string {
+  const partes = partesDoNome(nomeCompleto);
 
   if (partes.length === 0) return "";
   // Primeiro e último: o nome do meio entra só no desempate, feito à mão por

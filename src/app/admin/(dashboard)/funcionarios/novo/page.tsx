@@ -5,6 +5,7 @@ import { carregarAtorOuFalhar } from "@/lib/alcance-admin";
 import { requireAdmin } from "@/lib/session";
 import { Alert } from "@/components/ui/alert";
 import { EmployeeForm } from "@/components/admin/employee-form";
+import { FuncionarioLoteForm } from "@/components/admin/funcionario-lote-form";
 import { departamentosPermitidos, unidadesPermitidas } from "@/lib/permissoes-usuario";
 
 export default async function NovoFuncionarioPage() {
@@ -44,8 +45,11 @@ export default async function NovoFuncionarioPage() {
           um usuário. Peça ao proprietário da plataforma para definir o seu departamento.
         </Alert>
       ) : (
-        <div className="rounded-2xl border border-border bg-surface p-6">
-          <EmployeeForm departments={departments} unidades={unidades} />
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-border bg-surface p-6">
+            <EmployeeForm departments={departments} unidades={unidades} />
+          </div>
+          <FuncionarioLoteForm departments={departments} unidades={unidades} />
         </div>
       )}
     </div>
