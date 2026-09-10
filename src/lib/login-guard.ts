@@ -61,7 +61,7 @@ export async function permitirTentativa(identificador: string, ip: string): Prom
 
   const conta = await db.user.findUnique({
     where: { username: identificador },
-    select: { lockedUntil: true },
+    select: { id: true, failedAttempts: true, lockedUntil: true },
   });
 
   if (conta?.lockedUntil && conta.lockedUntil > agora) {
@@ -72,6 +72,25 @@ export async function permitirTentativa(identificador: string, ip: string): Prom
     throw new LoginBloqueado(
       `Acesso bloqueado temporariamente por tentativas seguidas. Tente novamente em ${faltam} minuto(s).`
     );
+  }
+
+  /*
+    Bloqueio vencido: o contador volta a zero AQUI.
+
+    Ele só zerava com acerto de senha ou redefinição. O efeito era silencioso e
+    ruim: passados os quinze minutos, o contador ainda estava no limite, então
+    o primeiro erro seguinte já era o sexto e travava a conta na hora. Quem
+    esqueceu a senha de verdade ficava com UMA tentativa a cada quinze minutos,
+    para sempre, sem nada na tela explicando por quê.
+
+    Cumprido o bloqueio, o ciclo recomeça inteiro — que é o que "tente
+    novamente em quinze minutos" promete a quem lê.
+  */
+  if (conta?.lockedUntil && conta.lockedUntil <= agora) {
+    await db.user.update({
+      where: { id: conta.id },
+      data: { failedAttempts: 0, lockedUntil: null },
+    });
   }
 }
 

@@ -63,6 +63,15 @@ next-env.d.ts
 # registro de erros do servidor: contém pilha de chamadas e caminhos internos
 /erros/
 
+# estado do servidor, gravado ao lado do registro de erros — em produção fica
+# fora do projeto, mas em desenvolvimento ERROS_DIR não está definida e estes
+# arquivos caem aqui na raiz. São de execução: nunca versionar.
+/ultima-migracao.json
+/migracao-em-curso.lock
+/avisos-de-tela.json
+/pedidos-de-redefinicao.json
+/*.json.*.tmp
+
 # artefatos da verificação automática, gerados a cada execução
 /ci.db
 /ci.db-journal

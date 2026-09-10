@@ -19,7 +19,18 @@
  * `prisma/migrations` em produção e o cliente do Prisma escreve no banco a
  * cada requisição.
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+  writeSync,
+} from "node:fs";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { db } from "@/lib/db";
@@ -80,6 +91,135 @@ export function ultimoRelatorioDeMigracao(): RelatorioDeMigracao | null {
     return JSON.parse(readFileSync(ARQUIVO_DO_RELATORIO, "utf8")) as RelatorioDeMigracao;
   } catch {
     return null;
+  }
+}
+
+/*
+  ---------------------------------------------------------------- a trava
+
+  A migração precisa acontecer UMA vez, e este módulo roda na subida de CADA
+  processo — a hospedagem sobe vários, que é a mesma descoberta que obrigou o
+  relatório acima a morar em arquivo em vez de numa variável.
+
+  Sem trava, dois processos que subam juntos executam a mesma migração ao mesmo
+  tempo. Para `CREATE TABLE` e `ADD COLUMN` isso passa batido, porque
+  `ehObjetoJaExistente` tolera o segundo. O estrago está na reescrita de tabela
+  que o Prisma gera para SQLite — cria `new_User`, copia, DERRUBA a antiga,
+  renomeia: o segundo processo chega para copiar de uma tabela que o primeiro
+  acabou de derrubar, e aí não é mais "o objeto já existe", é dado perdido.
+
+  A trava é um arquivo criado com "wx", que falha se ele já existe. A criação é
+  atômica no sistema de arquivos, e isso basta: os processos são todos da mesma
+  máquina, olhando para a mesma pasta. Não depende de transação do SQLite, que
+  o cliente do Prisma não garante entregar na mesma conexão.
+*/
+
+/** Ao lado do relatório, e pelo mesmo motivo: é estado do servidor. */
+const ARQUIVO_DA_TRAVA = path.resolve(ERROS_ROOT, "..", "migracao-em-curso.lock");
+
+/**
+ * Depois disto, a trava é considerada abandonada e pode ser assumida.
+ *
+ * Processo morto no meio da migração não remove a própria trava. Sem este
+ * prazo, um único apagão deixaria o servidor sem nunca mais migrar — trocaria
+ * uma falha rara por uma permanente.
+ */
+const TRAVA_ABANDONADA_MS = 10 * 60_000;
+
+/**
+ * Quanto o processo perdedor espera o vencedor terminar.
+ *
+ * Esperar é melhor do que seguir: quem segue serve requisição com o banco no
+ * schema antigo, que é exatamente o apagão que este módulo existe para acabar.
+ * Configurável porque o tempo certo depende do tamanho do banco, e aqui não há
+ * terminal no servidor para descobrir isso de outro jeito.
+ */
+const ESPERA_MAXIMA_MS =
+  Number(process.env.MIGRACAO_ESPERA_MINUTOS ?? 5) * 60_000;
+
+const INTERVALO_DE_ESPERA_MS = 500;
+
+const dormir = (ms: number) => new Promise((pronto) => setTimeout(pronto, ms));
+
+function tentarTravar(): { travou: boolean; semTrava?: string } {
+  try {
+    mkdirSync(path.dirname(ARQUIVO_DA_TRAVA), { recursive: true });
+    const descritor = openSync(ARQUIVO_DA_TRAVA, "wx");
+    writeSync(descritor, `pid ${process.pid} em ${new Date().toISOString()}\n`);
+    closeSync(descritor);
+    return { travou: true };
+  } catch (erro) {
+    if ((erro as NodeJS.ErrnoException)?.code === "EEXIST") return { travou: false };
+
+    /*
+      Não deu para criar a trava por outro motivo — pasta somente-leitura, por
+      exemplo. Seguir SEM ela devolve o comportamento de antes desta trava
+      existir, que é um risco conhecido e raro; recusar a migrar por causa
+      disso reintroduziria a falha que derrubou o site quatro vezes.
+    */
+    return { travou: true, semTrava: (erro as Error)?.message ?? String(erro) };
+  }
+}
+
+function destravar(): void {
+  try {
+    unlinkSync(ARQUIVO_DA_TRAVA);
+  } catch {
+    // Já removida por quem a considerou abandonada. Não há o que consertar.
+  }
+}
+
+function idadeDaTrava(): number | null {
+  try {
+    return Date.now() - statSync(ARQUIVO_DA_TRAVA).mtimeMs;
+  } catch {
+    return null;
+  }
+}
+
+type EstadoDaTrava = "assumida" | "sem-trava" | "desnecessaria" | "esgotou";
+
+/** Pega a trava, ou espera quem a tem — o que vier primeiro. */
+async function aguardarOuAssumirATrava(): Promise<{
+  estado: EstadoDaTrava;
+  aviso?: string;
+}> {
+  const limite = Date.now() + ESPERA_MAXIMA_MS;
+  let primeira = true;
+
+  for (;;) {
+    if (!primeira && Date.now() >= limite) return { estado: "esgotou" };
+    primeira = false;
+
+    const tentativa = tentarTravar();
+    if (tentativa.travou) {
+      return tentativa.semTrava
+        ? { estado: "sem-trava", aviso: tentativa.semTrava }
+        : { estado: "assumida" };
+    }
+
+    const idade = idadeDaTrava();
+    if (idade !== null && idade > TRAVA_ABANDONADA_MS) {
+      console.warn(
+        `[migracao] trava parada há ${Math.round(idade / 60_000)} min — ` +
+          "o processo que migrava não chegou ao fim. Assumindo o lugar dele."
+      );
+      destravar();
+      continue;
+    }
+
+    /*
+      Enquanto o outro trabalha, a única pergunta que importa é se ainda falta
+      alguma coisa. Zerou, ele terminou, e não há mais o que esperar — nem por
+      que disputar a trava.
+    */
+    try {
+      if ((await migracoesPendentes()).length === 0) return { estado: "desnecessaria" };
+    } catch {
+      // Banco no meio de uma reescrita de tabela: seguir esperando.
+    }
+
+    await dormir(INTERVALO_DE_ESPERA_MS);
   }
 }
 
@@ -151,6 +291,69 @@ export async function aplicarMigracoesNaSubida(): Promise<void> {
     return;
   }
 
+  /*
+    Daqui para baixo há trabalho a fazer, e ele precisa acontecer uma vez só.
+    A trava é pedida SÓ neste ponto: no caso normal — nada pendente — a subida
+    não toca em arquivo nenhum, que é como era antes.
+  */
+  const trava = await aguardarOuAssumirATrava();
+
+  if (trava.estado === "desnecessaria") {
+    registrar({ quando, pendentesAntes: pendentes, aplicadas: [] });
+    console.log("[migracao] outro processo aplicou as pendências; banco em dia.");
+    return;
+  }
+
+  if (trava.estado === "esgotou") {
+    const minutos = Math.round(ESPERA_MAXIMA_MS / 60_000);
+    const erro = `outro processo está migrando há mais de ${minutos} min e não terminou`;
+    registrar({ quando, pendentesAntes: pendentes, aplicadas: [], erro });
+    console.error(
+      `[migracao] ${erro}. Subindo com o banco desatualizado — as telas que ` +
+        "dependem do schema novo vão falhar. MIGRACAO_ESPERA_MINUTOS aumenta a espera."
+    );
+    return;
+  }
+
+  if (trava.estado === "sem-trava") {
+    console.warn(
+      `[migracao] seguindo SEM trava entre processos (${trava.aviso}). ` +
+        "Se a hospedagem subir mais de um processo, a migração pode acontecer duas vezes."
+    );
+  }
+
+  try {
+    /*
+      Relê com a trava na mão. Entre a primeira leitura e a trava, quem estava
+      na frente pode ter aplicado tudo — ou parte, e aí aplicar de novo o que
+      já entrou é o desvio que este módulo passa o tempo todo reconciliando.
+    */
+    const restantes = await migracoesPendentes();
+
+    if (restantes.length === 0) {
+      registrar({ quando, pendentesAntes: pendentes, aplicadas: [] });
+      console.log("[migracao] outro processo aplicou as pendências; banco em dia.");
+      return;
+    }
+
+    await aplicarLista(pasta, restantes, quando);
+  } catch (erro) {
+    const mensagem = (erro as Error)?.message ?? String(erro);
+    registrar({ quando, pendentesAntes: pendentes, aplicadas: [], erro: mensagem });
+    console.error("[migracao] não foi possível reconferir o estado do banco:", mensagem);
+  } finally {
+    // Só devolve a trava quem a pegou: no caso "sem-trava" não há o que soltar,
+    // e remover o arquivo seria puxar a trava de outro processo.
+    if (trava.estado === "assumida") destravar();
+  }
+}
+
+/** Aplica, em ordem, as migrações que a trava garantiu serem só nossas. */
+async function aplicarLista(
+  pasta: string,
+  pendentes: string[],
+  quando: string
+): Promise<void> {
   console.log(
     `[migracao] ${pendentes.length} migração(ões) pendente(s) na subida: ` +
       `${pendentes.join(", ")}. Aplicando...`

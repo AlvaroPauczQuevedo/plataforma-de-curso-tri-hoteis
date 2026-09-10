@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { registrarErro } from "@/lib/monitoramento";
-import { consumirVaga, JANELA_NOVA, type Janela } from "@/lib/teto-de-avisos";
+import { consumirVagaCompartilhada } from "@/lib/teto-compartilhado";
 
 /**
  * Recebe do navegador o aviso de que uma tela quebrou.
@@ -22,17 +22,22 @@ const TETO_POR_MINUTO = Number(process.env.ERROS_CLIENTE_LIMITE ?? 60);
 const JANELA_MS = 60_000;
 
 /*
-  A contagem é global e vive em memória, como o agrupamento do monitoramento:
-  não é por origem porque o objetivo não é ser justo entre visitantes, é não
-  deixar o disco encher. A regra em si está em lib/teto-de-avisos, que recebe o
-  relógio por parâmetro e por isso pode ser exercitada em teste.
-*/
-let janela: Janela = JANELA_NOVA;
+  A contagem é global — não é por origem porque o objetivo não é ser justo
+  entre visitantes, é não deixar o disco encher.
 
+  Ela vivia numa variável de módulo, e isso era um furo: a hospedagem sobe
+  vários processos, cada um com o próprio contador, e o teto real virava o
+  configurado VEZES o número de processos, contra um disco que é um só. Agora o
+  estado é compartilhado por arquivo (lib/teto-compartilhado); a regra de
+  contagem continua a mesma, pura, em lib/teto-de-avisos.
+*/
 function dentroDoTeto(): boolean {
-  const vaga = consumirVaga(janela, Date.now(), TETO_POR_MINUTO, JANELA_MS);
-  janela = vaga.janela;
-  return vaga.aceito;
+  return consumirVagaCompartilhada({
+    arquivo: "avisos-de-tela.json",
+    chave: "global",
+    teto: TETO_POR_MINUTO,
+    duracaoMs: JANELA_MS,
+  });
 }
 
 export async function POST(request: Request) {

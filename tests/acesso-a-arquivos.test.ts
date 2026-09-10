@@ -21,8 +21,12 @@ after(encerrar);
 let contador = 0;
 const unico = (prefixo: string) => `${prefixo}-${(contador += 1)}`;
 
-async function criarArquivo(kind: "VIDEO" | "PDF" | "COVER" | "AVATAR") {
-  const dono = await criarAdministrador();
+async function criarArquivo(
+  kind: "VIDEO" | "PDF" | "COVER" | "AVATAR",
+  // Quem enviou. Só importa para o avatar, onde é ele que decide o alcance.
+  donoId?: string
+) {
+  const dono = donoId ?? (await criarAdministrador()).id;
   return db.fileAsset.create({
     data: {
       filename: unico("arquivo"),
@@ -31,7 +35,7 @@ async function criarArquivo(kind: "VIDEO" | "PDF" | "COVER" | "AVATAR") {
       size: 10,
       storagePath: `${kind.toLowerCase()}/${unico("x")}`,
       kind,
-      uploadedById: dono.id,
+      uploadedById: dono,
     },
   });
 }
@@ -115,11 +119,30 @@ describe("Capa de curso", () => {
 });
 
 describe("Casos soltos", () => {
-  it("avatar é liberado: aparece no cabeçalho de quem estiver na tela", async () => {
-    const avatar = await criarArquivo("AVATAR");
+  it("avatar é do dono, e só dele", async () => {
+    /*
+      Era liberado para qualquer sessão, com a justificativa de que a foto
+      aparece no cabeçalho de quem está na tela. Mas o cabeçalho mostra a foto
+      de QUEM ESTÁ LOGADO: nenhuma tela de funcionário mostra a de outra
+      pessoa, e as listagens com foto dos outros são todas do painel — onde
+      quem entra é administrador, que esta barreira libera antes de chegar
+      aqui. Era o único ponto que devolvia "pode" sem conferir alcance nenhum.
+    */
     const pessoa = await criarFuncionario();
+    const outra = await criarFuncionario();
+    const avatar = await criarArquivo("AVATAR", pessoa.id);
 
     assert.equal(await fileBelongsToAccessibleCourse(pessoa.id, avatar.id, false), true);
+    assert.equal(await fileBelongsToAccessibleCourse(outra.id, avatar.id, false), false);
+  });
+
+  it("administrador continua alcançando o avatar de qualquer um", async () => {
+    // As listagens do painel mostram a foto dos funcionários.
+    const pessoa = await criarFuncionario();
+    const avatar = await criarArquivo("AVATAR", pessoa.id);
+    const admin = await criarAdministrador();
+
+    assert.equal(await fileBelongsToAccessibleCourse(admin.id, avatar.id, true), true);
   });
 
   it("arquivo sem vínculo nenhum é recusado", async () => {

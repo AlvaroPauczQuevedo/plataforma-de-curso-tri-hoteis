@@ -84,6 +84,35 @@ describe("Bloqueio por conta", () => {
     assert.equal(await tentar(alvo.username, "10.0.0.5"), null, "liberado após o prazo");
   });
 
+  it("cumprido o bloqueio, o ciclo de tentativas recomeça inteiro", async () => {
+    /*
+      O contador só zerava com acerto de senha ou redefinição. Passado o
+      bloqueio, ele ainda estava no limite: o primeiro erro seguinte já era o
+      quarto e travava a conta na hora. Quem esqueceu a senha de verdade ficava
+      com UMA tentativa a cada bloqueio, para sempre, e a tela não explicava.
+    */
+    const alvo = await criarFuncionario();
+    for (let i = 0; i < MAX_POR_CONTA; i += 1) await registrarFalha(alvo.username, "10.0.0.9");
+
+    await db.user.update({
+      where: { id: alvo.id },
+      data: { lockedUntil: new Date(Date.now() - 1000) },
+    });
+
+    // A mesma conferência que libera é a que zera o contador.
+    assert.equal(await tentar(alvo.username, "10.0.0.9"), null, "liberado após o prazo");
+
+    const depois = await db.user.findUnique({ where: { id: alvo.id } });
+    assert.equal(depois!.failedAttempts, 0, "o contador voltou a zero");
+    assert.equal(depois!.lockedUntil, null, "o bloqueio saiu do registro");
+
+    // E o ciclo inteiro está de volta: os erros seguintes não travam na hora.
+    for (let i = 0; i < MAX_POR_CONTA - 1; i += 1) {
+      await registrarFalha(alvo.username, "10.0.0.9");
+      assert.equal(await tentar(alvo.username, "10.0.0.9"), null, `erro ${i + 1} não trava`);
+    }
+  });
+
   it("e-mail que não existe não revela nada nem quebra", async () => {
     const inexistente = "ninguem@teste.local";
     await registrarFalha(inexistente, "10.0.0.6");

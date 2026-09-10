@@ -94,9 +94,24 @@ export async function fileBelongsToAccessibleCourse(userId: string, fileId: stri
 
   const file = await db.fileAsset.findUnique({
     where: { id: fileId },
-    select: { kind: true },
+    select: { kind: true, uploadedById: true },
   });
-  if (file?.kind === "AVATAR") return true;
+
+  /*
+    Avatar: só o próprio dono.
+
+    Era liberado para qualquer sessão, com a justificativa de que a foto
+    aparece no cabeçalho de quem está na tela. Mas o cabeçalho mostra a foto de
+    QUEM ESTÁ LOGADO, e nenhuma tela de funcionário mostra a de outra pessoa:
+    as listagens com foto dos outros são todas do painel, e administrador já
+    saiu no início desta função. Era o único ponto da barreira que devolvia
+    `true` sem conferir alcance nenhum.
+
+    A comparação é com quem ENVIOU o arquivo, e não com `User.avatarUrl`: o
+    avatar só entra por /perfil, então quem enviou é o dono, e um id vale mais
+    que casar pedaço de texto de uma URL.
+  */
+  if (file?.kind === "AVATAR") return file.uploadedById === userId;
 
   return false;
 }

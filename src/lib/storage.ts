@@ -1,4 +1,8 @@
-import { writeFile, mkdir } from "fs/promises";
+import { createWriteStream } from "node:fs";
+import { mkdir, rm } from "node:fs/promises";
+import { Readable } from "node:stream";
+import type { ReadableStream as ReadableStreamDoNode } from "node:stream/web";
+import { pipeline } from "node:stream/promises";
 import path from "path";
 import { randomUUID } from "crypto";
 
@@ -27,6 +31,27 @@ export const STORAGE_ROOT = path.resolve(
 
 export type UploadKind = "videos" | "pdfs" | "covers" | "avatars";
 
+/**
+ * Grava o arquivo enviado, EM FLUXO.
+ *
+ * Antes era `writeFile(caminho, Buffer.from(await file.arrayBuffer()))`, o que
+ * pedia ao Node uma cópia inteira do arquivo na memória — com o teto de 500 MB
+ * por envio, dois vídeos ao mesmo tempo derrubavam o processo numa hospedagem
+ * modesta. Em fluxo, o que passa pela memória são pedaços.
+ *
+ * RESSALVA que precisa ficar escrita, senão o próximo a ler isto vai achar que
+ * o problema acabou: quem monta o `File` é o `request.formData()` do próprio
+ * Next, e ELE já leu o corpo inteiro para a memória antes de esta função ser
+ * chamada. O que se economiza aqui é a SEGUNDA cópia — o pico cai à metade,
+ * não a zero. Zerar exigiria ler `request.body` como fluxo e interpretar o
+ * multipart na mão, o que traz um analisador de formato para dentro do
+ * projeto. Enquanto isso não acontecer, `UPLOAD_MAX_SIZE_MB` é o que de fato
+ * limita a memória do servidor, e é por ele que se ajusta.
+ *
+ * O arquivo pela metade é apagado se a gravação falhar. Sem isso, uma conexão
+ * interrompida deixaria um vídeo truncado no acervo, sem `FileAsset` para
+ * apontar para ele — lixo que ninguém encontra e ninguém remove.
+ */
 export async function saveUploadedFile(
   file: File,
   kind: UploadKind
@@ -38,8 +63,18 @@ export async function saveUploadedFile(
   const filename = `${randomUUID()}${ext}`;
   const fullPath = path.join(dir, filename);
 
-  const arrayBuffer = await file.arrayBuffer();
-  await writeFile(fullPath, Buffer.from(arrayBuffer));
+  try {
+    await pipeline(
+      // `file.stream()` devolve o ReadableStream da web; `Readable.fromWeb`
+      // pede o do Node. São o mesmo objeto em tempo de execução — a conversão
+      // é só de tipo, como em /api/files, que faz o caminho inverso.
+      Readable.fromWeb(file.stream() as unknown as ReadableStreamDoNode<Uint8Array>),
+      createWriteStream(fullPath)
+    );
+  } catch (erro) {
+    await rm(fullPath, { force: true }).catch(() => {});
+    throw erro;
+  }
 
   return {
     storagePath: path.join(kind, filename),

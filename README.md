@@ -911,6 +911,32 @@ do ar", que é pior — mas nesse estado a plataforma precisa de atenção imedi
 `prisma generate` é a exceção: falhando, a instalação para, porque sem o
 cliente gerado a aplicação nem sobe.
 
+#### A migração na subida acontece uma vez, mesmo com vários processos
+
+A rede de segurança de `src/lib/migracoes.ts` roda na subida de **cada**
+processo, e a hospedagem sobe vários. Dois processos aplicando a mesma migração
+ao mesmo tempo passavam batido em `CREATE TABLE` e `ADD COLUMN` — a
+reconciliação de desvio tolera "o objeto já existe" —, mas não na reescrita de
+tabela que o Prisma gera para SQLite: ela cria `new_User`, copia, **derruba** a
+antiga e renomeia. O segundo processo chegava para copiar de uma tabela que o
+primeiro tinha acabado de derrubar.
+
+Agora quem chega primeiro cria `migracao-em-curso.lock` (ao lado de
+`ultima-migracao.json`, na pasta de estado do servidor) e os outros **esperam**
+— em vez de servir requisição com o banco no schema antigo, que é o apagão que
+tudo isto existe para acabar.
+
+- A trava só é pedida quando há migração pendente. No caso normal a subida não
+  toca em arquivo nenhum.
+- `MIGRACAO_ESPERA_MINUTOS` (padrão 5) é quanto o perdedor espera. Esgotado o
+  prazo, o servidor sobe assim mesmo e o motivo aparece em `/api/saude`.
+- Trava parada há mais de 10 minutos é considerada abandonada — processo morto
+  no meio — e o próximo assume o lugar. Sem esse prazo, um único apagão
+  deixaria o servidor sem nunca mais migrar.
+
+Se precisar destravar à mão, apague o arquivo `migracao-em-curso.lock` com o
+servidor parado.
+
 #### Aplicar à mão, se precisar
 
 Da pasta com o código-fonte do build, uma linha por vez:
