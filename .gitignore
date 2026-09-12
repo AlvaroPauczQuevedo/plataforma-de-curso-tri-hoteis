@@ -70,6 +70,7 @@ next-env.d.ts
 /migracao-em-curso.lock
 /avisos-de-tela.json
 /pedidos-de-redefinicao.json
+/alarmes-da-isca.json
 /*.json.*.tmp
 
 # artefatos da verificação automática, gerados a cada execução

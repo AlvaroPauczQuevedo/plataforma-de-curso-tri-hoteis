@@ -1,5 +1,7 @@
 import type { NextAuthOptions } from "next-auth";
+import { after } from "next/server";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { dispararAlarmeDaIsca, ehIsca } from "@/lib/alarme-da-isca";
 import { db } from "@/lib/db";
 import { normalizarNomeDeUsuario } from "@/lib/nome-de-usuario";
 import { verifyPassword } from "@/lib/password";
@@ -55,6 +57,34 @@ export const authOptions: NextAuthOptions = {
         const user = await db.user.findUnique({ where: { username } });
 
         if (!user) {
+          /*
+            A isca do console (ver lib/isca-de-console). Só é conferida aqui,
+            quando a conta NÃO existe, e isso fecha a porta ao falso alarme:
+            mesmo que alguém criasse uma conta real com esse nome por um caminho
+            que não valida, os logins dela nunca cairiam neste ramo.
+
+            Depois da resposta, com `after`, e não só sem `await`. A primeira
+            versão usava `void` e, medida contra o servidor no ar, respondia de
+            forma consistente ~2 ms mais devagar que um usuário desconhecido
+            qualquer: a parte síncrona do alarme (contar o teto, escrever no
+            console) ainda rodava antes da resposta sair. Com amostras
+            suficientes, essa regularidade denuncia a armadilha. `after` só roda
+            quando a resposta já foi entregue.
+
+            `after` exige estar dentro de uma requisição do Next, que é o caso
+            aqui (a rota do NextAuth). Se um dia este `authorize` for chamado
+            de outro lugar, ele lança; o alarme cai no modo antigo em vez de
+            derrubar o login.
+          */
+          if (ehIsca(username)) {
+            const tentativa = { ip, senha: credentials.password };
+            try {
+              after(() => dispararAlarmeDaIsca(tentativa));
+            } catch {
+              void dispararAlarmeDaIsca(tentativa);
+            }
+          }
+
           // Registra mesmo sem conta: alimenta a barreira por origem contra
           // quem varre nomes de usuário.
           await registrarFalha(username, ip);

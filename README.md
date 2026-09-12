@@ -750,6 +750,43 @@ alerta viraria ruído que se aprende a ignorar.
 O monitoramento **nunca lança**: derrubar a requisição por não conseguir avisar
 sobre a falha seria pior do que monitoramento nenhum.
 
+## Isca do console
+
+> **Para auditoria e pentest: isto é proposital.** A credencial que aparece no
+> console da tela de login é falsa e não dá acesso a nada.
+
+Quem abre as ferramentas do navegador na tela de login encontra o que parece um
+acesso de contingência esquecido:
+
+```
+[auth] acesso de contingência ainda habilitado — remover antes do go-live (chamado #4471)
+[auth] fallback carregado: { usuario: "suporte.contingencia", senha: "Tri@Contingencia#2024", ... }
+```
+
+A conta não existe e não pode existir, porque o cadastro recusa esse nome. A
+graça está no que acontece quando alguém tenta usá-la. Nenhum funcionário tem
+motivo para digitar aquele usuário, que só aparece no console. Então quem tenta
+entrar com ele estava procurando brecha, e a tentativa vira alarme:
+
+- aparece em `/admin/erros` com o IP de origem, e vai por e-mail/webhook se o
+  [monitoramento](#monitoramento-opcional) estiver configurado;
+- diz se a pessoa usou a senha falsa inteira ou só o nome. **A senha digitada
+  nunca é gravada**;
+- quem tentou recebe "usuário ou senha inválidos", exatamente como um usuário
+  desconhecido qualquer, e no mesmo tempo. O login não espera o aviso sair.
+
+O alarme tem teto de `ISCA_TETO_POR_HORA` avisos por hora (padrão 20), para quem
+descobrir a isca não conseguir lotar o registro nem a caixa de quem recebe os
+avisos. Acima do teto ele se cala. A tentativa continua registrada como toda
+tentativa de login.
+
+Sem `TRUST_PROXY=true` atrás de um proxy, o IP registrado sai vazio. É a mesma
+regra da proteção do login.
+
+Para desligar, basta tirar `<IscaDeConsole />` de
+`src/components/auth/login-form.tsx`. O alarme fica inerte, porque ninguém mais
+tem de onde tirar o nome.
+
 ## Testes
 
 ```bash

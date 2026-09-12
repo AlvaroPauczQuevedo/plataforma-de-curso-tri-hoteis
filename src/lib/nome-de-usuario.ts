@@ -18,6 +18,10 @@
  * gravado deixaria de ser previsível a partir do que foi digitado.
  */
 
+// Caminho relativo, e não "@/": este módulo também é carregado por scripts de
+// linha de comando (scripts/redefinir-senha.mjs), fora da resolução do Next.
+import { ISCA_USUARIO } from "./isca-de-console";
+
 /** Limites do identificador. O teto é folgado; o piso evita "a" e "jo". */
 export const MINIMO = 3;
 export const MAXIMO = 32;
@@ -75,6 +79,14 @@ export function motivoDeNomeInvalido(nome: string): string | null {
   }
   if (/[._-]{2,}/.test(nome)) {
     return "O nome de usuário não pode ter dois separadores seguidos.";
+  }
+  /*
+    O nome da isca do console é reservado. Uma conta real com ele desligaria o
+    alarme (que só dispara quando a conta não existe) e poria alguém de verdade
+    atrás da credencial que o console oferece a quem procura brecha.
+  */
+  if (nome === ISCA_USUARIO) {
+    return "Este nome de usuário é reservado pela plataforma. Escolha outro.";
   }
   return null;
 }

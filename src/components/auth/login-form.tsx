@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, LogIn } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { IscaDeConsole } from "@/components/auth/isca-de-console";
 
 export function LoginForm({
   variant,
@@ -51,6 +52,8 @@ export function LoginForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Não desenha nada: é a isca do console. Ver lib/isca-de-console. */}
+      <IscaDeConsole />
       {error && <Alert tone="danger">{error}</Alert>}
 
       <div className="space-y-1.5">
