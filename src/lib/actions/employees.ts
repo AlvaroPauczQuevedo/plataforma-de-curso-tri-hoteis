@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import { hashPassword, senhaProvisoria } from "@/lib/password";
 import { logAdminActivity } from "@/lib/activity-log";
-import { randomUUID } from "crypto";
+import { novoTokenDeRedefinicao } from "@/lib/token-de-redefinicao";
 import { emailDeRedefinicao, emailDeSenhaProvisoria, enviarEmail } from "@/lib/email";
 import { sincronizarUsuario } from "@/lib/matricula-automatica";
 import { motivoDeNomeInvalido, normalizarNomeDeUsuario } from "@/lib/nome-de-usuario";
@@ -456,9 +456,10 @@ export async function generatePasswordResetLink(
     data: { usedAt: new Date() },
   });
 
-  const token = randomUUID();
+  // O link e o e-mail levam o token; o banco, só o digest.
+  const { token, digest } = novoTokenDeRedefinicao();
   await db.passwordResetToken.create({
-    data: { userId, token, expiresAt: new Date(Date.now() + 60 * 60 * 1000) },
+    data: { userId, token: digest, expiresAt: new Date(Date.now() + 60 * 60 * 1000) },
   });
 
   await logAdminActivity({

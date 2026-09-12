@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { AVISO_SENHA_CURTA, SENHA_MINIMA } from "@/lib/regra-de-senha";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
@@ -36,7 +37,7 @@ export async function updateProfile(formData: FormData): Promise<ActionResult> {
 const passwordSchema = z
   .object({
     currentPassword: z.string().min(1, "Informe sua senha atual."),
-    newPassword: z.string().min(6, "A nova senha deve ter ao menos 6 caracteres."),
+    newPassword: z.string().min(SENHA_MINIMA, AVISO_SENHA_CURTA),
     confirmPassword: z.string(),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {

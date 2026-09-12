@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { AVISO_SENHA_CURTA, SENHA_MINIMA } from "@/lib/regra-de-senha";
 import { db } from "@/lib/db";
 import { requireAdmin, requireUser } from "@/lib/session";
 import { hashPassword, verifyPassword } from "@/lib/password";
@@ -54,7 +55,7 @@ export async function sincronizarFuncionarios(): Promise<SyncResult> {
 const trocaSchema = z
   .object({
     senhaAtual: z.string().min(1, "Informe a senha atual."),
-    novaSenha: z.string().min(6, "A nova senha deve ter ao menos 6 caracteres."),
+    novaSenha: z.string().min(SENHA_MINIMA, AVISO_SENHA_CURTA),
     confirmacao: z.string(),
   })
   .refine((dados) => dados.novaSenha === dados.confirmacao, {

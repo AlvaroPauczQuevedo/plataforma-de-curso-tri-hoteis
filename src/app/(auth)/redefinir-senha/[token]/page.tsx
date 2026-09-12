@@ -6,6 +6,7 @@ import Link from "next/link";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { SENHA_MINIMA } from "@/lib/regra-de-senha";
 import { resetPassword } from "@/lib/actions/password-reset";
 
 export default function ResetPasswordPage(
@@ -57,7 +58,7 @@ export default function ResetPasswordPage(
             name="password"
             type="password"
             required
-            minLength={6}
+            minLength={SENHA_MINIMA}
             className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
           />
         </div>
@@ -71,7 +72,7 @@ export default function ResetPasswordPage(
             name="confirmPassword"
             type="password"
             required
-            minLength={6}
+            minLength={SENHA_MINIMA}
             className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
           />
         </div>

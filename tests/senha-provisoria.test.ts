@@ -2,12 +2,35 @@ import assert from "node:assert/strict";
 import { after, describe, it } from "node:test";
 import { criarFuncionario, db, encerrar } from "./ambiente";
 
+/*
+  ANTES da action de redefinição: o teto de pedidos grava a contagem ao lado do
+  registro de erros, e sem o desvio o arquivo cairia dentro do projeto.
+*/
+import { limparPastaDeErros } from "./erros-temporarios";
+
 // Depois do ambiente, que já apontou DATABASE_URL para o banco temporário.
 import { senhaProvisoria, verifyPassword } from "../src/lib/password";
 import { LoginBloqueado, permitirTentativa, registrarFalha } from "../src/lib/login-guard";
-import { resetPassword } from "../src/lib/actions/password-reset";
+import { requestPasswordReset, resetPassword } from "../src/lib/actions/password-reset";
+import { AVISO_SENHA_CURTA, SENHA_MINIMA } from "../src/lib/regra-de-senha";
+import { digestDoToken } from "../src/lib/token-de-redefinicao";
 
 after(encerrar);
+after(limparPastaDeErros);
+
+/** Grava um pedido de redefinição do jeito que a plataforma grava: pelo digest. */
+async function pedidoPendente(userId: string, token: string) {
+  await db.passwordResetToken.create({
+    data: { userId, token: digestDoToken(token), expiresAt: new Date(Date.now() + 3_600_000) },
+  });
+}
+
+function formulario(senha: string) {
+  const dados = new FormData();
+  dados.set("password", senha);
+  dados.set("confirmPassword", senha);
+  return dados;
+}
 
 /** Limite vindo de tests/ambiente.ts. */
 const MAX_POR_CONTA = 3;
@@ -82,9 +105,7 @@ describe("Redefinir a senha destrava a conta", () => {
     );
 
     const token = `token-de-teste-${pessoa.id}`;
-    await db.passwordResetToken.create({
-      data: { userId: pessoa.id, token, expiresAt: new Date(Date.now() + 3_600_000) },
-    });
+    await pedidoPendente(pessoa.id, token);
 
     const dados = new FormData();
     dados.set("password", "NovaSenha@456");
@@ -108,9 +129,7 @@ describe("Redefinir a senha destrava a conta", () => {
     }
 
     const token = `token-limpeza-${pessoa.id}`;
-    await db.passwordResetToken.create({
-      data: { userId: pessoa.id, token, expiresAt: new Date(Date.now() + 3_600_000) },
-    });
+    await pedidoPendente(pessoa.id, token);
 
     const dados = new FormData();
     dados.set("password", "OutraSenha@789");
@@ -129,9 +148,7 @@ describe("Redefinir a senha destrava a conta", () => {
   it("o token só serve uma vez", async () => {
     const pessoa = await criarFuncionario();
     const token = `token-unico-${pessoa.id}`;
-    await db.passwordResetToken.create({
-      data: { userId: pessoa.id, token, expiresAt: new Date(Date.now() + 3_600_000) },
-    });
+    await pedidoPendente(pessoa.id, token);
 
     const dados = new FormData();
     dados.set("password", "PrimeiraSenha@1");
@@ -148,5 +165,78 @@ describe("Redefinir a senha destrava a conta", () => {
     // E a senha continua sendo a primeira.
     const conta = await db.user.findUnique({ where: { id: pessoa.id } });
     assert.equal(await verifyPassword("PrimeiraSenha@1", conta!.passwordHash), true);
+  });
+});
+
+describe("Token de redefinição", () => {
+  /*
+    O banco guardava o token em texto puro. Quem tivesse uma cópia do banco, e o
+    `npm run backup` gera cópias, abria o link de qualquer pedido ainda dentro
+    da hora de validade e assumia a conta. Agora o banco guarda só o digest.
+  */
+
+  it("o pedido feito pela tela grava o digest, nunca o token", async () => {
+    const pessoa = await criarFuncionario();
+    await db.user.update({
+      where: { id: pessoa.id },
+      data: { email: `${pessoa.username}@teste.local` },
+    });
+
+    const dados = new FormData();
+    dados.set("email", `${pessoa.username}@teste.local`);
+    assert.equal((await requestPasswordReset(dados)).ok, true);
+
+    const gravado = await db.passwordResetToken.findFirst({ where: { userId: pessoa.id } });
+    assert.ok(gravado, "o pedido foi registrado");
+
+    // SHA-256 em hexadecimal, e não o formato do randomUUID que vai no link.
+    assert.match(gravado.token, /^[0-9a-f]{64}$/);
+    assert.doesNotMatch(gravado.token, /^[0-9a-f]{8}-[0-9a-f]{4}-/);
+  });
+
+  it("o token em claro gravado no banco não abre o link", async () => {
+    /*
+      É o caso dos pedidos que estavam pendentes quando esta mudança foi
+      publicada: o banco tem o token em claro, a busca agora é pelo digest, e o
+      link deixa de valer. Eles duravam uma hora, então o efeito passa sozinho.
+
+      E é também a garantia que importa: ler o valor da coluna não basta mais
+      para usar o link.
+    */
+    const pessoa = await criarFuncionario();
+    const token = `token-em-claro-${pessoa.id}`;
+    await db.passwordResetToken.create({
+      data: { userId: pessoa.id, token, expiresAt: new Date(Date.now() + 3_600_000) },
+    });
+
+    const resultado = await resetPassword(token, formulario("SenhaNova@2026"));
+
+    assert.equal(resultado.ok, false);
+  });
+});
+
+describe("Tamanho mínimo da senha", () => {
+  it(`${SENHA_MINIMA - 1} caracteres é recusado, e o link continua valendo`, async () => {
+    const pessoa = await criarFuncionario();
+    const token = `token-curta-${pessoa.id}`;
+    await pedidoPendente(pessoa.id, token);
+
+    const curta = "A".repeat(SENHA_MINIMA - 1);
+    const recusa = await resetPassword(token, formulario(curta));
+
+    assert.deepEqual(recusa, { ok: false, error: AVISO_SENHA_CURTA });
+
+    /*
+      A validação vem ANTES de usar o token. Se fosse o contrário, errar o
+      tamanho da senha gastaria o link, e a pessoa teria de pedir outro por
+      causa de um erro de digitação.
+    */
+    const pedido = await db.passwordResetToken.findUnique({
+      where: { token: digestDoToken(token) },
+    });
+    assert.equal(pedido?.usedAt, null, "o link não foi gasto");
+
+    const certa = "A".repeat(SENHA_MINIMA);
+    assert.equal((await resetPassword(token, formulario(certa))).ok, true);
   });
 });

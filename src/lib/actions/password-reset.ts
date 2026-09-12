@@ -1,12 +1,13 @@
 "use server";
 
-import { randomUUID } from "crypto";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
 import type { ActionResult } from "@/lib/actions/employees";
 import { emailDeRedefinicao, enviarEmail, envioDisponivel } from "@/lib/email";
+import { AVISO_SENHA_CURTA, SENHA_MINIMA } from "@/lib/regra-de-senha";
 import { consumirVagaCompartilhada } from "@/lib/teto-compartilhado";
+import { digestDoToken, novoTokenDeRedefinicao } from "@/lib/token-de-redefinicao";
 
 /**
  * Resposta idêntica exista ou não o e-mail, para não revelar a base.
@@ -127,11 +128,12 @@ export async function requestPasswordReset(
     data: { usedAt: new Date() },
   });
 
-  const token = randomUUID();
+  // O e-mail leva o token; o banco, só o digest. Ver lib/token-de-redefinicao.
+  const { token, digest } = novoTokenDeRedefinicao();
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
 
   await db.passwordResetToken.create({
-    data: { userId: user.id, token, expiresAt },
+    data: { userId: user.id, token: digest, expiresAt },
   });
 
   await enviarEmail(emailDeRedefinicao(user.name, endereco, token));
@@ -141,7 +143,7 @@ export async function requestPasswordReset(
 
 const resetSchema = z
   .object({
-    password: z.string().min(6, "A senha deve ter ao menos 6 caracteres."),
+    password: z.string().min(SENHA_MINIMA, AVISO_SENHA_CURTA),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -158,7 +160,9 @@ export async function resetPassword(token: string, formData: FormData): Promise<
     return { ok: false, error: parsed.error.issues[0].message };
   }
 
-  const resetToken = await db.passwordResetToken.findUnique({ where: { token } });
+  const resetToken = await db.passwordResetToken.findUnique({
+    where: { token: digestDoToken(token) },
+  });
   if (!resetToken || resetToken.usedAt || resetToken.expiresAt < new Date()) {
     return { ok: false, error: "Este link de redefinição é inválido ou expirou." };
   }

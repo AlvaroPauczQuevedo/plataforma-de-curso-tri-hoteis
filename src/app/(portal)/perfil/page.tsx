@@ -6,6 +6,7 @@ import { ActionForm } from "@/components/shared/action-form";
 import { envioDisponivel } from "@/lib/email";
 import { updateProfile, changePassword } from "@/lib/actions/profile";
 import { formatDateTime } from "@/lib/utils";
+import { SENHA_MINIMA } from "@/lib/regra-de-senha";
 
 export default async function PerfilPage() {
   const sessionUser = await requireUser();
@@ -88,7 +89,7 @@ export default async function PerfilPage() {
       <section className="space-y-5 rounded-2xl border border-border bg-surface p-6">
         <div>
           <h2 className="font-semibold text-ink-900">Alterar senha</h2>
-          <p className="text-sm text-ink-700/60">Use uma senha com pelo menos 6 caracteres.</p>
+          <p className="text-sm text-ink-700/60">Use uma senha com pelo menos {SENHA_MINIMA} caracteres.</p>
         </div>
 
         <ActionForm action={changePassword} submitLabel="Alterar senha" resetOnSuccess>
@@ -114,7 +115,7 @@ export default async function PerfilPage() {
                 name="newPassword"
                 type="password"
                 required
-                minLength={6}
+                minLength={SENHA_MINIMA}
                 className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
               />
             </div>
@@ -127,7 +128,7 @@ export default async function PerfilPage() {
                 name="confirmPassword"
                 type="password"
                 required
-                minLength={6}
+                minLength={SENHA_MINIMA}
                 className="w-full rounded-xl border border-border px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
               />
             </div>

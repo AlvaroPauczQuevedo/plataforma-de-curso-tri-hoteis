@@ -1,38 +1,43 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { revalidarConta } from "@/lib/conta-vigente";
 
 export async function getCurrentSession() {
   return getServerSession(authOptions);
 }
 
-/**
- * Confere, no banco, se a conta ainda pode usar a plataforma.
- *
- * A sessão é um token JWT com 8 horas de validade e não é consultável nem
- * revogável: desativar alguém no painel não alcançaria uma sessão já aberta,
- * e a pessoa seguiria estudando por até 8 horas depois do desligamento.
- * Por isso a situação é relida a cada requisição — o custo é uma consulta por
- * chave primária, e é o que torna a desativação imediata.
- */
-async function contaValida(userId: string): Promise<boolean> {
-  const conta = await db.user.findUnique({
-    where: { id: userId },
-    select: { active: true },
-  });
-  return conta?.active === true;
-}
+/*
+  Estas três funções são a checagem SEGURA de acesso da plataforma.
+
+  O proxy (`src/proxy.ts`) também olha o papel, mas só pelo cookie — é a
+  checagem otimista que o guia de autenticação do Next recomenda para ele,
+  porque roda em toda rota, inclusive nas pré-carregadas, e não deve ir ao
+  banco. Ela serve para redirecionar cedo, não para proteger nada. Quem protege
+  é o que está aqui, e aqui a conta é relida do banco a cada requisição:
+
+  - `active`, para desativar valer na hora — sem isso a pessoa seguiria
+    estudando por até 8 horas depois do desligamento;
+  - `role`, para rebaixar valer na hora — sem isso um administrador rebaixado
+    seguia com o painel inteiro nas mãos pelo mesmo intervalo.
+
+  O efeito colateral no proxy é só de navegação: quem acabou de ser PROMOVIDO
+  ainda é mandado para fora de /admin pelo cookie antigo, até entrar de novo.
+  O inverso — o rebaixado passar pelo proxy — é barrado pelo layout do painel,
+  que chama `requireAdmin`.
+*/
 
 export async function requireUser() {
   const session = await getCurrentSession();
   if (!session?.user) {
     redirect("/login");
   }
-  if (!(await contaValida(session.user.id))) {
+
+  const usuario = await revalidarConta(session.user);
+  if (!usuario) {
     redirect("/login?erro=acesso-desativado");
   }
-  return session.user;
+  return usuario;
 }
 
 export async function requireAdmin() {
@@ -40,26 +45,30 @@ export async function requireAdmin() {
   if (!session?.user) {
     redirect("/admin/login");
   }
-  if (session.user.role !== "ADMIN") {
-    redirect("/");
-  }
-  if (!(await contaValida(session.user.id))) {
+
+  const usuario = await revalidarConta(session.user);
+  if (!usuario) {
     redirect("/admin/login?erro=acesso-desativado");
   }
-  return session.user;
+
+  // O papel do BANCO, não o do token. Ver `lib/conta-vigente`.
+  if (usuario.role !== "ADMIN") {
+    redirect("/");
+  }
+  return usuario;
 }
 
 /**
  * Sessão para rotas de API, já com a conta revalidada.
  *
  * As rotas de API não podem redirecionar como uma página: devolvem null e
- * quem chama responde 401. Mesma releitura de `active` do requireUser — sem
- * ela, uma conta desativada continuaria baixando vídeos e certificados pela
- * API até o token expirar.
+ * quem chama responde 401. A mesma releitura do `requireUser` — sem ela, uma
+ * conta desativada continuaria baixando vídeos e certificados pela API até o
+ * token expirar, e um administrador rebaixado continuaria alcançando qualquer
+ * arquivo do acervo por `/api/files`, que decide pelo `role` devolvido aqui.
  */
 export async function sessaoDeApi() {
   const session = await getCurrentSession();
   if (!session?.user) return null;
-  if (!(await contaValida(session.user.id))) return null;
-  return session.user;
+  return revalidarConta(session.user);
 }

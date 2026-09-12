@@ -29,6 +29,14 @@ process.env.LOCKOUT_MINUTES = "10";
 process.env.LOGIN_IP_LIMIT = "8";
 process.env.LOGIN_IP_WINDOW_MINUTES = "5";
 process.env.TRUST_PROXY = "false";
+/*
+  O teto GLOBAL de pedidos de redefinição conta em arquivo, e o arquivo dos
+  testes cai na pasta temporária do sistema, compartilhada entre execuções. Com
+  o padrão de 60 por hora, rodar a suíte muitas vezes seguidas faria o pedido
+  ser descartado em silêncio, e o teste falharia sem motivo aparente. O teto por
+  conta fica no padrão: cada teste usa uma conta nova.
+*/
+process.env.REDEFINICAO_TETO_GLOBAL = "1000000";
 
 execFileSync(
   process.platform === "win32" ? "npx.cmd" : "npx",

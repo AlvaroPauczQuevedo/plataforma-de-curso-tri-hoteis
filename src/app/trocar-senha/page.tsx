@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { SENHA_MINIMA } from "@/lib/regra-de-senha";
 import { trocarSenhaProvisoria } from "@/lib/actions/intranet";
 
 const campoClasse =
@@ -74,11 +75,11 @@ export default function TrocarSenhaPage() {
             name="novaSenha"
             type="password"
             required
-            minLength={6}
+            minLength={SENHA_MINIMA}
             autoComplete="new-password"
             className={campoClasse}
           />
-          <p className="text-xs text-ink-700/60">Mínimo de 6 caracteres.</p>
+          <p className="text-xs text-ink-700/60">Mínimo de {SENHA_MINIMA} caracteres.</p>
         </div>
 
         <div className="space-y-1.5">
@@ -90,7 +91,7 @@ export default function TrocarSenhaPage() {
             name="confirmacao"
             type="password"
             required
-            minLength={6}
+            minLength={SENHA_MINIMA}
             autoComplete="new-password"
             className={campoClasse}
           />
