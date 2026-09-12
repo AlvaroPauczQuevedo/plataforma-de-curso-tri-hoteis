@@ -4,7 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { dispararAlarmeDaIsca, ehIsca } from "@/lib/alarme-da-isca";
 import { db } from "@/lib/db";
 import { normalizarNomeDeUsuario } from "@/lib/nome-de-usuario";
-import { verifyPassword } from "@/lib/password";
+import { compararComHashIsca, verifyPassword } from "@/lib/password";
 import {
   ipDaRequisicao,
   LoginBloqueado,
@@ -57,6 +57,16 @@ export const authOptions: NextAuthOptions = {
         const user = await db.user.findUnique({ where: { username } });
 
         if (!user) {
+          /*
+            Gasta o mesmo tempo de senha que uma conta real gastaria.
+
+            Sem isto, a ausência do bcrypt fazia a resposta "não existe" voltar
+            ~70 ms mais cedo que "existe, senha errada", e esse tempo revelava
+            quais nomes de usuário existem — exatamente o que a mensagem
+            genérica abaixo tenta esconder. Ver lib/password.
+          */
+          await compararComHashIsca(credentials.password);
+
           /*
             A isca do console (ver lib/isca-de-console). Só é conferida aqui,
             quando a conta NÃO existe, e isso fecha a porta ao falso alarme:

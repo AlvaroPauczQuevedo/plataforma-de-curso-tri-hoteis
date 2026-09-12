@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { randomInt } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 
 export async function hashPassword(plain: string) {
   return bcrypt.hash(plain, 10);
@@ -7,6 +7,34 @@ export async function hashPassword(plain: string) {
 
 export async function verifyPassword(plain: string, hash: string) {
   return bcrypt.compare(plain, hash);
+}
+
+/*
+  Um hash de verdade contra o qual comparar quando a conta NÃO existe.
+
+  O login só rodava o bcrypt quando encontrava a conta; para um usuário
+  inexistente, respondia sem comparar hash nenhum. A diferença era medível — ~95
+  ms contra ~22 ms num teste — e bastava para descobrir quais nomes de usuário
+  existem sem acertar senha alguma, furando a mensagem genérica que o login usa
+  justamente para não revelar isso.
+
+  A defesa é fazer o caminho "não existe" gastar o MESMO trabalho: comparar a
+  senha digitada contra este hash-isca. O resultado é ignorado — a comparação é
+  só para o relógio.
+
+  Calculado uma vez, sob demanda, e guardado. Ao custo 10, o mesmo de
+  `hashPassword`, para os dois caminhos levarem o mesmo tempo. Não fica no topo
+  do módulo porque `password` é importado até pelo `next build`, e um hash no
+  carregamento gastaria ~90 ms em cada avaliação, algumas fora de um login. O
+  conteúdo é descartável: só precisa ser um hash bcrypt válido do custo certo.
+*/
+let hashIscaCache: string | null = null;
+
+export async function compararComHashIsca(plain: string): Promise<void> {
+  if (!hashIscaCache) {
+    hashIscaCache = await bcrypt.hash(`conta-inexistente-${randomUUID()}`, 10);
+  }
+  await bcrypt.compare(plain, hashIscaCache);
 }
 
 /**

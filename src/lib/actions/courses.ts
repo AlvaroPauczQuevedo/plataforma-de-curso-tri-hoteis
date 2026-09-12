@@ -403,7 +403,24 @@ const lessonSchema = z.object({
   type: z.enum(["VIDEO", "PDF", "TEXT", "PROVA"]),
   required: z.coerce.boolean().default(true),
   videoSource: z.enum(["UPLOAD", "EMBED"]).optional(),
-  videoEmbedUrl: z.string().optional(),
+  /*
+    Só https://. A aula joga este valor num <iframe src>, então o campo é uma
+    porta para o navegador de quem estuda. O React já barra `javascript:` no
+    render e a CSP barra `data:`, mas validar no cadastro é a barreira mais
+    perto da entrada — recusa o esquema errado com uma mensagem clara, em vez
+    de gravar algo que só vai falar silenciosamente na tela do aluno.
+
+    O host NÃO é restringido a YouTube/Vimeo de propósito: qual provedor a rede
+    usa é decisão de quem cadastra, e uma lista fixa aqui um dia barraria o
+    provedor novo sem explicação. O que se exige é o mínimo que fecha o abuso.
+  */
+  videoEmbedUrl: z
+    .string()
+    .optional()
+    .refine(
+      (v) => !v || /^https:\/\/./.test(v),
+      "A URL de incorporação precisa começar com https://"
+    ),
   videoFileId: z.string().optional(),
   videoDurationSeconds: z.coerce.number().int().optional(),
   pdfFileId: z.string().optional(),

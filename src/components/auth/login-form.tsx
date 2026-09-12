@@ -7,6 +7,7 @@ import { Loader2, LogIn } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { IscaDeConsole } from "@/components/auth/isca-de-console";
+import { destinoSeguro } from "@/lib/destino-seguro";
 
 export function LoginForm({
   variant,
@@ -46,7 +47,9 @@ export function LoginForm({
       return;
     }
 
-    router.push(callbackUrl || (variant === "admin" ? "/admin" : "/"));
+    // Só caminho interno: um callbackUrl externo mandaria a pessoa recém-logada
+    // para um site de phishing. Ver lib/destino-seguro.
+    router.push(destinoSeguro(callbackUrl, variant === "admin" ? "/admin" : "/"));
     router.refresh();
   }
 
