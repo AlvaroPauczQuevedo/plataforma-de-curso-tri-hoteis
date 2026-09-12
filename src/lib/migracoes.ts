@@ -348,6 +348,38 @@ export async function aplicarMigracoesNaSubida(): Promise<void> {
   }
 }
 
+/**
+ * Cria a tabela de controle se ela não existir.
+ *
+ * `_prisma_migrations` é criada pelo `prisma migrate deploy`, não pelas
+ * migrações — então num banco que NUNCA migrou ela não existe, e é o primeiro
+ * arranque que `migracoesPendentes()` já prevê ao devolver a lista cheia.
+ *
+ * Sem isto, esse arranque criava todas as tabelas e depois falhava no INSERT
+ * que registra a migração: nada ficava registrado, e a subida seguinte tentava
+ * tudo de novo, para sempre, com `/api/saude` preso em 503. `scripts/
+ * aplicar-migracoes.mjs` sempre teve esta criação; ela se perdeu quando a
+ * rotina foi trazida para dentro do processo, e o caso só aparece em banco
+ * novo — restaurar backup em servidor novo, por exemplo.
+ *
+ * A forma é a mesma que o Prisma usa, para o `migrate` seguinte enxergar o que
+ * foi feito aqui.
+ */
+async function garantirTabelaDeControle(): Promise<void> {
+  await db.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "_prisma_migrations" (
+      "id" TEXT PRIMARY KEY NOT NULL,
+      "checksum" TEXT NOT NULL,
+      "finished_at" DATETIME,
+      "migration_name" TEXT NOT NULL,
+      "logs" TEXT,
+      "rolled_back_at" DATETIME,
+      "started_at" DATETIME NOT NULL DEFAULT current_timestamp,
+      "applied_steps_count" INTEGER UNSIGNED NOT NULL DEFAULT 0
+    )
+  `);
+}
+
 /** Aplica, em ordem, as migrações que a trava garantiu serem só nossas. */
 async function aplicarLista(
   pasta: string,
@@ -358,6 +390,22 @@ async function aplicarLista(
     `[migracao] ${pendentes.length} migração(ões) pendente(s) na subida: ` +
       `${pendentes.join(", ")}. Aplicando...`
   );
+
+  /*
+    Antes do primeiro comando, e com a trava na mão: o INSERT que fecha cada
+    migração precisa dela, e num banco novo ela ainda não existe.
+  */
+  try {
+    await garantirTabelaDeControle();
+  } catch (erro) {
+    const mensagem = (erro as Error)?.message ?? String(erro);
+    registrar({ quando, pendentesAntes: pendentes, aplicadas: [], erro: mensagem });
+    console.error(
+      `[migracao] não foi possível criar a tabela de controle: ${mensagem}. ` +
+        "Nada foi aplicado."
+    );
+    return;
+  }
 
   const aplicadas: string[] = [];
   const ignorados: string[] = [];
