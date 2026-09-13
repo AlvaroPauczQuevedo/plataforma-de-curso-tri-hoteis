@@ -10,6 +10,7 @@ import { SearchInput, SelectFilter, Pagination } from "@/components/admin/table-
 import { formatPrazo } from "@/lib/utils";
 import { levantarObrigacoes } from "@/lib/conformidade";
 import { BotaoWhatsApp } from "@/components/admin/botao-whatsapp";
+import { BotaoCsv } from "@/components/admin/botao-csv";
 import { PainelDeReciclagem } from "@/components/admin/painel-de-reciclagem";
 import { enderecoPublico } from "@/lib/email";
 import { mensagemDePrazo } from "@/lib/whatsapp";
@@ -119,21 +120,42 @@ export default async function ConformidadePage(
           </p>
         </div>
 
-        {/*
-          Link, e não botão: é um GET que devolve arquivo. Respeita o filtro de
-          departamento em tela — quem está olhando um setor quer o papel
-          daquele setor, não o da rede inteira.
-        */}
-        <a
-          href={`/api/relatorios/auditoria/pdf${
-            searchParams.departamento ? `?departamento=${searchParams.departamento}` : ""
-          }`}
-          className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm font-medium text-ink-900 transition hover:bg-surface-muted"
-          title="Gera o documento que a auditoria pede: por departamento e treinamento, quem está regular, com o código de conferência de cada certificado."
-        >
-          <FileDown className="h-4 w-4" />
-          Relatório para auditoria
-        </a>
+        <div className="flex flex-wrap gap-2">
+          {/*
+            Os dois arquivos respondem a pedidos diferentes, e por isso os dois
+            existem. O PDF é o documento que a auditoria arquiva: fechado,
+            assinado pelos códigos de conferência, para anexar. O CSV é
+            material de trabalho — o RH ordena, filtra e cruza com a escala
+            para decidir quem cobrar primeiro. Entregar só o PDF obriga alguém
+            a redigitar a lista numa planilha, que é como um relatório erra.
+          */}
+          <BotaoCsv
+            fonte="conformidade"
+            filtros={{
+              q: searchParams.q,
+              departamento: searchParams.departamento,
+              hotel: searchParams.hotel,
+              situacao: searchParams.situacao,
+            }}
+            titulo="Baixa esta lista como planilha, com o filtro que está em tela. Abre no Excel com dois cliques."
+          />
+
+          {/*
+            Link, e não botão: é um GET que devolve arquivo. Respeita o filtro de
+            departamento em tela — quem está olhando um setor quer o papel
+            daquele setor, não o da rede inteira.
+          */}
+          <a
+            href={`/api/relatorios/auditoria/pdf${
+              searchParams.departamento ? `?departamento=${searchParams.departamento}` : ""
+            }`}
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm font-medium text-ink-900 transition hover:bg-surface-muted"
+            title="Gera o documento que a auditoria pede: por departamento e treinamento, quem está regular, com o código de conferência de cada certificado."
+          >
+            <FileDown className="h-4 w-4" />
+            Relatório para auditoria
+          </a>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

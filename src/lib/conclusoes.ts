@@ -140,3 +140,50 @@ export async function conclusoesPorCurso(courseIds: string[]): Promise<Map<strin
 
   return mapa;
 }
+
+/**
+ * As conclusões de um período, de todos os cursos — para a série do painel.
+ *
+ * Mora aqui, e não no painel, pelo motivo que criou este arquivo: o painel faz
+ * a mesma pergunta das outras quatro telas ("quem concluiu?") e, escrita lá,
+ * ela seria a quinta resposta possível. O gráfico de evolução tem de somar o
+ * mesmo universo que a Conformidade conta — senão o painel diz que o mês teve
+ * trinta conclusões e a Conformidade continua mostrando as mesmas pendências.
+ *
+ * A diferença para `conclusoesPorCurso` é só o recorte: lá é por curso e o par
+ * mais recente vence; aqui é por data e **cada conclusão é um evento**. Quem
+ * fez presencialmente em março e reciclou aqui em agosto conta duas vezes,
+ * porque foram dois treinamentos — a série responde "quanto se treinou no
+ * mês", não "quanta gente está treinada".
+ */
+export async function conclusoesNoPeriodo(
+  desde: Date
+): Promise<{ em: Date; origem: OrigemDaConclusao }[]> {
+  const certificados = await db.certificate.findMany({
+    where: { issuedAt: { gte: desde } },
+    select: { issuedAt: true },
+  });
+
+  // Mesma tolerância de `conclusoesPorCurso`, e pelo mesmo episódio: sem a
+  // tabela, o painel perde a parcela presencial em vez de não abrir.
+  let externas: { concluidoEm: Date }[] = [];
+  try {
+    externas = await db.conclusaoExterna.findMany({
+      where: { concluidoEm: { gte: desde } },
+      select: { concluidoEm: true },
+    });
+  } catch (erro) {
+    const codigo = (erro as { code?: string })?.code;
+    if (codigo !== "P2021") throw erro;
+
+    console.error(
+      "[conclusoes] a tabela ConclusaoExterna não existe — a série do painel está " +
+        "sem o treinamento presencial. Aplique as migrações pendentes."
+    );
+  }
+
+  return [
+    ...certificados.map((c) => ({ em: c.issuedAt, origem: "plataforma" as const })),
+    ...externas.map((e) => ({ em: e.concluidoEm, origem: "externa" as const })),
+  ];
+}

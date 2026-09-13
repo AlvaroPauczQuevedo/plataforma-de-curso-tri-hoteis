@@ -9,6 +9,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SearchInput, SelectFilter, Pagination } from "@/components/admin/table-filters";
 import { IntranetSyncPanel } from "@/components/admin/intranet-sync-panel";
+import { BotaoCsv } from "@/components/admin/botao-csv";
 import { syncDisponivel } from "@/lib/intranet-sync";
 import { formatDateTime } from "@/lib/utils";
 
@@ -82,10 +83,23 @@ export default async function FuncionariosPage(
             {total} conta(s) — funcionários e administradores
           </p>
         </div>
-        <ButtonLink href="/admin/funcionarios/novo">
-          <Plus className="h-4 w-4" />
-          Novo usuário
-        </ButtonLink>
+        <div className="flex flex-wrap gap-2">
+          {/* Leva o filtro em tela: quem está olhando um hotel quer aquela folha. */}
+          <BotaoCsv
+            fonte="usuarios"
+            filtros={{
+              q: searchParams.q,
+              departamento: searchParams.departamento,
+              hotel: searchParams.hotel,
+              status: searchParams.status,
+              papel: searchParams.papel,
+            }}
+          />
+          <ButtonLink href="/admin/funcionarios/novo">
+            <Plus className="h-4 w-4" />
+            Novo usuário
+          </ButtonLink>
+        </div>
       </div>
 
       {/*
