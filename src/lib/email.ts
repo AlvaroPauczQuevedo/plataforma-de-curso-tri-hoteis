@@ -247,3 +247,47 @@ export function emailDeRedefinicao(nome: string, email: string, token: string): 
     ].join("\n\n"),
   };
 }
+
+/**
+ * Lembrete de treinamento obrigatório vencendo ou vencido.
+ *
+ * Sai da rotina agendada de `lib/lembretes`, uma vez por estágio: quem foi
+ * avisado a sete dias do prazo recebe de novo quando o prazo estoura, e só.
+ *
+ * O texto diz o que fazer e onde, sem cobrar de quem talvez já tenha feito
+ * presencialmente — a Conformidade reconhece treinamento externo, e um aviso
+ * acusatório para quem está em dia queima a credibilidade dos próximos.
+ */
+export function emailDeLembreteDeTreinamento(dados: {
+  nome: string;
+  email: string;
+  curso: string;
+  estagio: "vencendo" | "atrasado";
+  diasRestantes: number | null;
+}): Mensagem {
+  const primeiroNome = dados.nome.split(" ")[0];
+  const atrasado = dados.estagio === "atrasado";
+
+  const prazo = atrasado
+    ? dados.diasRestantes === null
+      ? "O prazo já passou."
+      : `O prazo passou há ${Math.abs(dados.diasRestantes)} dia(s).`
+    : dados.diasRestantes === null
+      ? "O prazo está próximo."
+      : `Faltam ${dados.diasRestantes} dia(s) para o prazo.`;
+
+  return {
+    para: dados.email,
+    assunto: atrasado
+      ? `Treinamento obrigatório em atraso — ${dados.curso}`
+      : `Treinamento obrigatório vencendo — ${dados.curso}`,
+    texto: [
+      `Olá, ${primeiroNome}.`,
+      `O treinamento obrigatório "${dados.curso}" consta como ${
+        atrasado ? "ATRASADO" : "a vencer"
+      } no seu nome. ${prazo}`,
+      `Você pode fazer o curso por aqui: ${enderecoPublico()}/meus-cursos`,
+      "Se você já fez este treinamento presencialmente, avise o setor de treinamento para que o registro seja lançado — assim esta cobrança para de aparecer.",
+    ].join("\n\n"),
+  };
+}

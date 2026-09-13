@@ -152,6 +152,7 @@ model User {
   tentativasProva   TentativaProva[]
   departamentosExtras DepartamentoExtra[]
   unidadesExtras      UnidadeExtra[]
+  lembretes           LembreteEnviado[]
 
   /// Quase toda consulta do painel filtra por departamento: alcance do
   /// administrador, relatorios, conformidade e matricula automatica. Sem o
@@ -257,6 +258,7 @@ model Course {
   courseProgress  CourseProgress[]
   certificates    Certificate[]
   conclusoesExternas ConclusaoExterna[]
+  lembretes       LembreteEnviado[]
 
   @@index([status])
   /// Mesmo motivo do indice em User: o departamento decide quem enxerga e
@@ -652,4 +654,36 @@ model DepartamentoExtra {
 
   @@id([userId, departmentId])
   @@index([departmentId])
+}
+
+/// Um lembrete de treinamento que JÁ foi disparado.
+///
+/// A rotina de lembretes roda por agendador, e o agendador repete. Sem memória
+/// do que já saiu, a mesma pendência viraria um aviso por dia até a pessoa
+/// fazer o curso — e aviso que chega todo dia é aviso que se aprende a ignorar,
+/// que é exatamente o oposto do que esta funcionalidade existe para conseguir.
+///
+/// A chave é (pessoa, curso, ESTÁGIO). O estágio importa: "está vencendo" e
+/// "venceu" são notícias diferentes, e cada uma merece uma passagem. Quem foi
+/// avisado a sete dias do prazo é avisado de novo quando o prazo estoura, e só.
+///
+/// Guarda o canal para o relatório da rotina distinguir quem recebeu de fato
+/// (e-mail) de quem entrou na fila de WhatsApp para alguém chamar à mão — nesta
+/// rede, a maioria.
+model LembreteEnviado {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  /// "vencendo" ou "atrasado", espelhando a situação da Conformidade.
+  estagio   String
+  /// "EMAIL" quando saiu sozinho; "WHATSAPP_PENDENTE" quando ficou na fila.
+  canal     String
+
+  enviadoEm DateTime @default(now())
+
+  @@unique([userId, courseId, estagio])
+  @@index([enviadoEm])
 }

@@ -750,6 +750,45 @@ alerta viraria ruído que se aprende a ignorar.
 O monitoramento **nunca lança**: derrubar a requisição por não conseguir avisar
 sobre a falha seria pior do que monitoramento nenhum.
 
+## Lembretes automáticos (opcional)
+
+A Conformidade sabe, nome a nome, quem está vencendo e quem está atrasado — mas
+é uma **tela**, e fica parada até alguém abrir. Treinamento vencido não avisa
+que venceu. Esta rotina faz a cobrança sair sozinha.
+
+Ligue definindo `CRON_SECRET` e apontando o agendador da hospedagem para a rota:
+
+```bash
+# cron, toda segunda às 8h
+0 8 * * 1  curl -fsS -X POST -H "x-cron-secret: SEU_SEGREDO" https://SEU-DOMINIO/api/tarefas
+```
+
+Mora numa rota, e não num temporizador dentro da aplicação, pelo mesmo motivo
+do resumo de conformidade: o build é standalone, sem processo de fundo, e um
+temporizador interno dispararia de novo a cada reinício e uma vez por instância.
+
+**O que a rotina faz:**
+
+- lê a **mesma** conta da Conformidade (a mesma função, não uma cópia);
+- quem tem e-mail confirmado recebe o aviso na hora;
+- quem não tem — a maioria desta rede — entra numa **fila de WhatsApp** que
+  volta no corpo da resposta, com links `wa.me` prontos. Não há API de WhatsApp
+  aqui, e fingir que há seria pior do que assumir que o canal é manual;
+- responde um relatório JSON: avaliadas, novos, por e-mail, na fila, sem canal.
+
+**Um aviso por estágio, não por execução.** `LembreteEnviado` guarda o que já
+saiu com a chave (pessoa, curso, estágio). "Está vencendo" e "venceu" são
+notícias diferentes e cada uma passa **uma vez** — o agendador pode repetir à
+vontade sem virar spam, e chamar a rota duas vezes seguidas não manda nada duas
+vezes.
+
+**O que ela deliberadamente NÃO faz:** rematricular sozinha. Resetar o progresso
+apagaria o certificado (ver [Reciclagem](#reciclagem-o-certificado-ainda-vale)),
+que é justamente o papel que a auditoria pede. A rotina avisa; refazer a
+matrícula continua sendo ato de quem administra.
+
+Sem `CRON_SECRET`, a rota responde 503 e não faz nada — falha fechada.
+
 ## Isca do console
 
 > **Para auditoria e pentest: isto é proposital.** A credencial que aparece no
