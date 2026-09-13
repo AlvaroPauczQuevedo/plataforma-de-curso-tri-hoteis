@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { documentoAlcanca, departamentosDaPessoa } from "@/lib/documentos";
 import { mapaDeLiberacao } from "@/lib/liberacao-de-aulas";
 
 export async function userHasCourseAccess(userId: string, courseId: string) {
@@ -90,6 +91,27 @@ export async function fileBelongsToAccessibleCourse(userId: string, fileId: stri
     // rascunho revelaria um curso que ainda não foi liberado.
     if (courseWithCover.status === "PUBLISHED") return true;
     return userHasCourseAccess(userId, courseWithCover.id);
+  }
+
+  /*
+    PDF de documento com aceite (política, NR).
+
+    Fica antes da consulta de `kind` porque o documento é enviado como PDF
+    comum: o que o libera não é o tipo do arquivo, é o documento que aponta
+    para ele. A regra de alcance é a MESMA da listagem do funcionário — sem
+    isso, a tela mostraria o documento e o visualizador daria 403, ou pior,
+    alguém de outro setor leria a política pelo endereço direto.
+  */
+  const documento = await db.documento.findFirst({
+    where: { arquivoId: fileId },
+    select: { publicado: true, departamentos: { select: { departmentId: true } } },
+  });
+  if (documento) {
+    if (!documento.publicado) return false;
+    return documentoAlcanca(
+      documento.departamentos.map((d) => d.departmentId),
+      await departamentosDaPessoa(userId)
+    );
   }
 
   const file = await db.fileAsset.findUnique({

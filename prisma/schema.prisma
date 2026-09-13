@@ -49,6 +49,7 @@ model Department {
   obrigatorios CursoObrigatorio[]
   provas    Prova[]
   membrosExtras DepartamentoExtra[]
+  documentos DocumentoDepartamento[]
 }
 
 model User {
@@ -153,6 +154,8 @@ model User {
   departamentosExtras DepartamentoExtra[]
   unidadesExtras      UnidadeExtra[]
   lembretes           LembreteEnviado[]
+  documentosCriados   Documento[]         @relation("DocumentoCriadoPor")
+  aceitesDeDocumento  AceiteDeDocumento[]
 
   /// Quase toda consulta do painel filtra por departamento: alcance do
   /// administrador, relatorios, conformidade e matricula automatica. Sem o
@@ -224,6 +227,7 @@ model FileAsset {
   videoForLessons Lesson[] @relation("LessonVideo")
   pdfForLessons   Lesson[] @relation("LessonPdf")
   comprovantesExternos ConclusaoExterna[] @relation("ComprovanteExterno")
+  documentos           Documento[]        @relation("DocumentoArquivo")
 }
 
 model Course {
@@ -654,6 +658,84 @@ model DepartamentoExtra {
 
   @@id([userId, departmentId])
   @@index([departmentId])
+}
+
+/// Documento que exige aceite: política interna, NR, código de conduta.
+///
+/// É a outra metade da conformidade. O curso prova que a pessoa foi TREINADA;
+/// isto prova que ela foi INFORMADA — e é o que um auditor pede quando pergunta
+/// "onde está a assinatura de que ele recebeu a política?". Até aqui a
+/// plataforma não tinha resposta: o documento circulava por e-mail ou impresso,
+/// e o comprovante era a memória de quem entregou.
+///
+/// O PDF reaproveita `FileAsset`, como a capa do curso e o PDF da aula — mesmo
+/// upload, mesmo `/api/files`, mesma barreira de alcance.
+model Documento {
+  id          String    @id @default(cuid())
+  titulo      String
+  descricao   String?
+
+  arquivoId   String
+  arquivo     FileAsset @relation("DocumentoArquivo", fields: [arquivoId], references: [id])
+
+  /// Sobe a cada revisão. É o coração do modelo: quem aceitou a v1 volta a
+  /// dever quando sai a v2, porque aceitou outro texto. Sem versão, uma
+  /// política revisada ficaria "aceita" por gente que nunca leu a mudança —
+  /// um registro que parece conformidade e não é.
+  versao      Int       @default(1)
+
+  /// Rascunho não aparece para o funcionário. Mesma lógica do curso e da prova.
+  publicado   Boolean   @default(false)
+
+  createdById String
+  createdBy   User      @relation("DocumentoCriadoPor", fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  departamentos DocumentoDepartamento[]
+  aceites       AceiteDeDocumento[]
+
+  @@index([publicado])
+}
+
+/// A quem o documento se aplica.
+///
+/// NENHUMA linha significa a rede inteira, e esse é o caso comum: código de
+/// conduta vale para todo mundo. Restringir por setor existe para a NR que só
+/// alcança quem trabalha naquela função — exigir aceite de norma de cozinha da
+/// recepção inteira transformaria a lista de pendências em ruído.
+model DocumentoDepartamento {
+  documentoId  String
+  documento    Documento  @relation(fields: [documentoId], references: [id], onDelete: Cascade)
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@id([documentoId, departmentId])
+  @@index([departmentId])
+}
+
+/// "Li e concordo": o registro que dá peso ao documento.
+///
+/// Guarda a VERSÃO aceita, não apenas a data — é o que permite dizer, dois anos
+/// depois, qual texto exatamente aquela pessoa aceitou. E guarda a origem do
+/// clique, porque um aceite sem rastro é uma afirmação sem testemunha.
+///
+/// Nunca é apagado por revisão: a v2 cria uma linha nova, e a da v1 fica. O
+/// histórico é o produto aqui.
+model AceiteDeDocumento {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentoId String
+  documento   Documento @relation(fields: [documentoId], references: [id], onDelete: Cascade)
+
+  versao      Int
+  aceitoEm    DateTime  @default(now())
+  /// Vazio quando não há proxy confiável (mesma regra do login).
+  ip          String    @default("")
+
+  @@unique([userId, documentoId, versao])
+  @@index([documentoId])
 }
 
 /// Um lembrete de treinamento que JÁ foi disparado.

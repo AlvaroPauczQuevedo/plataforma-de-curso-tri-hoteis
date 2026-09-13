@@ -750,6 +750,38 @@ alerta viraria ruído que se aprende a ignorar.
 O monitoramento **nunca lança**: derrubar a requisição por não conseguir avisar
 sobre a falha seria pior do que monitoramento nenhum.
 
+## Aceite de documentos
+
+O curso prova que a pessoa foi **treinada**; o aceite prova que ela foi
+**informada**. É o que um auditor pede quando pergunta onde está o registro de
+que fulano recebeu a política — e até aqui a plataforma não tinha resposta: o
+documento circulava por e-mail ou impresso, e o comprovante era a memória de
+quem entregou.
+
+**Como funciona**
+
+1. Em **Documentos**, no painel, envie o PDF (política, NR, código de conduta) e
+   escolha quem precisa aceitar. Nasce como **rascunho**.
+2. Publicado, ele aparece em **Documentos** no portal do funcionário, que lê o
+   PDF, marca "li e concordo" e registra o aceite.
+3. O painel mostra a barra de quem já aceitou e a lista de **quem falta** — que
+   é a pergunta útil; uma lista só de assinaturas não responde isso.
+
+**Alcance.** Sem nenhum setor marcado, o documento vale para a rede inteira — e
+nesse caso só o **proprietário** publica, pelo mesmo motivo que curso sem
+departamento é reservado a ele. Com setores, vale o departamento principal e os
+adicionais, a mesma regra do treinamento obrigatório.
+
+**Versão é o coração do modelo.** Documento revisado é outro texto: use
+**Nova versão** para enviar o PDF novo, e todos voltam à fila de aceite. Os
+aceites antigos **não** são apagados — eles provam quem leu a versão anterior, e
+é essa a pergunta que a auditoria faz sobre o passado. Quem já tinha assinado
+aparece como *"Revisado — leia de novo"*, com texto diferente de quem nunca leu.
+
+**O que fica registrado:** quem, qual documento, **qual versão**, quando e de
+qual origem (IP, quando há proxy confiável). Documento com aceite não pode ser
+excluído — despublicar tira da frente dos funcionários e preserva a prova.
+
 ## Lembretes automáticos (opcional)
 
 A Conformidade sabe, nome a nome, quem está vencendo e quem está atrasado — mas

@@ -5,6 +5,7 @@ import {
   BookOpen,
   ClipboardList,
   DoorOpen,
+  FileCheck2,
   FileQuestion,
   History,
   ShieldAlert,
@@ -62,6 +63,7 @@ function menuDe(proprietario: boolean): GrupoMenu[] {
       itens: [
         { href: "/admin/cursos", label: "Cursos", icon: BookOpen },
         { href: "/admin/provas", label: "Provas", icon: FileQuestion },
+        { href: "/admin/documentos", label: "Documentos", icon: FileCheck2 },
       ],
     },
     {
