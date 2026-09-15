@@ -99,6 +99,61 @@ async function criarFaltantes(
   return { criadas, jaExistiam };
 }
 
+/**
+ * As trilhas atribuidas viram regras do MESMO formato do CursoObrigatorio.
+ *
+ * E o ponto do modulo de trilhas: ele nao ganha um caminho proprio para gravar
+ * matricula. Uma trilha de cinco cursos atribuida a um setor simplesmente
+ * expande em cinco regras iguais as que o curso obrigatorio produz, e a
+ * gravacao segue por `criarFaltantes` — com a regra de ouro ("so criar, nunca
+ * remover") valendo de graca.
+ *
+ * Um segundo lugar que cria Enrollment acabaria divergindo do primeiro, e
+ * divergencia em matricula aparece do pior jeito: gente cobrada por curso que
+ * ninguem atribuiu, ou pior, gente sem o treinamento que a lei exige.
+ *
+ * So trilha PUBLICADA entra. Rascunho nao matricula ninguem — publicar e o
+ * ato deliberado justamente porque mexe na vida de gente de verdade.
+ */
+async function regrasDeTrilhas(filtro?: {
+  departmentIds?: string[];
+  trilhaId?: string;
+}): Promise<{ courseId: string; departmentId: string; prazoDias: number | null }[]> {
+  const atribuicoes = await db.trilhaDepartamento.findMany({
+    where: {
+      trilha: { publicada: true, ...(filtro?.trilhaId ? { id: filtro.trilhaId } : {}) },
+      ...(filtro?.departmentIds ? { departmentId: { in: filtro.departmentIds } } : {}),
+    },
+    select: {
+      departmentId: true,
+      prazoDias: true,
+      trilha: { select: { cursos: { select: { courseId: true } } } },
+    },
+  });
+
+  return atribuicoes.flatMap((a) =>
+    a.trilha.cursos.map((c) => ({
+      courseId: c.courseId,
+      departmentId: a.departmentId,
+      /*
+        O prazo e da TRILHA INTEIRA, e vale igual para todos os degraus. Um
+        prazo por degrau exigiria adivinhar quanto tempo cada curso leva, e
+        errar essa conta vira cobranca indevida — que e o jeito mais rapido de
+        a equipe aprender a ignorar a cobranca.
+      */
+      prazoDias: a.prazoDias,
+    }))
+  );
+}
+
+/** Sincroniza uma trilha: matricula quem falta em todos os cursos dela. */
+export async function sincronizarTrilha(
+  trilhaId: string,
+  assignedById: string
+): Promise<ResultadoSincronizacao> {
+  return criarFaltantes(await regrasDeTrilhas({ trilhaId }), assignedById);
+}
+
 /** Sincroniza um curso: matricula quem falta em todos os departamentos dele. */
 export async function sincronizarCurso(
   courseId: string,
@@ -141,17 +196,25 @@ export async function sincronizarUsuario(
   ];
   if (departamentos.length === 0) return { criadas: 0, jaExistiam: 0 };
 
-  const obrigatorios = await db.cursoObrigatorio.findMany({
-    where: { departmentId: { in: departamentos } },
-    select: { courseId: true, departmentId: true, prazoDias: true },
-  });
-  return criarFaltantes(obrigatorios, assignedById, { id: userId });
+  // Curso obrigatorio E trilha atribuida: as duas origens produzem a mesma
+  // regra, e quem entra no setor deve as duas coisas.
+  const [obrigatorios, deTrilhas] = await Promise.all([
+    db.cursoObrigatorio.findMany({
+      where: { departmentId: { in: departamentos } },
+      select: { courseId: true, departmentId: true, prazoDias: true },
+    }),
+    regrasDeTrilhas({ departmentIds: departamentos }),
+  ]);
+  return criarFaltantes([...obrigatorios, ...deTrilhas], assignedById, { id: userId });
 }
 
 /** Sincroniza a plataforma inteira. Usado pelo botão "Sincronizar agora". */
 export async function sincronizarTudo(assignedById: string): Promise<ResultadoSincronizacao> {
-  const obrigatorios = await db.cursoObrigatorio.findMany({
-    select: { courseId: true, departmentId: true, prazoDias: true },
-  });
-  return criarFaltantes(obrigatorios, assignedById);
+  const [obrigatorios, deTrilhas] = await Promise.all([
+    db.cursoObrigatorio.findMany({
+      select: { courseId: true, departmentId: true, prazoDias: true },
+    }),
+    regrasDeTrilhas(),
+  ]);
+  return criarFaltantes([...obrigatorios, ...deTrilhas], assignedById);
 }

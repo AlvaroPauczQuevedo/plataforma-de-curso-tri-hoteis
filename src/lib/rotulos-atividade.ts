@@ -17,6 +17,11 @@ export const ROTULOS_DE_ATIVIDADE: Record<string, string> = {
   CURSO_ARCHIVED: "arquivou o curso",
   CRIAR_MODULO: "criou um módulo em",
 
+  CRIAR_TRILHA: "criou a trilha",
+  PUBLICAR_TRILHA: "publicou a trilha",
+  DESPUBLICAR_TRILHA: "moveu para rascunho a trilha",
+  EXCLUIR_TRILHA: "excluiu a trilha",
+
   CRIAR_PROVA: "criou a prova",
   EDITAR_PROVA: "editou a prova",
   EXCLUIR_PROVA: "excluiu a prova",

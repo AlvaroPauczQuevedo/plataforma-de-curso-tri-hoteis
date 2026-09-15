@@ -50,6 +50,8 @@ model Department {
   provas    Prova[]
   membrosExtras DepartamentoExtra[]
   documentos DocumentoDepartamento[]
+  trilhas    Trilha[]
+  trilhasObrigatorias TrilhaDepartamento[]
 }
 
 model User {
@@ -156,6 +158,7 @@ model User {
   lembretes           LembreteEnviado[]
   documentosCriados   Documento[]         @relation("DocumentoCriadoPor")
   aceitesDeDocumento  AceiteDeDocumento[]
+  trilhasCriadas      Trilha[]            @relation("TrilhaCriadaPor")
 
   /// Quase toda consulta do painel filtra por departamento: alcance do
   /// administrador, relatorios, conformidade e matricula automatica. Sem o
@@ -263,6 +266,7 @@ model Course {
   certificates    Certificate[]
   conclusoesExternas ConclusaoExterna[]
   lembretes       LembreteEnviado[]
+  trilhas         TrilhaCurso[]
 
   @@index([status])
   /// Mesmo motivo do indice em User: o departamento decide quem enxerga e
@@ -768,4 +772,83 @@ model LembreteEnviado {
 
   @@unique([userId, courseId, estagio])
   @@index([enviadoEm])
+}
+
+/// Uma trilha de aprendizagem: cursos em ORDEM.
+///
+/// O que a plataforma nao sabia expressar antes e a DEPENDENCIA entre cursos.
+/// "Integracao" antes de "Atendimento", "Boas praticas" antes de "Manipulacao
+/// de alimentos" — a ordem existe no treinamento real de um hotel, e sem ela a
+/// pessoa abria os cinco cursos no primeiro dia e comecava pelo mais dificil.
+///
+/// A trilha NAO e um novo jeito de matricular. Ela se apoia na matricula
+/// automatica que ja existe: atribuida a um departamento, as matriculas saem
+/// pelo mesmo `criarFaltantes` do CursoObrigatorio. Um segundo caminho que
+/// grava Enrollment acabaria divergindo do primeiro, e divergencia em
+/// matricula aparece como gente cobrada por curso que ninguem atribuiu.
+model Trilha {
+  id           String      @id @default(cuid())
+  titulo       String
+  descricao    String?
+
+  /// Departamento dono. Decide quem ALTERA a trilha, igual a Course e Prova.
+  /// Nulo significa trilha da rede — e so o proprietario mexe nela.
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  /// Rascunho nao aparece para ninguem. Publicar e o ato deliberado, porque
+  /// publicar uma trilha atribuida MATRICULA gente de verdade.
+  publicada    Boolean     @default(false)
+
+  createdById  String
+  createdBy    User        @relation("TrilhaCriadaPor", fields: [createdById], references: [id])
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  cursos        TrilhaCurso[]
+  departamentos TrilhaDepartamento[]
+
+  @@index([departmentId])
+}
+
+/// Um degrau da trilha: o curso e a posicao dele na ordem.
+model TrilhaCurso {
+  id       String @id @default(cuid())
+  trilhaId String
+  trilha   Trilha @relation(fields: [trilhaId], references: [id], onDelete: Cascade)
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  /// Posicao na fila, a partir de 0. Nao e unica de proposito: durante uma
+  /// reordenacao dois degraus passam pelo mesmo numero, e um indice unico
+  /// faria a gravacao falhar no meio.
+  ordem    Int
+
+  /// O mesmo curso duas vezes na mesma trilha nao e ordem, e engano de
+  /// clique — e faria o degrau seguinte nunca liberar.
+  @@unique([trilhaId, courseId])
+  @@index([courseId])
+}
+
+/// A quem a trilha e obrigatoria.
+///
+/// Espelha CursoObrigatorio, e de proposito: e a mesma pergunta ("quem precisa
+/// fazer isto?") e as matriculas saem pelo mesmo caminho.
+model TrilhaDepartamento {
+  id           String     @id @default(cuid())
+  trilhaId     String
+  trilha       Trilha     @relation(fields: [trilhaId], references: [id], onDelete: Cascade)
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  /// Dias para concluir a TRILHA INTEIRA, contados da matricula. Nulo = sem
+  /// prazo. Vale igual para todos os degraus: prazo por degrau exigiria
+  /// adivinhar quanto tempo cada curso leva, e errar isso vira cobranca
+  /// indevida.
+  prazoDias    Int?
+
+  createdAt    DateTime   @default(now())
+
+  @@unique([trilhaId, departmentId])
+  @@index([departmentId])
 }

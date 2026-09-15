@@ -838,6 +838,74 @@ aparece como *"Revisado — leia de novo"*, com texto diferente de quem nunca le
 qual origem (IP, quando há proxy confiável). Documento com aceite não pode ser
 excluído — despublicar tira da frente dos funcionários e preserva a prova.
 
+## Trilhas de aprendizagem
+
+Cursos em **ordem**. O curso avulso ensina uma coisa; a trilha ensina um
+caminho: "Integração" antes de "Atendimento", "Boas práticas" antes de
+"Manipulação de alimentos".
+
+Era a dependência entre cursos que a plataforma não sabia expressar. Sem ela, a
+pessoa recebia cinco cursos no primeiro dia e começava pelo mais difícil — que
+é como alguém desiste do segundo.
+
+Em `/admin/trilhas` (montar) e `/trilhas` (fazer).
+
+### As três decisões que definem o módulo
+
+**1. A trilha matricula em TODOS os cursos de uma vez.** Não um a um. A
+Conformidade precisa enxergar a dívida inteira: matriculando por etapa, o
+relatório mostraria uma pendência para quem deve cinco, e ficaria correto e
+vazio ao mesmo tempo.
+
+**2. O bloqueio é de apresentação, não de acesso.** O degrau trancado aparece
+cinza, sem link, com o motivo escrito. Ele não some: a pessoa precisa ver o
+caminho inteiro para saber onde está e quanto falta. Esconder o que vem depois
+transformaria a trilha numa fila de surpresas.
+
+**3. Presencial destranca.** A conclusão vem de `lib/conclusoes`, a mesma fonte
+da Conformidade, da Reciclagem e do relatório de auditoria. Uma brigada feita
+numa sala abre o degrau seguinte, e o degrau ganha o selo *presencial* — senão
+a pessoa abre chamado perguntando por que a trilha não reconheceu o treinamento
+que ela fez.
+
+### O que a trilha NÃO faz
+
+Ela não é um segundo jeito de matricular. Uma trilha atribuída a um setor
+expande em regras do mesmo formato do `CursoObrigatorio`, e a gravação segue
+pelo mesmo `criarFaltantes` — inclusive a regra de ouro, **só criar, nunca
+remover**. Um segundo lugar que grava `Enrollment` acabaria divergindo do
+primeiro, e divergência em matrícula aparece do pior jeito: gente cobrada por
+curso que ninguém atribuiu, ou gente sem o treinamento que a lei exige.
+
+Por isso, também:
+
+- **tirar um degrau não desmatricula ninguém** — o curso sai da trilha e
+  continua na lista da pessoa, com progresso e certificado intactos;
+- **desatribuir um setor não desmatricula ninguém** — a trilha some da tela, a
+  dívida permanece;
+- **trilha publicada não se exclui.** Ela já matriculou gente, e apagá-la
+  deixaria as matrículas órfãs, sem nada explicando por que aqueles cinco
+  cursos apareceram. Despublicar é o caminho.
+
+### Curso concluído fora de ordem continua concluído
+
+Acontece de verdade: a pessoa fez o curso avulso antes de a trilha existir, ou
+o RH lançou o presencial fora de ordem. Reapresentá-lo como trancado mandaria
+refazer treinamento já cumprido — e faria a trilha discordar da Conformidade
+sobre a mesma pessoa.
+
+### O gargalo
+
+A tela do painel mostra **em que degrau a equipe parou**. Doze pessoas paradas
+no mesmo curso não são doze problemas de disciplina: são um problema daquele
+curso — longo demais, confuso, ou com prova impossível. É a informação que muda
+uma decisão, e nenhuma outra tela a dava.
+
+O prazo é da **trilha inteira**, e vale igual para todos os degraus. Prazo por
+degrau exigiria adivinhar quanto tempo cada curso leva, e errar essa conta vira
+cobrança indevida — o jeito mais rápido de a equipe aprender a ignorar
+cobrança.
+
 ## Lembretes automáticos (opcional)
 
 A Conformidade sabe, nome a nome, quem está vencendo e quem está atrasado — mas
