@@ -159,6 +159,8 @@ model User {
   documentosCriados   Documento[]         @relation("DocumentoCriadoPor")
   aceitesDeDocumento  AceiteDeDocumento[]
   trilhasCriadas      Trilha[]            @relation("TrilhaCriadaPor")
+  sessoesCriadas      SessaoPresencial[]  @relation("SessaoCriadaPor")
+  presencas           PresencaEmSessao[]
 
   /// Quase toda consulta do painel filtra por departamento: alcance do
   /// administrador, relatorios, conformidade e matricula automatica. Sem o
@@ -267,6 +269,7 @@ model Course {
   conclusoesExternas ConclusaoExterna[]
   lembretes       LembreteEnviado[]
   trilhas         TrilhaCurso[]
+  sessoesPresenciais SessaoPresencial[]
 
   @@index([status])
   /// Mesmo motivo do indice em User: o departamento decide quem enxerga e
@@ -851,4 +854,72 @@ model TrilhaDepartamento {
 
   @@unique([trilhaId, departmentId])
   @@index([departmentId])
+}
+
+/// Uma sessao de treinamento PRESENCIAL, com lista de presenca por QR.
+///
+/// O treinamento em sala ja era reconhecido (ver ConclusaoExterna), mas era
+/// lancado a mao, um nome por vez. Numa brigada de incendio com trinta
+/// pessoas isso e meia hora de digitacao — e e onde alguem fica de fora sem
+/// ninguem notar, o que numa auditoria e exatamente o buraco que importa.
+///
+/// A sessao NAO cria conclusao sozinha. Ela junta presencas; o instrutor
+/// confere a lista e ENCERRA, e e o encerramento que grava as conclusoes. Um
+/// bipe errado antes disso e so uma linha para remover, nao um registro de
+/// conformidade falso que depois precisa ser apagado.
+model SessaoPresencial {
+  id          String    @id @default(cuid())
+  courseId    String
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  /// "Brigada — turma da tarde". Distingue duas turmas do mesmo curso no
+  /// mesmo dia, que e o caso normal num hotel que nao pode parar inteiro.
+  titulo      String?
+  instrutor   String
+  local       String?
+
+  /// Segredo do qual o codigo rotativo e derivado. NUNCA sai do servidor.
+  ///
+  /// O codigo do QR muda a cada 30 segundos justamente para que a foto do
+  /// codigo mandada no grupo do WhatsApp nao sirva: quem nao estava na sala
+  /// nao marca presenca. Sem rotacao, a lista de presenca vale tanto quanto
+  /// um print.
+  segredo     String
+
+  /// Quando o treinamento aconteceu. E desta data que a reciclagem conta a
+  /// validade — nao da hora em que alguem lancou no sistema.
+  realizadaEm DateTime
+
+  /// Enquanto no futuro, a sessao aceita check-in. Nulo = sem limite.
+  abertaAte   DateTime?
+
+  /// Preenchido no encerramento, que e o ato que grava as conclusoes.
+  encerradaEm DateTime?
+
+  criadaPorId String
+  criadaPor   User      @relation("SessaoCriadaPor", fields: [criadaPorId], references: [id])
+  createdAt   DateTime  @default(now())
+
+  presencas   PresencaEmSessao[]
+
+  @@index([courseId])
+}
+
+/// Um bipe de presenca. Vira ConclusaoExterna so quando a sessao encerra.
+model PresencaEmSessao {
+  id           String   @id @default(cuid())
+  sessaoId     String
+  sessao       SessaoPresencial @relation(fields: [sessaoId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  registradaEm DateTime @default(now())
+
+  /// Origem do bipe. Nao prova presenca fisica, mas e o que permite olhar
+  /// para trinta check-ins vindos do mesmo lugar em dois segundos.
+  ip           String?
+
+  /// Bipar duas vezes e o mesmo que bipar uma.
+  @@unique([sessaoId, userId])
+  @@index([userId])
 }

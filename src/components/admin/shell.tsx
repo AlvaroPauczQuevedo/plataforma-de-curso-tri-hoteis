@@ -7,6 +7,7 @@ import {
   DoorOpen,
   FileCheck2,
   FileQuestion,
+  QrCode,
   Route,
   History,
   ShieldAlert,
@@ -67,6 +68,10 @@ function menuDe(proprietario: boolean): GrupoMenu[] {
         { href: "/admin/trilhas", label: "Trilhas", icon: Route },
         { href: "/admin/documentos", label: "Documentos", icon: FileCheck2 },
       ],
+    },
+    {
+      titulo: "Presencial",
+      itens: [{ href: "/admin/presenca", label: "Presença", icon: QrCode }],
     },
     {
       titulo: "Administração",

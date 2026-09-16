@@ -945,6 +945,76 @@ matrícula continua sendo ato de quem administra.
 
 Sem `CRON_SECRET`, a rota responde 503 e não faz nada — falha fechada.
 
+## Check-in presencial por QR
+
+Brigada de incêndio, manipulação de alimentos, as NRs — o treinamento que mais
+importa num hotel acontece numa sala, não na plataforma. Ele já era reconhecido
+(ver *Treinamento presencial*), mas lançado **à mão, um nome por vez**. Numa
+turma de trinta são trinta lançamentos, e é aí que alguém fica de fora sem
+ninguém notar. Numa auditoria, o nome que faltou é exatamente o problema.
+
+Em `/admin/presenca`: o instrutor abre a lista, projeta o código, a turma
+aponta a câmera do celular, e ele encerra quando acaba.
+
+### Por que o código gira
+
+A objeção óbvia a uma lista de presença por QR é a foto: alguém fotografa o
+código, manda no grupo, e três pessoas que não estavam na sala aparecem
+treinadas em brigada de incêndio. Isso não é detalhe de segurança — é a
+diferença entre um registro que vale numa auditoria e um que não vale.
+
+Por isso o código **não é fixo**. Ele é derivado do segredo da sessão e da
+janela de tempo, muda a cada **30 segundos**, e o servidor aceita apenas a
+janela corrente e a anterior. A foto de 14h02 não serve às 14h05. Para marcar
+presença é preciso estar olhando para a tela naquele instante — que é,
+literalmente, estar na sala.
+
+É o desenho de um autenticador de dois fatores, e pelo mesmo motivo: o que se
+quer provar não é "sei o segredo", é "estou aqui agora".
+
+Três consequências que sustentam isso:
+
+- **O segredo nunca chega ao navegador.** A tela do instrutor pergunta ao
+  servidor qual é o código agora e redesenha o QR. Mandar o segredo e deixar o
+  cliente derivar entregaria, a quem abrisse o inspetor, a capacidade de gerar
+  códigos válidos de casa.
+- **Funcionário não lê a rota do código** (`403`). Se lesse, bastaria pedir o
+  código a cada trinta segundos, de qualquer lugar, e a rotação não
+  significaria nada.
+- **A janela seguinte não é aceita.** Aceitá-la daria 90 segundos de vida ao
+  código. A anterior é aceita porque entre apontar a câmera e a página carregar
+  passam segundos — sem essa folga, quem mira a tela no segundo 29 é recusado e
+  vai dizer que "o QR não funciona".
+
+Quando a câmera falha — reflexo, tela suja, aparelho velho — o código também
+aparece em texto, com alfabeto sem `O/0` e `I/1/L`, para ser digitado.
+
+### O bipe não é a conclusão
+
+A sessão **junta presenças**; é o **encerramento** que grava as conclusões. O
+instrutor confere a lista, tira quem bipou por engano, e só então confirma.
+
+Um clique errado antes disso é uma linha para remover. Depois, seria um "fulano
+está treinado em brigada de incêndio" que alguém precisaria descobrir que é
+falso — e a `ConclusaoExterna` é justamente o registro que a auditoria lê.
+
+Por isso, também: depois de encerrada, a presença não se remove por aqui. A
+conclusão existe, e apagar a presença a deixaria sem a origem que a explica;
+para desfazer, a tela de treinamento presencial remove a conclusão com nome e
+responsável.
+
+A conclusão é gravada com a **data do treinamento**, não a do encerramento — é
+dela que a reciclagem conta a validade. E quem já tinha conclusão naquele curso
+é pulado: `ConclusaoExterna` é única por pessoa e curso, e duplicá-la duplicaria
+a pessoa em todo relatório.
+
+### Encaixa no resto
+
+A conclusão entra pela mesma `lib/conclusoes` que a Conformidade, a Reciclagem,
+o relatório de auditoria e as Trilhas já leem. Então o check-in de hoje
+**destrava o degrau seguinte da trilha** sozinho, e sai na planilha de
+conformidade sem nenhum lançamento extra.
+
 ## Isca do console
 
 > **Para auditoria e pentest: isto é proposital.** A credencial que aparece no
