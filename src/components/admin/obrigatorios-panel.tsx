@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ActionButton } from "@/components/shared/action-button";
 import {
   removerObrigatoriedade,
-  tornarObrigatorio,
+  tornarObrigatorioEmLote,
 } from "@/lib/actions/obrigatorios";
 
 type Obrigatoriedade = {
@@ -42,26 +42,33 @@ export function ObrigatoriosPanel({
   const router = useRouter();
   const [pendente, iniciar] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
-  const [departamento, setDepartamento] = useState("");
+  const [escolhidos, setEscolhidos] = useState<string[]>([]);
   const [prazo, setPrazo] = useState("");
   const [validade, setValidade] = useState("");
 
   const jaUsados = new Set(atuais.map((a) => a.departmentId));
   const restantes = disponiveis.filter((d) => !jaUsados.has(d.id));
 
+  function alternar(id: string) {
+    setEscolhidos((atual) =>
+      atual.includes(id) ? atual.filter((x) => x !== id) : [...atual, id]
+    );
+  }
+
   function adicionar() {
-    if (!departamento) {
-      setErro("Escolha um departamento.");
+    if (escolhidos.length === 0) {
+      setErro("Escolha ao menos um setor.");
       return;
     }
     setErro(null);
     iniciar(async () => {
+      // Campo vazio é "sem prazo"/"não vence", e não zero: zero venceria hoje.
       const dias = prazo.trim() === "" ? null : Number(prazo);
       const meses = validade.trim() === "" ? null : Number(validade);
-      const r = await tornarObrigatorio(courseId, departamento, dias, meses);
+      const r = await tornarObrigatorioEmLote(courseId, escolhidos, dias, meses);
       if (!r.ok) setErro(r.error);
       else {
-        setDepartamento("");
+        setEscolhidos([]);
         setPrazo("");
         setValidade("");
         router.refresh();
@@ -113,23 +120,51 @@ export function ObrigatoriosPanel({
 
       {restantes.length > 0 && (
         <div className="flex flex-wrap items-end gap-3 rounded-xl bg-surface-muted/50 p-4">
-          <div className="min-w-[200px] flex-1 space-y-1.5">
-            <label htmlFor="obrig-dep" className="text-xs font-medium text-ink-900">
-              Obrigatório para
-            </label>
-            <select
-              id="obrig-dep"
-              value={departamento}
-              onChange={(e) => setDepartamento(e.target.value)}
-              className={`w-full ${campoClasse}`}
-            >
-              <option value="">Escolha um departamento</option>
+          {/*
+            Caixas de seleção, e não uma lista suspensa de escolha única.
+            Nesta rede o departamento é o hotel: marcar um curso para as 25
+            casas eram 25 idas ao formulário, repetidas a cada curso novo.
+          */}
+          <div className="min-w-[240px] flex-1 space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium text-ink-900">Obrigatório para</span>
+
+              <div className="flex gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setEscolhidos(restantes.map((d) => d.id))}
+                  className="font-medium text-brand-texto hover:underline"
+                >
+                  Marcar todos ({restantes.length})
+                </button>
+                {escolhidos.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setEscolhidos([])}
+                    className="text-ink-700/60 hover:underline"
+                  >
+                    Limpar
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="max-h-48 space-y-0.5 overflow-y-auto rounded-xl border border-border bg-surface p-2">
               {restantes.map((d) => (
-                <option key={d.id} value={d.id}>
+                <label
+                  key={d.id}
+                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-ink-900 hover:bg-surface-muted"
+                >
+                  <input
+                    type="checkbox"
+                    checked={escolhidos.includes(d.id)}
+                    onChange={() => alternar(d.id)}
+                    className="h-4 w-4 rounded border-border accent-brand-600"
+                  />
                   {d.name}
-                </option>
+                </label>
               ))}
-            </select>
+            </div>
           </div>
 
           <div className="w-32 space-y-1.5">
@@ -163,9 +198,13 @@ export function ObrigatoriosPanel({
             />
           </div>
 
-          <Button onClick={adicionar} disabled={pendente}>
+          <Button onClick={adicionar} disabled={pendente || escolhidos.length === 0}>
             <Plus className="h-4 w-4" />
-            {pendente ? "Matriculando..." : "Tornar obrigatório"}
+            {pendente
+              ? "Matriculando..."
+              : escolhidos.length > 1
+                ? `Tornar obrigatório em ${escolhidos.length} setores`
+                : "Tornar obrigatório"}
           </Button>
         </div>
       )}

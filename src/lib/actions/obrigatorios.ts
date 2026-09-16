@@ -6,6 +6,12 @@ import { requireAdmin } from "@/lib/session";
 import { logAdminActivity } from "@/lib/activity-log";
 import { bloqueioDeCurso, bloqueioDeVinculo } from "@/lib/alcance-admin";
 import { sincronizarCurso } from "@/lib/matricula-automatica";
+import {
+  motivoDePrazoInvalido,
+  motivoDeValidadeInvalida,
+  resumoDoLote,
+  separarObrigatoriedades,
+} from "@/lib/obrigatoriedade";
 import type { ActionResult } from "@/lib/actions/employees";
 
 /**
@@ -30,18 +36,13 @@ export async function tornarObrigatorio(
   const doDepartamento = await bloqueioDeVinculo(admin.id, departmentId);
   if (doDepartamento) return doDepartamento;
 
-  if (prazoDias !== null && (!Number.isInteger(prazoDias) || prazoDias < 1)) {
-    return { ok: false, error: "O prazo deve ser um número de dias maior que zero." };
-  }
+  // As mesmas conferências da versão em lote, vindas de `lib/obrigatoriedade`:
+  // duas cópias acabariam divergindo, e uma aceitaria o que a outra recusa.
+  const prazoRuim = motivoDePrazoInvalido(prazoDias);
+  if (prazoRuim) return { ok: false, error: prazoRuim };
 
-  /*
-    Validade em MESES, e não em dias, porque é assim que a norma fala:
-    "reciclagem anual", "a cada dois anos". Converter para dias na tela faria
-    quem cadastra calcular 365 de cabeça e errar em ano bissexto.
-  */
-  if (validadeMeses !== null && (!Number.isInteger(validadeMeses) || validadeMeses < 1)) {
-    return { ok: false, error: "A validade deve ser um número de meses maior que zero." };
-  }
+  const validadeRuim = motivoDeValidadeInvalida(validadeMeses);
+  if (validadeRuim) return { ok: false, error: validadeRuim };
 
   const existente = await db.cursoObrigatorio.findUnique({
     where: { courseId_departmentId: { courseId, departmentId } },
@@ -73,6 +74,103 @@ export async function tornarObrigatorio(
       resultado.criadas > 0
         ? `Curso obrigatório para ${departamento?.name}. ${resultado.criadas} funcionário(s) matriculado(s).`
         : `Curso obrigatório para ${departamento?.name}. Todos já estavam matriculados.`,
+  };
+}
+
+
+/**
+ * O mesmo, para VÁRIOS setores de uma vez.
+ *
+ * Nesta rede o departamento é o hotel, então "Brigada de incêndio é
+ * obrigatória" eram 25 idas ao formulário — repetidas a cada curso novo.
+ * Esquecer uma casa deixa o hotel irregular sem ninguém notar: a Conformidade
+ * o mostra em dia, porque ele não deve nada.
+ *
+ * **Tudo ou nada nas recusas**, como o cadastro de funcionários em lote: se um
+ * setor selecionado estiver fora do alcance de quem clicou, nada é gravado.
+ * Gravar parte e reclamar do resto deixaria uma lista pela metade para
+ * reconciliar à mão.
+ *
+ * **Mas setor que já era obrigatório é pulado, não recusado.** É pedido já
+ * atendido, não erro de validação — ver `separarObrigatoriedades`.
+ */
+export async function tornarObrigatorioEmLote(
+  courseId: string,
+  departmentIds: string[],
+  prazoDias: number | null,
+  validadeMeses: number | null = null
+): Promise<ActionResult> {
+  const admin = await requireAdmin();
+
+  if (departmentIds.length === 0) {
+    return { ok: false, error: "Escolha ao menos um setor." };
+  }
+
+  const doCurso = await bloqueioDeCurso(courseId, admin.id);
+  if (doCurso) return doCurso;
+
+  const prazoRuim = motivoDePrazoInvalido(prazoDias);
+  if (prazoRuim) return { ok: false, error: prazoRuim };
+
+  const validadeRuim = motivoDeValidadeInvalida(validadeMeses);
+  if (validadeRuim) return { ok: false, error: validadeRuim };
+
+  /*
+    O alcance de CADA setor, antes de gravar qualquer um. A trava é a mesma da
+    versão individual; o que muda é que ela roda inteira primeiro — senão os
+    primeiros seriam gravados e o lote morreria no meio.
+  */
+  for (const departmentId of departmentIds) {
+    const bloqueio = await bloqueioDeVinculo(admin.id, departmentId);
+    if (bloqueio) return bloqueio;
+  }
+
+  const jaExistentes = new Set(
+    (
+      await db.cursoObrigatorio.findMany({
+        where: { courseId, departmentId: { in: departmentIds } },
+        select: { departmentId: true },
+      })
+    ).map((o) => o.departmentId)
+  );
+
+  const { novos, jaEram } = separarObrigatoriedades(departmentIds, jaExistentes);
+
+  if (novos.length > 0) {
+    await db.cursoObrigatorio.createMany({
+      data: novos.map((departmentId) => ({ courseId, departmentId, prazoDias, validadeMeses })),
+    });
+  }
+
+  /*
+    Uma sincronização só, no fim. Ela varre os obrigatórios do curso inteiro,
+    então chamá-la por setor repetiria o mesmo trabalho N vezes — e com 25
+    hotéis isso é 25 varreduras da base de funcionários.
+  */
+  const resultado =
+    novos.length > 0
+      ? await sincronizarCurso(courseId, admin.id)
+      : { criadas: 0, jaExistiam: 0 };
+
+  await logAdminActivity({
+    adminId: admin.id,
+    action: "CURSO_OBRIGATORIO_EM_LOTE",
+    targetType: "Course",
+    targetId: courseId,
+    details: `${novos.length} setor(es) novo(s) — ${resultado.criadas} matrícula(s) criada(s)`,
+  });
+
+  revalidatePath(`/admin/cursos/${courseId}`);
+  revalidatePath("/admin/matriculas");
+  revalidatePath("/admin/conformidade");
+
+  return {
+    ok: true,
+    message: resumoDoLote({
+      novos: novos.length,
+      jaEram: jaEram.length,
+      matriculas: resultado.criadas,
+    }),
   };
 }
 

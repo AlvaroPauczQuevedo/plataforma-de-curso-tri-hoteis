@@ -552,6 +552,36 @@ atrasado no que devia"; aqui é anterior a qualquer dívida. Alguém sem curso
 obrigatório não aparece na conformidade nunca, e ainda assim pode ter recebido
 uma senha que jamais usou.
 
+### Obrigatoriedade em vários setores de uma vez
+
+Na tela do curso, "Obrigatório para" aceita **marcar vários setores**, com
+"Marcar todos" ao lado.
+
+Existe por causa de como esta rede usa a plataforma: aqui o **departamento é o
+hotel**. Marcar "Brigada de incêndio" como obrigatória para as 25 casas eram 25
+idas ao formulário, e isso se repetia inteiro a cada curso novo — com seis
+treinamentos obrigatórios, 150 marcações à mão. Esquecer uma casa deixa o hotel
+irregular **sem ninguém notar**: a Conformidade o mostra em dia, porque ele não
+deve nada. É o pior tipo de erro que este projeto pode produzir, porque não
+aparece em lugar nenhum.
+
+O prazo e a reciclagem valem igual para todos os setores marcados.
+
+Duas decisões, e elas são diferentes de propósito:
+
+- **Tudo ou nada nas recusas.** Se um setor marcado estiver fora do alcance de
+  quem clicou, nada é gravado — igual ao cadastro de funcionários em lote.
+  Gravar parte e reclamar do resto deixaria uma lista pela metade para
+  reconciliar à mão.
+- **Setor que já era obrigatório é pulado, não recusado.** É pedido já
+  atendido, não erro de validação. Recusar o lote por causa dele obrigaria a
+  pessoa a descobrir quais setores já têm e desmarcá-los um a um — exatamente o
+  trabalho que o lote existe para tirar.
+
+A sincronização das matrículas roda **uma vez**, no fim: ela varre os
+obrigatórios do curso inteiro, então chamá-la por setor repetiria a varredura
+da base de funcionários 25 vezes.
+
 ## WhatsApp: o canal que existe
 
 Ninguém nesta rede tem e-mail corporativo, e o pessoal é opcional. O resultado

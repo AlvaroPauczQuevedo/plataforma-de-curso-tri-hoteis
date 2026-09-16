@@ -44,6 +44,7 @@ export const ROTULOS_DE_ATIVIDADE: Record<string, string> = {
   MATRICULAR: "realizou matrícula(s):",
   REMOVER_MATRICULA: "removeu matrícula de",
   CURSO_OBRIGATORIO: "tornou o curso obrigatório em",
+  CURSO_OBRIGATORIO_EM_LOTE: "tornou obrigatório em vários setores o curso",
   REMOVER_OBRIGATORIEDADE: "removeu a obrigatoriedade do curso em",
 
   CRIAR_DEPARTAMENTO: "criou o departamento",
