@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { ClipboardList } from "lucide-react";
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import { Badge } from "@/components/ui/badge";
@@ -57,67 +58,120 @@ export default async function MatriculasPage(
     db.unidade.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
 
-  // Mesmo cuidado: só os campos que a tabela mostra. Estes ficam no servidor,
-  // mas trazer o registro inteiro de milhares de matrículas custa memória à
-  // toa — e o dia em que alguém passar isto a um componente de cliente, o
-  // vazamento volta pela porta dos fundos.
-  const enrollments = await db.enrollment.findMany({
-    /*
-      O hotel filtra pela PESSOA matriculada, não pela matrícula: quem tem
-      unidade é o funcionário, e a matrícula só o liga a um curso. Sem passar
-      pela relação, o filtro não teria em que coluna se apoiar.
-    */
-    where: {
-      ...(searchParams.curso ? { courseId: searchParams.curso } : {}),
-      ...(searchParams.hotel ? { user: { unidadeId: searchParams.hotel } } : {}),
-    },
-    select: {
-      id: true,
-      userId: true,
-      courseId: true,
-      mandatory: true,
-      dueDate: true,
-      assignedAt: true,
-      user: { select: { id: true, name: true, username: true } },
-      course: { select: { id: true, title: true } },
-    },
-    orderBy: { assignedAt: "desc" },
-  });
-
   /*
-    O progresso é buscado só para as matrículas em tela, e não da tabela
-    inteira: sem este filtro, cada abertura desta página carregava um registro
-    por par funcionário-curso da plataforma toda.
+    O hotel filtra pela PESSOA matriculada, não pela matrícula: quem tem
+    unidade é o funcionário, e a matrícula só o liga a um curso. Sem passar
+    pela relação, o filtro não teria em que coluna se apoiar.
   */
-  const progresses = await db.courseProgress.findMany({
-    where: {
-      userId: { in: [...new Set(enrollments.map((e) => e.userId))] },
-      courseId: { in: [...new Set(enrollments.map((e) => e.courseId))] },
-    },
-  });
-  const progressMap = new Map(progresses.map((p) => [`${p.userId}:${p.courseId}`, p]));
+  const onde = {
+    ...(searchParams.curso ? { courseId: searchParams.curso } : {}),
+    ...(searchParams.hotel ? { user: { unidadeId: searchParams.hotel } } : {}),
+  };
+
+  // Só os campos que a tabela mostra. Estes ficam no servidor, mas trazer o
+  // registro inteiro custa memória à toa — e o dia em que alguém passar isto a
+  // um componente de cliente, o vazamento volta pela porta dos fundos.
+  const CAMPOS = {
+    id: true,
+    userId: true,
+    courseId: true,
+    mandatory: true,
+    dueDate: true,
+    assignedAt: true,
+    user: { select: { id: true, name: true, username: true } },
+    course: { select: { id: true, title: true } },
+  } as const;
+
+  // O tipo sai do próprio `select`: acrescentar um campo lá o traz para cá
+  // sozinho, em vez de deixar as duas listas divergirem em silêncio.
+  type Matricula = Prisma.EnrollmentGetPayload<{ select: typeof CAMPOS }>;
+
   const now = new Date();
 
-  const enriched = enrollments.map((e) => {
-    const progress = progressMap.get(`${e.userId}:${e.courseId}`);
-    const percent = progress?.percent ?? 0;
-    const completed = percent >= 100;
-    const overdue = Boolean(e.dueDate && !completed && new Date(e.dueDate) < now);
-    const status = completed ? "completed" : overdue ? "overdue" : percent > 0 ? "in_progress" : "not_started";
-    return { ...e, percent, completed, overdue, status };
-  });
+  /**
+   * O status nasce do cruzamento entre progresso e prazo, e não existe como
+   * coluna. É o que decide por onde a paginação pode passar.
+   */
+  const comStatus = (
+    linhas: Matricula[],
+    progressos: Map<string, { percent: number }>
+  ) =>
+    linhas.map((e) => {
+      const percent = progressos.get(`${e.userId}:${e.courseId}`)?.percent ?? 0;
+      const completed = percent >= 100;
+      const overdue = Boolean(e.dueDate && !completed && new Date(e.dueDate) < now);
+      return {
+        ...e,
+        percent,
+        completed,
+        overdue,
+        status: completed
+          ? "completed"
+          : overdue
+            ? "overdue"
+            : percent > 0
+              ? "in_progress"
+              : "not_started",
+      };
+    });
 
-  const filtered = searchParams.status ? enriched.filter((e) => e.status === searchParams.status) : enriched;
+  const progressoDe = async (linhas: { userId: string; courseId: string }[]) => {
+    if (linhas.length === 0) return new Map<string, { percent: number }>();
+    const progressos = await db.courseProgress.findMany({
+      where: {
+        userId: { in: [...new Set(linhas.map((e) => e.userId))] },
+        courseId: { in: [...new Set(linhas.map((e) => e.courseId))] },
+      },
+      select: { userId: true, courseId: true, percent: true },
+    });
+    return new Map(progressos.map((p) => [`${p.userId}:${p.courseId}`, p]));
+  };
 
-  /*
-    A paginação acontece depois do filtro, em memória, porque o status não
-    existe no banco: ele nasce do cruzamento entre progresso e prazo. Paginar
-    antes faria o filtro valer só dentro da página, e a contagem do topo
-    mentiria. O ganho aqui é não desenhar milhares de linhas de uma vez; para
-    paginar no banco, o status precisaria ser gravado junto com a matrícula.
-  */
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pagina = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  let pagina: ReturnType<typeof comStatus>;
+  let total: number;
+
+  if (searchParams.status) {
+    /*
+      COM filtro de status, não há como paginar no banco: o status não é
+      coluna, então o banco não sabe quantas linhas o filtro deixa passar.
+      Paginar antes faria o filtro valer só dentro da página, e a contagem do
+      topo mentiria — que é pior do que a varredura.
+    */
+    const todas = await db.enrollment.findMany({
+      where: onde,
+      select: CAMPOS,
+      orderBy: { assignedAt: "desc" },
+    });
+    const filtradas = comStatus(todas, await progressoDe(todas)).filter(
+      (e) => e.status === searchParams.status
+    );
+
+    total = filtradas.length;
+    pagina = filtradas.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  } else {
+    /*
+      SEM filtro de status — o caso comum, e o padrão da tela — a página sai do
+      banco. Antes, abrir esta tela carregava TODA matrícula da plataforma e o
+      progresso de todas elas, para desenhar 25 linhas; agora são 25 linhas e o
+      progresso de 25. O status continua sendo calculado, mas só para o que
+      aparece.
+    */
+    const [linhas, contagem] = await Promise.all([
+      db.enrollment.findMany({
+        where: onde,
+        select: CAMPOS,
+        orderBy: { assignedAt: "desc" },
+        skip: (page - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
+      }),
+      db.enrollment.count({ where: onde }),
+    ]);
+
+    total = contagem;
+    pagina = comStatus(linhas, await progressoDe(linhas));
+  }
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const statusBadge = {
     not_started: <Badge tone="neutral">Não iniciado</Badge>,
@@ -144,7 +198,7 @@ export default async function MatriculasPage(
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-semibold text-ink-900">Matrículas existentes ({filtered.length})</h2>
+          <h2 className="font-semibold text-ink-900">Matrículas existentes ({total})</h2>
           <Suspense>
             <div className="flex gap-3">
               <SelectFilter
@@ -171,7 +225,7 @@ export default async function MatriculasPage(
           </Suspense>
         </div>
 
-        {filtered.length === 0 ? (
+        {total === 0 ? (
           <EmptyState icon={ClipboardList} title="Nenhuma matrícula encontrada" />
         ) : (
           <div className="overflow-hidden rounded-2xl border border-border bg-surface">

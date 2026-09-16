@@ -6,8 +6,6 @@ import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import { hashPassword, senhaProvisoria } from "@/lib/password";
 import { logAdminActivity } from "@/lib/activity-log";
-import { novoTokenDeRedefinicao } from "@/lib/token-de-redefinicao";
-import { emailDeRedefinicao, emailDeSenhaProvisoria, enviarEmail } from "@/lib/email";
 import { sincronizarUsuario } from "@/lib/matricula-automatica";
 import { motivoDeNomeInvalido, normalizarNomeDeUsuario } from "@/lib/nome-de-usuario";
 import {
@@ -19,7 +17,6 @@ import {
   type Recusa,
   bloqueioDeAlteracao,
   bloqueioDeVinculo,
-  ehProprietario,
 } from "@/lib/alcance-admin";
 
 const employeeSchema = z.object({
@@ -32,7 +29,12 @@ const employeeSchema = z.object({
   role: z.enum(["ADMIN", "EMPLOYEE"]).default("EMPLOYEE"),
 });
 
-export type ActionResult = { ok: true; message?: string } | { ok: false; error: string };
+import type { ActionResult } from "@/lib/actions/resultado";
+
+// Reexportado para não quebrar os quatorze arquivos que o importavam daqui.
+// O lugar dele agora é `actions/resultado`: é tipo, não ação, e
+// quatorze arquivos o importavam daqui como se fosse coisa de funcionário.
+export type { ActionResult } from "@/lib/actions/resultado";
 
 /**
  * Normaliza e confere o nome de usuário digitado no formulário.
@@ -325,168 +327,6 @@ export async function updateEmployee(
 }
 
 /**
- * Ativa ou desativa um acesso.
- *
- * Agora que administradores enxergam uns aos outros, duas travas passam a ser
- * necessarias — as duas evitam o mesmo desfecho: uma plataforma sem ninguem
- * capaz de administra-la, sem caminho de volta pela interface.
- */
-export async function toggleEmployeeActive(userId: string, active: boolean): Promise<ActionResult> {
-  const admin = await requireAdmin();
-
-  const bloqueio = await bloqueioDeAlteracao(userId, admin.id);
-  if (bloqueio) return bloqueio;
-
-  if (!active) {
-    if (userId === admin.id) {
-      return {
-        ok: false,
-        error: "Você não pode desativar o próprio acesso. Peça a outro administrador.",
-      };
-    }
-
-    const alvo = await db.user.findUnique({ where: { id: userId }, select: { role: true } });
-    if (alvo?.role === "ADMIN") {
-      const administradoresAtivos = await db.user.count({
-        where: { role: "ADMIN", active: true },
-      });
-      if (administradoresAtivos <= 1) {
-        return {
-          ok: false,
-          error: "Este é o último administrador ativo. Ative outro antes de desativar este.",
-        };
-      }
-    }
-  }
-
-  const target = await db.user.update({ where: { id: userId }, data: { active } });
-
-  await logAdminActivity({
-    adminId: admin.id,
-    action: active ? "ATIVAR_FUNCIONARIO" : "DESATIVAR_FUNCIONARIO",
-    targetType: "User",
-    targetId: userId,
-    details: target.name,
-  });
-
-  revalidatePath("/admin/funcionarios");
-  return { ok: true, message: active ? "Acesso ativado." : "Acesso desativado." };
-}
-
-export async function resetEmployeePassword(userId: string): Promise<ActionResult> {
-  const admin = await requireAdmin();
-
-  const bloqueio = await bloqueioDeAlteracao(userId, admin.id);
-  if (bloqueio) return bloqueio;
-
-  const tempPassword = senhaProvisoria();
-  const passwordHash = await hashPassword(tempPassword);
-
-  /*
-    Redefinir a senha destrava a conta.
-
-    O bloqueio por tentativas seguidas é conferido ANTES da comparação da
-    senha (lib/login-guard), então uma conta bloqueada continuava recusando o
-    acesso mesmo com a senha nova — e este é justamente o caminho que a pessoa
-    toma depois de errar a senha cinco vezes: pedir ao administrador uma nova.
-    Ela recebia a senha e ainda assim não entrava, sem nada na tela explicando.
-  */
-  const alvo = await db.user.update({
-    where: { id: userId },
-    data: {
-      passwordHash,
-      mustChangePassword: true,
-      failedAttempts: 0,
-      lockedUntil: null,
-    },
-  });
-
-  await logAdminActivity({
-    adminId: admin.id,
-    action: "REDEFINIR_SENHA",
-    targetType: "User",
-    targetId: userId,
-  });
-
-  /*
-    Só envia para quem TEM endereço confirmado — hoje a minoria.
-
-    A senha ainda aparece na tela nos dois casos: quem administra precisa poder
-    entregá-la em mãos sem depender de a mensagem ter saído, e é assim que a
-    maior parte da rede vai receber.
-  */
-  const envio = alvo.email
-    ? await enviarEmail(emailDeSenhaProvisoria(alvo.name, alvo.email, alvo.username, tempPassword))
-    : null;
-
-  revalidatePath(`/admin/funcionarios/${userId}`);
-  return {
-    ok: true,
-    message: envio?.enviado
-      ? `Nova senha enviada para ${alvo.email}. Senha: ${tempPassword}`
-      : `Nova senha provisória: ${tempPassword}`,
-  };
-}
-
-/**
- * Gera um link de redefinição de senha para um funcionário.
- *
- * Fica no painel administrativo (e não na tela pública /esqueci-senha) porque
- * quem recebe o link assume a conta: exposto publicamente, bastaria saber o
- * e-mail de alguém para tomar o acesso dele. O administrador entrega o link
- * ao funcionário pelo canal interno enquanto não há envio de e-mail.
- */
-export async function generatePasswordResetLink(
-  userId: string
-): Promise<ActionResult & { resetLink?: string }> {
-  const admin = await requireAdmin();
-
-  const bloqueio = await bloqueioDeAlteracao(userId, admin.id);
-  if (bloqueio) return bloqueio;
-
-  const target = await db.user.findUnique({ where: { id: userId } });
-  if (!target) return { ok: false, error: "Funcionário não encontrado." };
-  if (!target.active) {
-    return { ok: false, error: "Reative o acesso antes de gerar um link de redefinição." };
-  }
-
-  // Invalida links anteriores ainda pendentes deste usuário.
-  await db.passwordResetToken.updateMany({
-    where: { userId, usedAt: null },
-    data: { usedAt: new Date() },
-  });
-
-  // O link e o e-mail levam o token; o banco, só o digest.
-  const { token, digest } = novoTokenDeRedefinicao();
-  await db.passwordResetToken.create({
-    data: { userId, token: digest, expiresAt: new Date(Date.now() + 60 * 60 * 1000) },
-  });
-
-  await logAdminActivity({
-    adminId: admin.id,
-    action: "GERAR_LINK_REDEFINICAO",
-    targetType: "User",
-    targetId: userId,
-    details: target.name,
-  });
-
-  // Só há para onde enviar quando a pessoa confirmou um endereço. Sem isso, o
-  // link fica só na tela, para o administrador entregar pelo canal interno —
-  // que é como a maior parte desta rede recebe.
-  const envio = target.email
-    ? await enviarEmail(emailDeRedefinicao(target.name, target.email, token))
-    : null;
-
-  return {
-    ok: true,
-    message: envio?.enviado
-      ? `Link enviado para ${target.email}. Válido por 1 hora e de uso único.`
-      : "Link válido por 1 hora e de uso único.",
-    resetLink: `/redefinir-senha/${token}`,
-  };
-}
-
-/**
  * Quanto histórico a exclusão de um usuário destruiria, e o que a impede.
  *
  * Existe separada da exclusão porque a tela precisa dos mesmos números para
@@ -612,118 +452,6 @@ export async function deleteEmployee(userId: string): Promise<ActionResult> {
 
   revalidatePath("/admin/funcionarios");
   return { ok: true, message: `Conta de ${alvo.name} excluída.` };
-}
-
-export async function createDepartment(name: string): Promise<ActionResult> {
-  const admin = await requireAdmin();
-
-  // Criar departamento é decidir a estrutura da plataforma, e só o proprietário
-  // consegue atribuir alguém a um. Aberto a todos, geraria só departamentos
-  // órfãos que ninguém pode usar.
-  if (!(await ehProprietario(admin.id))) {
-    return {
-      ok: false,
-      error: "Só o proprietário da plataforma pode criar departamentos.",
-    };
-  }
-
-  if (!name?.trim()) return { ok: false, error: "Informe o nome do departamento." };
-
-  const existing = await db.department.findUnique({ where: { name: name.trim() } });
-  if (existing) return { ok: false, error: "Departamento já existe." };
-
-  await db.department.create({ data: { name: name.trim() } });
-  await logAdminActivity({
-    adminId: admin.id,
-    action: "CRIAR_DEPARTAMENTO",
-    targetType: "Department",
-    details: name,
-  });
-
-  revalidatePath("/admin/funcionarios");
-  revalidatePath("/admin/configuracoes");
-  return { ok: true };
-}
-
-/**
- * Exclui um departamento — só o proprietário, e só quando não sobra nada preso
- * a ele.
- *
- * A recusa é a parte importante desta função. Departamento é a peça que amarra
- * três coisas, e cada uma quebra de um jeito diferente se ele sumir:
- *
- *  - USUÁRIOS ficariam sem setor. Sem setor, nenhum treinamento obrigatório os
- *    alcança e nenhum administrador de departamento consegue editá-los. A
- *    pessoa continua na plataforma, invisível para as regras.
- *
- *  - CURSOS ficariam sem dono. Curso sem departamento é editável apenas pelo
- *    proprietário — na prática, o conteúdo do setor extinto ficaria congelado
- *    para todos os outros administradores.
- *
- *  - REGRAS DE TREINAMENTO OBRIGATÓRIO seriam apagadas em cascata, em silêncio.
- *    As matrículas já criadas sobrevivem, mas a regra que as gerava some — e
- *    ninguém mais entra automaticamente. É a perda mais cara das três, porque
- *    só aparece meses depois, quando alguém nota que a equipe nova não recebeu
- *    o treinamento.
- *
- * Por isso a função conta antes e explica o que encontrou, em vez de apagar e
- * deixar o rastro para alguém descobrir depois.
- */
-export async function deleteDepartment(departmentId: string): Promise<ActionResult> {
-  const admin = await requireAdmin();
-
-  if (!(await ehProprietario(admin.id))) {
-    return {
-      ok: false,
-      error: "Só o proprietário da plataforma pode excluir departamentos.",
-    };
-  }
-
-  const departamento = await db.department.findUnique({
-    where: { id: departmentId },
-    select: {
-      name: true,
-      _count: { select: { users: true, courses: true, obrigatorios: true } },
-    },
-  });
-
-  if (!departamento) return { ok: false, error: "Departamento não encontrado." };
-
-  const { users, courses, obrigatorios } = departamento._count;
-
-  /*
-    As pendências são listadas juntas, e não uma por vez: quem precisa esvaziar
-    um departamento quer saber tudo o que falta de uma vez, não descobrir o
-    próximo impedimento a cada tentativa.
-  */
-  const pendencias: string[] = [];
-  if (users > 0) pendencias.push(`${users} usuário(s)`);
-  if (courses > 0) pendencias.push(`${courses} curso(s)`);
-  if (obrigatorios > 0) pendencias.push(`${obrigatorios} regra(s) de treinamento obrigatório`);
-
-  if (pendencias.length > 0) {
-    return {
-      ok: false,
-      error:
-        `Não é possível excluir "${departamento.name}": ainda há ` +
-        `${pendencias.join(", ")} vinculado(s) a ele. ` +
-        "Mova ou remova esses vínculos antes de excluir.",
-    };
-  }
-
-  await db.department.delete({ where: { id: departmentId } });
-
-  await logAdminActivity({
-    adminId: admin.id,
-    action: "EXCLUIR_DEPARTAMENTO",
-    targetType: "Department",
-    targetId: departmentId,
-    details: departamento.name,
-  });
-
-  revalidatePath("/admin/funcionarios");
-  revalidatePath("/admin/configuracoes");
-  return { ok: true, message: `Departamento "${departamento.name}" excluído.` };
 }
 
 /**

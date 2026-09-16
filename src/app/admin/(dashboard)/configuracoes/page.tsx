@@ -6,7 +6,7 @@ import { QuickAddForm } from "@/components/admin/quick-add-form";
 import { DepartmentList } from "@/components/admin/department-list";
 import { UnidadeList } from "@/components/admin/unidade-list";
 import { UnidadeLoteForm } from "@/components/admin/unidade-lote-form";
-import { createDepartment } from "@/lib/actions/employees";
+import { createDepartment } from "@/lib/actions/departamentos";
 import { criarUnidade } from "@/lib/actions/unidades";
 import { ehProprietario } from "@/lib/alcance-admin";
 import { createCategory } from "@/lib/actions/courses";

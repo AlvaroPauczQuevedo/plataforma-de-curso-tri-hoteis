@@ -9,8 +9,8 @@ import {
   toggleEmployeeActive,
   resetEmployeePassword,
   generatePasswordResetLink,
-  deleteEmployee,
-} from "@/lib/actions/employees";
+} from "@/lib/actions/acesso-de-funcionario";
+import { deleteEmployee } from "@/lib/actions/employees";
 
 /** O que a exclusão levaria junto. Vem contado do servidor. */
 export type ImpactoDaExclusao = {

@@ -2,7 +2,7 @@
 
 import { Trash2 } from "lucide-react";
 import { ActionButton } from "@/components/shared/action-button";
-import { deleteDepartment } from "@/lib/actions/employees";
+import { deleteDepartment } from "@/lib/actions/departamentos";
 
 export type DepartamentoNaTela = {
   id: string;

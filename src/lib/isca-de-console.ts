@@ -23,7 +23,7 @@
  *    própria tela já mostra.
  *
  * AVISO para auditoria e pentest: isto é proposital. Ver a seção "Isca do
- * console" no README.
+ * console" em `docs/acesso.md`.
  *
  * Sem nenhum import: a tela de login é componente de cliente, e este arquivo
  * vai inteiro para o navegador — que é justamente o objetivo.
