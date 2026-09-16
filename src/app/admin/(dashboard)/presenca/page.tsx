@@ -1,4 +1,4 @@
-import { QrCode } from "lucide-react";
+import { QrCode, X } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
 import { carregarAtorOuFalhar } from "@/lib/alcance-admin";
@@ -9,10 +9,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { QrDaSessao } from "@/components/admin/qr-da-sessao";
 import { PresencaAoVivo } from "@/components/admin/presenca-ao-vivo";
 import { SessaoPresencialForm } from "@/components/admin/sessao-presencial-form";
-import {
-  EncerrarSessao,
-  RemoverDaLista,
-} from "@/components/admin/sessao-presencial-acoes";
+import { ActionButton } from "@/components/shared/action-button";
+import { encerrarSessaoPresencial, removerPresenca } from "@/lib/actions/presenca";
 import { formatDateTime } from "@/lib/utils";
 
 /**
@@ -132,7 +130,24 @@ export default async function PresencaAdminPage() {
                   </div>
 
                   {situacao !== "encerrada" && (
-                    <EncerrarSessao sessaoId={sessao.id} presentes={sessao.presencas.length} />
+                    <ActionButton
+                      /*
+                        `.bind` sobre a server action, e nao uma closure. Uma
+                        funcao criada aqui — num Server Component — nao
+                        atravessa a fronteira para um Client Component; o
+                        `.bind` devolve outra server action, que o React
+                        serializa. E o mesmo idioma de /admin/matriculas.
+                      */
+                      action={encerrarSessaoPresencial.bind(null, sessao.id)}
+                      variant="primary"
+                      confirmMessage={
+                        sessao.presencas.length === 0
+                          ? "Ninguém bipou nesta lista. Encerrar assim mesmo?"
+                          : `Encerrar registra a conclusão de ${sessao.presencas.length} pessoa(s) neste treinamento. Confira a lista antes — depois disso ela vira registro de conformidade.`
+                      }
+                    >
+                      Encerrar e registrar
+                    </ActionButton>
                   )}
                 </div>
 
@@ -176,11 +191,14 @@ export default async function PresencaAdminPage() {
                               conclusão sem a origem que a explica.
                             */}
                             {situacao !== "encerrada" && (
-                              <RemoverDaLista
-                                sessaoId={sessao.id}
-                                userId={p.userId}
-                                nome={p.user.name}
-                              />
+                              <ActionButton
+                                action={removerPresenca.bind(null, sessao.id, p.userId)}
+                                variant="ghost"
+                                size="sm"
+                                confirmMessage={`Tirar ${p.user.name} da lista?`}
+                              >
+                                <X className="h-4 w-4" />
+                              </ActionButton>
                             )}
                           </li>
                         ))}
