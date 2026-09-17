@@ -16,6 +16,7 @@ desenvolve.
 | --- | --- |
 | [Operação](docs/operacao.md) | Como subir, publicar e configurar. O que se lê no dia da virada e quando algo para. |
 | [Acesso e permissões](docs/acesso.md) | Quem entra, como entra, e o que cada perfil alcança. |
+| [Modelo de login](docs/modelo-de-login.md) | As decisões de autenticação e criação de usuários, escritas para serem reimplementadas em outro sistema. |
 | [Treinamento](docs/treinamento.md) | Cursos, trilhas, documentos com aceite, presencial e reciclagem. |
 | [Conformidade e relatórios](docs/conformidade.md) | Quem deve o quê, e os papéis que a auditoria pede. |
 | [Desenvolvimento](docs/desenvolvimento.md) | Como o código está organizado e como se confere que ele funciona. |
