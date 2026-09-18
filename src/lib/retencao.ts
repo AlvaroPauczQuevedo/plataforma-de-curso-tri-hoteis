@@ -68,7 +68,7 @@ export type RegraDeRetencao = {
  *   dúvida pelo lado seguro: atende quem entenda que alcança, e é curto o
  *   bastante para não guardar histórico de navegação de ninguém por anos.
  *
- * - **5 anos para a trilha administrativa** porque ela é o registro de QUEM
+ * - **5 anos para o registro de ações administrativas** porque ele guarda QUEM
  *   fez o quê com a conta dos outros — é a prova de responsabilização do
  *   Art. 6º, X, e a que responde "quem apagou o certificado dessa pessoa?".
  *   O horizonte acompanha a prescrição trabalhista.
@@ -80,9 +80,9 @@ export type RegraDeRetencao = {
  *
  * O que NÃO tem regra aqui, deliberadamente: progresso, certificado, conclusão
  * externa e matrícula. São a prova de que a pessoa foi treinada, e o Art. 16, I
- * autoriza conservá-los para cumprir obrigação legal — as NRs e a fiscalização
- * trabalhista. Apagá-los por prazo seria destruir exatamente o que a plataforma
- * existe para provar.
+ * autoriza conservá-los para cumprir obrigação legal — a legislação de
+ * segurança do trabalho e a fiscalização trabalhista. Apagá-los por prazo seria
+ * destruir exatamente o que a plataforma existe para provar.
  */
 export function regrasDeRetencao(): RegraDeRetencao[] {
   return [
@@ -93,7 +93,7 @@ export function regrasDeRetencao(): RegraDeRetencao[] {
       porque: "Marco Civil, Art. 15 — 6 meses é o piso defensável.",
     },
     {
-      nome: "Trilha administrativa (AdminActivityLog)",
+      nome: "Registro de ações administrativas (AdminActivityLog)",
       dias: diasDoAmbiente("RETENCAO_ATIVIDADE_DIAS", 1825),
       acao: "apagar",
       porque: "Responsabilização (Art. 6º, X) e prescrição trabalhista.",
@@ -181,7 +181,7 @@ export async function executarRetencao(agora = new Date()): Promise<RelatorioDeR
     linhas.push({ ...acesso, alcancados, aplicado: ativa && alcancados > 0 });
   }
 
-  /* --- trilha administrativa: apagar */
+  /* --- registro de ações administrativas: apagar */
   {
     const onde = { createdAt: { lt: limiteDe(agora, atividade.dias) } };
     const alcancados = await db.adminActivityLog.count({ where: onde });

@@ -127,7 +127,7 @@ As bases adequadas aqui, na leitura técnica:
 
 | Tratamento | Base provável | Dispositivo |
 | --- | --- | --- |
-| Treinamento **obrigatório** (NRs, brigada, manipulação de alimentos) | Cumprimento de obrigação legal e regulatória | Art. 7º, II |
+| Treinamento **obrigatório** por exigência legal ou sanitária | Cumprimento de obrigação legal e regulatória | Art. 7º, II |
 | Conta de acesso, progresso, certificado | Execução de contrato de trabalho | Art. 7º, V |
 | Registros de acesso e auditoria | Legítimo interesse / obrigação legal | Art. 7º, IX / II |
 | **Telefone e e-mail pessoal** | Consentimento — e aqui ele **é** o certo | Art. 7º, I |
@@ -242,7 +242,7 @@ IP sem descarte.
 **A parte difícil não é técnica, é a definição do prazo**, e ela é jurídica:
 
 - Registros de treinamento obrigatório têm razão de ser mantidos após o
-  desligamento — prescrição trabalhista e fiscalização das NRs. Algo em torno
+  desligamento — prescrição trabalhista e fiscalização do trabalho. Algo em torno
   de 5 anos é o que se costuma praticar, mas **quem define é o jurídico**.
 - Logs de acesso e IPs não têm a mesma justificativa e provavelmente podem ter
   prazo curto.

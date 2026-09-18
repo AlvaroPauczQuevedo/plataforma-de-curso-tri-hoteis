@@ -95,7 +95,7 @@ export default async function PresencaAdminPage() {
         <EmptyState
           icon={QrCode}
           title="Nenhuma lista de presença"
-          description="Abra uma quando for aplicar um treinamento presencial — brigada de incêndio, manipulação de alimentos, as NRs."
+          description="Abra uma quando for aplicar um treinamento em sala, com instrutor e lista de presença."
         />
       ) : (
         <div className="space-y-4">

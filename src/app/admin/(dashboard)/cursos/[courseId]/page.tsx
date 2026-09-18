@@ -9,6 +9,8 @@ import { CourseForm } from "@/components/admin/course-form";
 import { CourseStatusActions } from "@/components/admin/course-status-actions";
 import { ModuleLessonBuilder } from "@/components/admin/module-lesson-builder";
 import { ObrigatoriosPanel } from "@/components/admin/obrigatorios-panel";
+import { HabilitacaoPanel } from "@/components/admin/habilitacao-panel";
+import { avisoDeHabilitacao, situacaoDaHabilitacao } from "@/lib/habilitacao";
 import { Alert } from "@/components/ui/alert";
 import { statusLabel } from "@/lib/utils";
 import { motivoDeBloqueioDeCurso } from "@/lib/permissoes-usuario";
@@ -71,6 +73,38 @@ export default async function CourseEditorPage(
     select: { id: true, titulo: true, publicada: true },
     orderBy: { titulo: "asc" },
   });
+
+  const habilitacoes = await db.habilitacaoDeInstrutor.findMany({
+    where: { courseId: course.id },
+    orderBy: { declaradoEm: "desc" },
+    select: {
+      id: true,
+      instrutor: true,
+      registro: true,
+      arquivoId: true,
+      validoAte: true,
+      declaradoEm: true,
+      declaradoPor: { select: { name: true } },
+    },
+  });
+
+  const agora = new Date();
+  const habilitacoesNaTela = habilitacoes.map((h) => ({
+    id: h.id,
+    instrutor: h.instrutor,
+    registro: h.registro,
+    arquivoId: h.arquivoId,
+    validoAte: h.validoAte ? h.validoAte.toISOString() : null,
+    declaradoPor: h.declaradoPor.name,
+    declaradoEm: h.declaradoEm.toISOString(),
+    situacao: situacaoDaHabilitacao(h, agora),
+  }));
+
+  const avisoDeInstrutor = avisoDeHabilitacao(
+    { exigeInstrutorHabilitado: course.exigeInstrutorHabilitado, publicado: course.status === "PUBLISHED" },
+    habilitacoes,
+    agora
+  );
 
   const obrigatorios = await db.cursoObrigatorio.findMany({
     where: { courseId },
@@ -156,6 +190,24 @@ export default async function CourseEditorPage(
           />
         )}
       </section>
+
+      {!motivo && (
+        <section className="space-y-4 rounded-2xl border border-border bg-surface p-6">
+          <div>
+            <h2 className="font-semibold text-ink-900">Habilitação do instrutor</h2>
+            <p className="text-sm text-ink-700/60">
+              Para treinamentos que exigem formação específica de quem aplica.
+            </p>
+          </div>
+          <HabilitacaoPanel
+            courseId={course.id}
+            exige={course.exigeInstrutorHabilitado}
+            publicado={course.status === "PUBLISHED"}
+            habilitacoes={habilitacoesNaTela}
+            aviso={avisoDeInstrutor}
+          />
+        </section>
+      )}
 
       {!motivo && (
         <section className="space-y-4 rounded-2xl border border-border bg-surface p-6">

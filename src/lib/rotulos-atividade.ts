@@ -20,6 +20,11 @@ export const ROTULOS_DE_ATIVIDADE: Record<string, string> = {
   ABRIR_SESSAO_PRESENCIAL: "abriu a lista de presença de",
   ENCERRAR_SESSAO_PRESENCIAL: "encerrou a lista de presença de",
 
+  ANEXAR_HABILITACAO: "anexou o comprovante de habilitação do instrutor em",
+  REMOVER_HABILITACAO: "removeu o comprovante de habilitação do instrutor de",
+  EXIGIR_HABILITACAO: "passou a exigir instrutor habilitado em",
+  DISPENSAR_HABILITACAO: "dispensou a exigência de instrutor habilitado em",
+
   CRIAR_TRILHA: "criou a trilha",
   PUBLICAR_TRILHA: "publicou a trilha",
   DESPUBLICAR_TRILHA: "moveu para rascunho a trilha",

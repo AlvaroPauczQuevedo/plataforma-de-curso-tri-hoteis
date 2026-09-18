@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { difficultyLabel, formatDuration, formatPrazo } from "@/lib/utils";
 import { getNextLessonId } from "@/lib/portal-data";
+import { AvisoForaDoExpediente } from "@/components/portal/aviso-fora-do-expediente";
 
 const lessonIcon = { VIDEO: Video, PDF: FileText, TEXT: BookOpen, PROVA: FileQuestion };
 
@@ -95,6 +96,12 @@ export default async function CourseDetailPage(
 
   return (
     <div className="space-y-6">
+      {/*
+        Antes de tudo, porque é uma decisão a tomar ANTES de começar a aula —
+        depois de assistir, o registro já existe.
+      */}
+      <AvisoForaDoExpediente obrigatorio={Boolean(enrollment?.mandatory)} />
+
       <div className="overflow-hidden rounded-2xl border border-border bg-surface">
         <div className="relative h-44 bg-gradient-to-br from-ink-900 to-brand-700 sm:h-56">
           {course.coverFile && (

@@ -184,7 +184,7 @@ quem entregou.
 
 **Como funciona**
 
-1. Em **Documentos**, no painel, envie o PDF (política, NR, código de conduta) e
+1. Em **Documentos**, no painel, envie o PDF (política, norma, código de conduta) e
    escolha quem precisa aceitar. Nasce como **rascunho**.
 2. Publicado, ele aparece em **Documentos** no portal do funcionário, que lê o
    PDF, marca "li e concordo" e registra o aceite.
@@ -243,7 +243,7 @@ reciclar.
 
 ## Check-in presencial por QR
 
-Brigada de incêndio, manipulação de alimentos, as NRs — o treinamento que mais
+Combate a incêndio, manipulação de alimentos, segurança do trabalho — o treinamento que mais
 importa num hotel acontece numa sala, não na plataforma. Ele já era reconhecido
 (ver *Treinamento presencial*), mas lançado **à mão, um nome por vez**. Numa
 turma de trinta são trinta lançamentos, e é aí que alguém fica de fora sem
@@ -314,7 +314,7 @@ conformidade sem nenhum lançamento extra.
 ## Reciclagem: o certificado ainda vale?
 
 Os treinamentos que mais importam num hotel **vencem** — manipulação de
-alimentos, brigada de incêndio, as NRs. Um certificado de 2024 não prova nada em
+alimentos, combate a incêndio, segurança do trabalho. Um certificado de 2024 não prova nada em
 2026, e é exatamente isso que um auditor pergunta.
 
 Até então a plataforma não tinha noção de validade: concluído era concluído para

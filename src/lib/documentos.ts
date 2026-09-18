@@ -1,5 +1,5 @@
 /**
- * Aceite de documentos: política interna, NR, código de conduta.
+ * Aceite de documentos: política interna, norma, código de conduta.
  *
  * É a outra metade da conformidade. O curso prova que a pessoa foi TREINADA;
  * o aceite prova que ela foi INFORMADA — e é o que um auditor pede quando

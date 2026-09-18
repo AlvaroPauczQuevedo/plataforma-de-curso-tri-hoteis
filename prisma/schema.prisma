@@ -160,6 +160,7 @@ model User {
   aceitesDeDocumento  AceiteDeDocumento[]
   trilhasCriadas      Trilha[]            @relation("TrilhaCriadaPor")
   sessoesCriadas      SessaoPresencial[]  @relation("SessaoCriadaPor")
+  habilitacoesDeclaradas HabilitacaoDeInstrutor[] @relation("HabilitacaoDeclaradaPor")
   presencas           PresencaEmSessao[]
 
   /// Quase toda consulta do painel filtra por departamento: alcance do
@@ -232,6 +233,7 @@ model FileAsset {
   videoForLessons Lesson[] @relation("LessonVideo")
   pdfForLessons   Lesson[] @relation("LessonPdf")
   comprovantesExternos ConclusaoExterna[] @relation("ComprovanteExterno")
+  comprovantesDeHabilitacao HabilitacaoDeInstrutor[] @relation("ComprovanteDeHabilitacao")
   documentos           Documento[]        @relation("DocumentoArquivo")
 }
 
@@ -250,6 +252,11 @@ model Course {
   sequential         Boolean          @default(false)
   allowDownload      Boolean          @default(true)
   certificateEnabled Boolean          @default(true)
+  /// Este treinamento exige instrutor legalmente habilitado?
+  ///
+  /// Quando verdadeiro, o curso so e publicado com um comprovante de
+  /// habilitacao anexado e dentro da validade. Ver `lib/habilitacao`.
+  exigeInstrutorHabilitado Boolean    @default(false)
   videoCompletionThreshold Int        @default(90)
   /// Departamento dono do curso. Define quem pode alterá-lo: um administrador
   /// comum só mexe nos cursos do seu departamento. Nulo significa que o curso
@@ -268,6 +275,7 @@ model Course {
   certificates    Certificate[]
   conclusoesExternas ConclusaoExterna[]
   lembretes       LembreteEnviado[]
+  habilitacoes    HabilitacaoDeInstrutor[]
   trilhas         TrilhaCurso[]
   sessoesPresenciais SessaoPresencial[]
 
@@ -300,7 +308,7 @@ model CursoObrigatorio {
   /// Nulo = vale para sempre, que era o unico comportamento possivel antes.
   ///
   /// Existe porque os treinamentos que mais importam num hotel VENCEM:
-  /// manipulacao de alimentos, brigada de incendio, as NRs. Um certificado de
+  /// manipulacao de alimentos, combate a incendio, seguranca do trabalho. Um certificado de
   /// 2024 nao prova nada em 2026, e e exatamente isso que um auditor pergunta.
   /// Sem este campo a plataforma era registro do que foi feito; com ele, ela
   /// rematricula sozinha antes de a empresa ficar irregular.
@@ -667,7 +675,7 @@ model DepartamentoExtra {
   @@index([departmentId])
 }
 
-/// Documento que exige aceite: política interna, NR, código de conduta.
+/// Documento que exige aceite: política interna, norma, código de conduta.
 ///
 /// É a outra metade da conformidade. O curso prova que a pessoa foi TREINADA;
 /// isto prova que ela foi INFORMADA — e é o que um auditor pede quando pergunta
@@ -708,7 +716,7 @@ model Documento {
 /// A quem o documento se aplica.
 ///
 /// NENHUMA linha significa a rede inteira, e esse é o caso comum: código de
-/// conduta vale para todo mundo. Restringir por setor existe para a NR que só
+/// conduta vale para todo mundo. Restringir por setor existe para a norma que só
 /// alcança quem trabalha naquela função — exigir aceite de norma de cozinha da
 /// recepção inteira transformaria a lista de pendências em ruído.
 model DocumentoDepartamento {
@@ -922,4 +930,50 @@ model PresencaEmSessao {
   /// Bipar duas vezes e o mesmo que bipar uma.
   @@unique([sessaoId, userId])
   @@index([userId])
+}
+
+/// Comprovante de que quem aplica um treinamento tem habilitacao legal para
+/// aplica-lo.
+///
+/// Existe por um risco concreto: a plataforma emite "CERTIFICADO DE CONCLUSAO"
+/// e a empresa o apresenta a fiscalizacao. Se o treinamento exigia instrutor
+/// habilitado e quem o aplicou nao era, o certificado nao prova o que afirma —
+/// e o problema so aparece quando alguem cobra, que e tarde.
+///
+/// O comprovante e anexado ANTES de o curso ser publicado. Ver
+/// `lib/habilitacao`.
+model HabilitacaoDeInstrutor {
+  id        String  @id @default(cuid())
+  courseId  String
+  course    Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  /// Nome do instrutor como consta no comprovante — nem sempre e usuario daqui.
+  instrutor String
+  /// Registro profissional, conselho, numero do certificado. Como declarado.
+  registro  String?
+
+  /// O comprovante digitalizado.
+  arquivoId String
+  arquivo   FileAsset @relation("ComprovanteDeHabilitacao", fields: [arquivoId], references: [id])
+
+  /// Habilitacao VENCE: registro profissional e certificacao de instrutor tem
+  /// prazo. Nulo significa sem validade declarada — e a tela avisa que isso
+  /// precisa de conferencia humana, em vez de tratar como valido para sempre.
+  validoAte DateTime?
+
+  /// Quem declarou, quando e de onde. E esta pessoa que responde pelo que
+  /// anexou: o termo abaixo e aceito no ato.
+  declaradoPorId String
+  declaradoPor   User     @relation("HabilitacaoDeclaradaPor", fields: [declaradoPorId], references: [id])
+  declaradoEm    DateTime @default(now())
+  ip             String   @default("")
+
+  /// O texto do termo COMO ESTAVA no momento do aceite.
+  ///
+  /// Gravado por extenso, e nao por referencia a uma constante do codigo: o
+  /// termo pode ser reescrito amanha, e o que importa numa disputa e o que a
+  /// pessoa leu quando clicou — nao o que o arquivo diz hoje.
+  termoAceito String
+
+  @@index([courseId])
 }

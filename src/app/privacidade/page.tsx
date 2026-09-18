@@ -14,8 +14,9 @@ import { Logo } from "@/components/ui/logo";
  *
  * **É AVISO, não termo de consentimento.** A diferença não é de palavra.
  *
- * O tratamento aqui se apoia em obrigação legal (as NRs mandam treinar) e na
- * execução do contrato de trabalho — Art. 7º, II e V. Não em consentimento.
+ * O tratamento aqui se apoia em obrigação legal — a legislação trabalhista e
+ * sanitária obriga a empresa a capacitar e a comprovar — e na execução do
+ * contrato de trabalho: Art. 7º, II e V. Não em consentimento.
  * Pedir "eu concordo" numa relação de emprego seria fingir uma escolha que não
  * existe, e pior: consentimento é revogável a qualquer tempo (Art. 8º, §5º),
  * então bastaria alguém revogá-lo para a empresa perder a prova de treinamento
@@ -105,9 +106,8 @@ export default function PrivacidadePage() {
           <ul className="list-disc space-y-1.5 pl-5">
             <li>
               <strong className="text-ink-900">Treinamentos obrigatórios</strong> — porque
-              a lei exige que a empresa capacite e comprove (Art. 7º, II da LGPD). Brigada
-              de incêndio, manipulação de alimentos e as Normas Regulamentadoras entram
-              aqui.
+              a legislação exige que a empresa capacite os seus profissionais e comprove
+              que o fez (Art. 7º, II da LGPD).
             </li>
             <li>
               <strong className="text-ink-900">Sua conta, progresso e certificados</strong>{" "}

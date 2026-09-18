@@ -94,7 +94,7 @@ export async function fileBelongsToAccessibleCourse(userId: string, fileId: stri
   }
 
   /*
-    PDF de documento com aceite (política, NR).
+    PDF de documento com aceite (política, norma interna).
 
     Fica antes da consulta de `kind` porque o documento é enviado como PDF
     comum: o que o libera não é o tipo do arquivo, é o documento que aponta

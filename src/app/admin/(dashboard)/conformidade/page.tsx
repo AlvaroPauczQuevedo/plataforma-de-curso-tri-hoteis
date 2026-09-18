@@ -12,6 +12,7 @@ import { levantarObrigacoes } from "@/lib/conformidade";
 import { BotaoWhatsApp } from "@/components/admin/botao-whatsapp";
 import { BotaoCsv } from "@/components/admin/botao-csv";
 import { PainelDeReciclagem } from "@/components/admin/painel-de-reciclagem";
+import { PainelForaDoExpediente } from "@/components/admin/painel-fora-do-expediente";
 import { enderecoPublico } from "@/lib/email";
 import { mensagemDePrazo } from "@/lib/whatsapp";
 
@@ -169,6 +170,14 @@ export default async function ConformidadePage(
 
       <Suspense>
         <PainelDeReciclagem departamentoId={searchParams.departamento} />
+      </Suspense>
+
+      {/*
+        Em Suspense próprio: a consulta varre o progresso de aula dos últimos 30
+        dias, e não deve segurar o resto da tela. Some quando não há nada.
+      */}
+      <Suspense>
+        <PainelForaDoExpediente />
       </Suspense>
 
       <Suspense>

@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { ressincronizarProgressoDoCurso } from "@/lib/progress";
 import { requireAdmin } from "@/lib/session";
 import { logAdminActivity } from "@/lib/activity-log";
+import { motivoParaNaoPublicar } from "@/lib/habilitacao";
 import type { ActionResult } from "@/lib/actions/employees";
 import {
   type Recusa,
@@ -172,11 +173,25 @@ export async function setCourseStatus(
   if (status === "PUBLISHED") {
     const course = await db.course.findUnique({
       where: { id: courseId },
-      include: { modules: { include: { lessons: true } } },
+      include: {
+        modules: { include: { lessons: true } },
+        habilitacoes: { select: { validoAte: true } },
+      },
     });
     const hasLessons = course?.modules.some((m) => m.lessons.length > 0);
     if (!hasLessons) {
       return { ok: false, error: "Adicione ao menos um módulo com uma aula antes de publicar." };
+    }
+
+    /*
+      Treinamento que exige instrutor habilitado não vai ao ar sem o
+      comprovante. A trava é na publicação, e não na emissão do certificado,
+      porque publicar é o ato que faz a plataforma passar a afirmar que aquele
+      treinamento aconteceu — e é essa afirmação que precisa se sustentar.
+    */
+    if (course) {
+      const impedimento = motivoParaNaoPublicar(course, course.habilitacoes, new Date());
+      if (impedimento) return { ok: false, error: impedimento };
     }
   }
 

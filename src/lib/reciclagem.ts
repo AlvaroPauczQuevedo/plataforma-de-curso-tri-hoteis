@@ -2,7 +2,7 @@
  * Reciclagem: o certificado ainda vale?
  *
  * Os treinamentos que mais importam num hotel VENCEM — manipulação de
- * alimentos, brigada de incêndio, as NRs. Um certificado de 2024 não prova
+ * alimentos, combate a incêndio, segurança do trabalho. Um certificado de 2024 não prova
  * nada em 2026, e é exatamente isso que um auditor pergunta.
  *
  * Até aqui a plataforma não tinha noção de validade: `Certificate` só guarda
