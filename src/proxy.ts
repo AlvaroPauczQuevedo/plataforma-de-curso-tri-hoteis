@@ -20,6 +20,13 @@ const PUBLIC_PATHS = [
   // A conferência de certificado é pública de propósito: quem confere é gente
   // de fora — auditor, cliente, outro empregador —, que não tem login aqui.
   "/validar",
+  /*
+    O aviso de privacidade precisa ser legível ANTES de entrar. Exigir sessão
+    para a pessoa saber como os próprios dados são tratados inverteria o
+    sentido do Art. 9º da LGPD — e a tela de login o linka justamente para
+    quem ainda não tem acesso poder ler.
+  */
+  "/privacidade",
 ];
 
 function isPublicPath(pathname: string) {

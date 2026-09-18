@@ -13,12 +13,24 @@ export default async function LoginPage(
       title="Bem-vindo de volta"
       subtitle="Entre com seu nome de usuário e senha para acessar seus cursos."
       footer={
-        <p className="text-center text-xs text-ink-700/60">
-          É administrador?{" "}
-          <Link href="/admin/login" className="font-medium text-brand-texto hover:underline">
-            Acesse o painel administrativo
-          </Link>
-        </p>
+        <div className="space-y-2 text-center text-xs text-ink-700/60">
+          <p>
+            É administrador?{" "}
+            <Link href="/admin/login" className="font-medium text-brand-texto hover:underline">
+              Acesse o painel administrativo
+            </Link>
+          </p>
+          {/*
+            O aviso de privacidade fica AQUI, antes do login, porque é aqui que
+            a pessoa ainda pode lê-lo sem ter entrado — que é o que o Art. 9º
+            da LGPD pretende.
+          */}
+          <p>
+            <Link href="/privacidade" className="hover:underline">
+              Aviso de privacidade
+            </Link>
+          </p>
+        </div>
       }
     >
       <LoginForm variant="employee" callbackUrl={searchParams.callbackUrl} />

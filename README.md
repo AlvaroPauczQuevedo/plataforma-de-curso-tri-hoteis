@@ -20,6 +20,7 @@ desenvolve.
 | [Treinamento](docs/treinamento.md) | Cursos, trilhas, documentos com aceite, presencial e reciclagem. |
 | [Conformidade e relatórios](docs/conformidade.md) | Quem deve o quê, e os papéis que a auditoria pede. |
 | [Desenvolvimento](docs/desenvolvimento.md) | Como o código está organizado e como se confere que ele funciona. |
+| [LGPD](docs/lgpd.md) | Que dado pessoal a plataforma trata, o que já está adequado e o que falta. |
 
 ## Começando
 

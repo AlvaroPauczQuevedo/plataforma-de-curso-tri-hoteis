@@ -25,6 +25,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { dispararLembretes } from "@/lib/lembretes";
 import { registrarErro } from "@/lib/monitoramento";
+import { executarRetencao, resumoDaRetencao } from "@/lib/retencao";
 
 /* A resposta é sobre o AGORA, e a rotina escreve. Nunca em cache. */
 export const dynamic = "force-dynamic";
@@ -64,19 +65,40 @@ async function executar(request: NextRequest) {
 
   try {
     const relatorio = await dispararLembretes();
+
+    /*
+      A retenção roda na MESMA chamada, e depois dos lembretes.
+
+      Depois porque o expurgo é a parte destrutiva: se ele falhar, os lembretes
+      do dia já saíram. E na mesma chamada porque uma segunda rotina agendada
+      seria uma segunda coisa para alguém lembrar de configurar — e a que
+      ficasse esquecida seria justamente esta, que ninguém vê funcionando.
+
+      Em modo simulação (o padrão) ela só CONTA o que está vencido. Ver
+      `lib/retencao`.
+    */
+    const retencao = await executarRetencao();
+
+    /*
+      O resumo vai para o log do servidor mesmo quando nada acontece: é assim
+      que se descobre que a retenção está desligada há meses, em vez de
+      presumir que está funcionando.
+    */
+    console.log(`[retencao] ${resumoDaRetencao(retencao)}`);
+
     /*
       O relatório volta no corpo para o agendador poder guardá-lo, e a fila de
       WhatsApp vem junto: é ela que diz quem precisa ser chamado à mão. Quem
       quiser agir pela tela usa a Conformidade, que já tem os botões.
     */
-    return NextResponse.json({ ok: true, ...relatorio });
+    return NextResponse.json({ ok: true, ...relatorio, retencao });
   } catch (erro) {
     /*
       Falhar aqui é silencioso por natureza — ninguém está olhando quando o
       cron roda de madrugada. Então o erro vai para o monitoramento, que avisa
       pelos canais já configurados, antes de virar um 500 que só o agendador vê.
     */
-    await registrarErro(erro, "rotina agendada — lembretes");
+    await registrarErro(erro, "rotina agendada — lembretes e retenção");
     return NextResponse.json({ erro: "A rotina falhou. Ver /admin/erros." }, { status: 500 });
   }
 }
