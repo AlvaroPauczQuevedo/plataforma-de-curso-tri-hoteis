@@ -336,7 +336,7 @@ Separado pelo que resolve mais com menos esforço.
 | 2 | Definir **prazos de retenção** por tipo de dado | Jurídico | Médio |
 | 3 | Implementar **expurgo automático** conforme os prazos | Eu | Baixo |
 | 4 | Indicar **encarregado** e publicar o contato | Gestão | Baixo |
-| 5 | Escrever o **registro de operações** (Art. 37) — a seção 2 já é o rascunho | Jurídico + eu | Médio |
+| 5 | ~~Escrever o **registro de operações** (Art. 37)~~ — **feito**: `npm run lgpd:registro` gera o PDF | Jurídico revisa | — |
 | 6 | Definir **procedimento de atendimento ao titular** (Art. 18) | Jurídico | Médio |
 | 7 | Documentar **onde ficam os backups** e restringir o acesso | Gestão/TI | Baixo |
 | 8 | Confirmar **local de hospedagem** — transferência internacional? | Gestão/TI | Baixo |
@@ -351,6 +351,27 @@ eu implemento assim que houver texto — a tela e o registro de ciência são
 simples. Diga quando quiser que eu faça.
 
 ---
+
+## 6.1 O registro de operações, em PDF
+
+```bash
+npm run lgpd:registro          # gera registro-de-tratamento.pdf
+```
+
+É o documento do Art. 37, escrito para o jurídico: identificação da
+controladora, finalidades com as respectivas bases legais, categorias de dados,
+compartilhamento, prazos, medidas de segurança, direitos do titular e os pontos
+pendentes de decisão.
+
+**É gerado, não escrito à mão.** Os prazos de retenção, a janela de expediente,
+o contato do encarregado e o estado do expurgo saem **lidos da configuração
+vigente** — então o papel não tem como discordar do sistema sobre um número. Um
+registro de tratamento desatualizado é pior que nenhum: ele afirma, com
+aparência de documento oficial, coisas que o sistema deixou de fazer.
+
+O PDF fica fora do versionamento pelo mesmo motivo. Quem precisar, gera.
+
+A prosa continua sendo escrita, e é ela que precisa de revisão jurídica.
 
 ## 7. Exposição
 

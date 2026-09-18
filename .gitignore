@@ -80,3 +80,11 @@ next-env.d.ts
 /ci.db-shm
 /erros-ci/
 /servidor.log
+
+# Registro de tratamento gerado por `npm run lgpd:registro`.
+#
+# Fora do versionamento de proposito: e um retrato da configuracao no momento
+# da geracao, e uma copia commitada envelheceria em silencio — passando a
+# afirmar, com cara de documento oficial, prazos que o sistema ja nao aplica.
+# Quem precisar dele, gera.
+registro-de-tratamento.pdf
