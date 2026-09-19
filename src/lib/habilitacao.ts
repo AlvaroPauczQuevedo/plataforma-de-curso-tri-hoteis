@@ -39,14 +39,12 @@
  * Gravado POR EXTENSO em cada habilitação, e não referenciado desta constante:
  * o texto pode ser reescrito amanhã, e numa disputa o que importa é o que a
  * pessoa leu quando clicou. Ver `HabilitacaoDeInstrutor.termoAceito`.
+ *
+ * O texto em si mora em `lib/textos-lgpd.mjs`, junto dos demais que o sistema
+ * apresenta ao titular — é de lá que o anexo do Registro de Operações o lê,
+ * para que a revisão jurídica recaia sobre o mesmo texto que a tela mostra.
  */
-export const TERMO_DE_HABILITACAO =
-  "Declaro que o comprovante anexado é autêntico e está vigente, e que a pessoa " +
-  "nele identificada possui a habilitação legal exigida para aplicar este " +
-  "treinamento. Estou ciente de que a apresentação de documento falso ou " +
-  "adulterado é de minha inteira responsabilidade, nas esferas civil, " +
-  "administrativa, fiscal e penal, e de que este registro — com meu nome, data e " +
-  "origem do acesso — constitui prova dessa declaração.";
+export { TERMO_DE_HABILITACAO } from "@/lib/textos-lgpd.mjs";
 
 export type SituacaoDaHabilitacao = "valida" | "vencida" | "sem_validade";
 

@@ -25,6 +25,19 @@
  * Uso: node scripts/registro-de-tratamento.mjs [destino.pdf]
  */
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+/*
+  Os textos vêm do MESMO módulo que alimenta as telas. É o que faz a revisão
+  jurídica valer: o advogado aprova exatamente o que o funcionário lê.
+*/
+import {
+  AVISO_SECOES,
+  AVISO_SUBTITULO,
+  AVISO_TITULO,
+  TERMO_DE_HABILITACAO,
+  TEXTOS_DO_SISTEMA,
+  avisoContato,
+  encarregadoEmUmaLinha,
+} from "../src/lib/textos-lgpd.mjs";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -81,7 +94,7 @@ function janelaDeExpediente() {
     : `de segunda a sábado, das ${inicio}h às ${fim}h`;
 }
 
-const encarregado = process.env.ENCARREGADO_CONTATO?.trim() || null;
+const encarregado = encarregadoEmUmaLinha();
 
 /* ---------------------------------------------------------------- conteúdo */
 
@@ -377,7 +390,36 @@ const DOCUMENTO = [
       "para tanto. A medida não previne a fraude; suprime o seu anonimato.",
   },
 
-  { tipo: "titulo", texto: "11. Pontos pendentes de decisão jurídica" },
+  { tipo: "titulo", texto: "11. Anexo — textos apresentados ao titular" },
+  {
+    tipo: "paragrafo",
+    texto:
+      "Transcrição literal do que a plataforma informa ao empregado. São as afirmações " +
+      "pelas quais a empresa responde, e é sobre elas que incide a revisão jurídica. Os " +
+      "textos abaixo são lidos do mesmo módulo que alimenta as telas: não há como o que " +
+      "consta aqui divergir do que o titular lê.",
+  },
+  { tipo: "subtitulo", texto: `11.1. ${AVISO_TITULO} (página pública, sem exigência de login)` },
+  { tipo: "citacao", texto: AVISO_SUBTITULO },
+  ...AVISO_SECOES.flatMap((secao) => [
+    { tipo: "rotulo", texto: secao.titulo },
+    ...(secao.paragrafos ?? []).map((t) => ({ tipo: "citacao", texto: t })),
+    ...(secao.itens ?? []).map((t) => ({ tipo: "citacao", texto: `— ${t}` })),
+    ...(secao.depois ?? []).map((t) => ({ tipo: "citacao", texto: t })),
+  ]),
+  { tipo: "rotulo", texto: "Fale conosco" },
+  { tipo: "citacao", texto: avisoContato() },
+
+  { tipo: "subtitulo", texto: "11.2. Demais avisos nas telas" },
+  ...TEXTOS_DO_SISTEMA.flatMap((t) => [
+    { tipo: "rotulo", texto: t.onde },
+    { tipo: "citacao", texto: t.texto },
+  ]),
+
+  { tipo: "subtitulo", texto: "11.3. Termo aceito por quem anexa habilitação de instrutor" },
+  { tipo: "citacao", texto: TERMO_DE_HABILITACAO },
+
+  { tipo: "titulo", texto: "12. Pontos pendentes de decisão jurídica" },
   {
     tipo: "lista",
     itens: [
@@ -511,6 +553,41 @@ async function gerar() {
       y -= 6;
       page.drawText(bloco.texto, { x: MARGEM, y, size: 10, font: bold, color: GRAFITE });
       y -= 14;
+      continue;
+    }
+
+    /* Rótulo do trecho citado: diz DE ONDE o texto foi transcrito. */
+    if (bloco.tipo === "rotulo") {
+      reservar(24);
+      y -= 3;
+      page.drawText(bloco.texto, { x: MARGEM, y, size: 8.5, font: bold, color: CINZA });
+      y -= 12;
+      continue;
+    }
+
+    /*
+      Citação literal: recuada e com barra à esquerda, para o leitor distinguir
+      o que a plataforma DIZ do que este documento AFIRMA sobre ela. Num anexo
+      de revisão, confundir os dois seria o pior defeito possível.
+    */
+    if (bloco.tipo === "citacao") {
+      const corpo = 8.5;
+      const recuo = 14;
+      const linhas = quebrar(bloco.texto, italico, corpo, UTIL - recuo - 4);
+      const altura = linhas.length * (corpo + 3.5);
+
+      reservar(altura + 6);
+
+      page.drawRectangle({
+        x: MARGEM, y: y - altura + 9, width: 2, height: altura, color: LARANJA,
+      });
+      for (const linha of linhas) {
+        page.drawText(linha, {
+          x: MARGEM + recuo, y, size: corpo, font: italico, color: GRAFITE,
+        });
+        y -= corpo + 3.5;
+      }
+      y -= 5;
       continue;
     }
 

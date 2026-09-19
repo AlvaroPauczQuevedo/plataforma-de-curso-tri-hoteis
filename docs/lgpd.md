@@ -194,9 +194,9 @@ titular.
 tratamento se apoia em obrigação legal e contrato, não em consentimento. Pedir
 "eu concordo" fingiria uma escolha que não existe na relação de emprego.
 
-O canal do encarregado sai de `ENCARREGADO_CONTATO`; sem a variável, a página
-aponta o setor de treinamento — um canal existente vale mais que um específico
-inexistente.
+O canal do encarregado sai de `ENCARREGADO_NOME`, `ENCARREGADO_EMAIL` e
+`ENCARREGADO_WHATSAPP`; sem elas, a página aponta o setor de treinamento — um
+canal existente vale mais que um específico inexistente.
 
 > **Ainda pendente:** o texto é factual e foi conferido contra o código, mas
 > **precisa de revisão jurídica** antes de ser considerado a peça formal.
