@@ -373,6 +373,25 @@ O PDF fica fora do versionamento pelo mesmo motivo. Quem precisar, gera.
 
 A prosa continua sendo escrita, e é ela que precisa de revisão jurídica.
 
+## 6.2 Se a plataforma for desativada
+
+Desativar o sistema **não suspende as obrigações da LGPD**. O Art. 5º, X lista o
+armazenamento entre as operações de tratamento: dado pessoal parado num servidor
+suspenso — ou numa cópia de backup na máquina de alguém — continua sendo
+tratado, e continua sob a lei.
+
+Três consequências práticas:
+
+- **Os registros continuam sob a LGPD enquanto existirem**, inclusive em
+  backups fora do servidor. A cópia que alguém baixou "só por segurança" é
+  tratamento de dado pessoal, e precisa do mesmo cuidado que o original.
+- **Se a decisão for não seguir com a plataforma**, a eliminação precisa ser
+  deliberada e registrada: apagar também é tratamento (Art. 5º, X), e o Art. 16
+  pede que a eliminação ao término seja um ato, não um esquecimento.
+- **Enquanto a decisão não vem**, vale saber onde estão todas as cópias. Uma
+  conta de hospedagem desativada mantém os arquivos por um período antes da
+  exclusão definitiva — e esse período termina sem aviso.
+
 ## 7. Exposição
 
 As sanções do Art. 52 vão de advertência a multa de até 2% do faturamento,

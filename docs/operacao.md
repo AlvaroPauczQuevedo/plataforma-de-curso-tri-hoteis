@@ -290,7 +290,139 @@ Em hospedagem CloudLinux (Hostinger, por exemplo), o `node` não está no `PATH`
 cron — use o caminho completo, algo como
 `/opt/alt/alt-nodejs22/root/usr/bin/node`.
 
-### Erros do servidor
+### Mudar de servidor sem perder nada
+
+Trocar de conta de hospedagem, ou de hospedagem inteira. O código vem do
+repositório; o que precisa viajar são **três coisas**:
+
+| O quê | Onde está |
+| --- | --- |
+| O banco | `DATABASE_URL` |
+| Os arquivos enviados | `STORAGE_DIR` |
+| A configuração | as variáveis de ambiente |
+
+#### Não copie o arquivo do banco
+
+É o erro que custa caro, e ele parece funcionar.
+
+O SQLite roda em **modo WAL** aqui. Nesse modo as escritas recentes ficam num
+arquivo separado (`dev.db-wal`) antes de serem incorporadas ao `.db`. Copiar só
+o `dev.db` de uma aplicação no ar leva um banco **sem as últimas escritas** — e
+não há erro nenhum: ele abre, as telas funcionam, e faltam as matrículas da
+última hora. Copiar os três arquivos com a aplicação rodando é pior ainda,
+porque eles podem estar inconsistentes entre si.
+
+Use o backup, que existe exatamente para isso:
+
+```bash
+npm run backup
+```
+
+Ele usa `VACUUM INTO`, que produz um instantâneo **consistente mesmo com a
+plataforma no ar** — e copia os uploads junto, na mesma pasta. Banco e arquivos
+precisam viajar juntos: o banco guarda só o id e o caminho de cada arquivo, e
+um sem o outro dá aulas apontando para vídeos que não existem.
+
+#### O procedimento
+
+**1. No servidor antigo — gere e confira**
+
+```bash
+npm run backup
+npm run backup:conferir
+```
+
+O segundo restaura numa pasta temporária e confere que todo arquivo citado pelo
+banco veio junto, que os tamanhos batem e que o schema é o que o código espera.
+**Não pule**: um backup que ninguém restaurou não é backup, é esperança.
+
+**2. Transfira a pasta do backup** para a conta nova, inteira.
+
+**3. No servidor novo — confira de novo, antes de apontar qualquer coisa**
+
+```bash
+BACKUP_DIR=/caminho/do/backup/transferido npm run backup:conferir
+```
+
+É aqui que se descobre transferência truncada — enquanto ainda dá para repetir,
+com o servidor antigo no ar.
+
+**4. Coloque no lugar**, com a aplicação parada:
+
+```bash
+mkdir -p /home/NOVO_USUARIO/dados-academia
+cp backup/AAAA-MM-DD-HHMM/dev.db      /home/NOVO_USUARIO/dados-academia/dev.db
+cp -r backup/AAAA-MM-DD-HHMM/uploads  /home/NOVO_USUARIO/dados-academia/uploads
+```
+
+Não copie `dev.db-wal` nem `dev.db-shm`: o backup já os incorporou, e arquivos
+antigos ao lado do banco novo confundem o SQLite.
+
+**5. Ajuste as variáveis** — os caminhos absolutos mudaram de usuário:
+
+```
+DATABASE_URL="file:/home/NOVO_USUARIO/dados-academia/dev.db"
+STORAGE_DIR="/home/NOVO_USUARIO/dados-academia/uploads"
+ERROS_DIR="/home/NOVO_USUARIO/dados-academia/erros"
+BACKUP_DIR="/home/NOVO_USUARIO/dados-academia/backups"
+```
+
+**6. Suba e confira** — `/api/saude` responde se o banco abriu e se as migrações
+estão em dia. Depois entre e abra uma aula com vídeo: é o que prova que os
+uploads vieram.
+
+**7. Só então** desligue o servidor antigo.
+
+#### Quando não dá para rodar o backup
+
+Conta suspensa, sem terminal, hospedagem que só oferece Gerenciador de Arquivos.
+Aqui a regra acima **se inverte**, e a inversão é a parte que custa caro.
+
+O `VACUUM INTO` incorpora o WAL ao arquivo que gera — por isso o backup normal
+dispensa os arquivos auxiliares. Copiando **cru**, ninguém incorporou nada: as
+escritas mais recentes ainda estão no `dev.db-wal`, e copiar só o `dev.db` leva
+um banco que abre sem erro e **sem os últimos cadastros**.
+
+Então baixe, com a aplicação parada:
+
+```
+dev.db
+dev.db-wal     <- indispensável
+dev.db-shm
+uploads/       <- a pasta inteira
+```
+
+O SQLite reaplica o WAL sozinho na primeira abertura. O `-shm` é recriado, mas
+levar não atrapalha.
+
+Para conferir que veio inteiro, antes de confiar: ponha os arquivos numa pasta
+no formato que o backup usa e rode `npm run backup:conferir` apontando para ela.
+
+**Conta desativada não é conta apagada.** A hospedagem costuma manter os
+arquivos por um período antes da exclusão definitiva — é uma janela, e ela
+fecha. Depois dela não há procedimento que recupere.
+
+#### O que quebra se o endereço mudar
+
+**Não rode `admin:criar` no servidor novo.** As contas vieram no banco; o script
+recusaria de qualquer forma, mas o reflexo de "instalação nova, criar admin"
+existe e aqui ele está errado.
+
+**`NEXTAUTH_SECRET`:** mantenha o mesmo, ou todas as sessões caem e todo mundo
+precisa entrar de novo. Não é grave — é um aviso para não assustar.
+
+**Os certificados já impressos** são o ponto sutil. O PDF é gerado na hora, então
+os baixados a partir de agora trazem o endereço novo. Mas o QR dos que já foram
+impressos e guardados aponta para o **domínio antigo** — e quem confere é gente
+de fora: auditor, outro empregador. Se o domínio mudar, mantenha um
+redirecionamento do antigo para o novo, ou aqueles certificados param de ser
+conferíveis.
+
+**Reagende o cron.** Ele não viaja com o backup: sem refazê-lo no servidor novo,
+os lembretes silenciam e o backup para de rodar — as duas falhas mais silenciosas
+que esta plataforma tem.
+
+## Erros do servidor
 
 Quando uma tela quebra, o usuário vê *"Código para o suporte: 2268569496"*. Esse
 número é o `digest` do erro, e **/admin/erros** (só o proprietário) é onde ele
@@ -421,23 +553,67 @@ de liberar qualquer tela.
 
 ## Ordem de configuração após publicar
 
-Cada passo destrava o próximo:
+Cada passo destrava o próximo.
 
-1. **Crie o proprietário** (`criar-proprietario.ts`) e troque a senha no
-   primeiro acesso, em *Minha conta*.
-2. **Defina o departamento de cada administrador.** Sem isso eles veem tudo e
-   não alteram nada — e só o proprietário consegue atribuir.
-3. **Atribua os cursos existentes a um departamento.** Curso sem departamento só
-   o proprietário altera.
-4. **Agende o backup** no cron. É o único item da lista cuja ausência pode custar
-   dados irrecuperáveis.
-5. **Preencha SMTP e alertas**, se quiser envio de e-mail e aviso de erro.
-   Precisa das credenciais do domínio de vocês.
-6. **Rode o teste de fumaça** apontando para o domínio. Leva segundos e é o que
-   pega tela quebrada antes de o primeiro usuário encontrá-la. A verificação
-   automática já roda a bateria a cada push, mas ela testa o código — só a
-   fumaça contra o domínio testa a PUBLICAÇÃO: variável faltando, banco não
-   migrado, arquivo fora do lugar.
+**1. Crie as pastas de dados, FORA da aplicação.** Publicar substitui o
+diretório; dado guardado dentro dele morre na segunda publicação.
+
+```bash
+mkdir -p /home/SEU_USUARIO/dados-academia/{uploads,erros,backups}
+```
+
+**2. Importe as variáveis de ambiente.** Aponte `DATABASE_URL`, `STORAGE_DIR`,
+`ERROS_DIR` e `BACKUP_DIR` para as pastas acima, e defina `NEXTAUTH_URL` com o
+domínio real. Ver *Variáveis obrigatórias em produção*.
+
+**3. Crie o proprietário.** É a única conta que existe num banco novo — sem
+ela ninguém entra.
+
+```bash
+npx tsx prisma/criar-proprietario.ts seu.nome "Seu Nome"
+```
+
+Anote a senha: ela aparece uma vez. No primeiro acesso a plataforma exige a
+troca, e não dá para pular.
+
+**4. Defina o departamento de cada administrador.** Sem isso eles veem tudo e
+não alteram nada — e só o proprietário consegue atribuir.
+
+**5. Atribua os cursos a um departamento.** Curso sem departamento só o
+proprietário altera.
+
+**6. Agende o backup** no cron. É o único item cuja ausência pode custar dados
+irrecuperáveis. O `node` precisa do caminho completo: no cron da CloudLinux ele
+não está no `PATH`.
+
+```
+0 3 * * * cd /home/SEU_USUARIO/public_html &&   /opt/alt/alt-nodejs22/root/usr/bin/node scripts/backup.mjs   >> /home/SEU_USUARIO/backup.log 2>&1
+```
+
+**7. Agende a rotina diária.** Ela dispara os lembretes de treinamento e a
+retenção de dados. Sem alguém chamando esta URL, os lembretes existem e nunca
+saem — é a falha mais silenciosa da plataforma, porque nada dá erro.
+
+```
+0 8 * * * curl -s -H "x-cron-secret: SEU_CRON_SECRET"   https://SEU_DOMINIO/api/tarefas
+```
+
+**8. Preencha o encarregado de dados** (`ENCARREGADO_NOME`, `ENCARREGADO_EMAIL`,
+`ENCARREGADO_WHATSAPP`). Sem eles o aviso de privacidade aponta o setor de
+treinamento — funciona, mas a LGPD pede canal identificado (Art. 41).
+
+**9. Preencha SMTP e alertas**, se quiser envio de e-mail e aviso de erro.
+Precisa das credenciais do domínio de vocês. Vazio, a plataforma não tenta
+enviar nada e não quebra por isso.
+
+**10. Rode o teste de fumaça** apontando para o domínio. Leva segundos e pega
+tela quebrada antes do primeiro usuário. A verificação automática roda a cada
+push, mas ela testa o CÓDIGO — só a fumaça contra o domínio testa a
+PUBLICAÇÃO: variável faltando, banco não migrado, arquivo fora do lugar.
+
+**11. Gere o Registro de Operações** (`npm run lgpd:registro`) depois que tudo
+acima estiver no lugar. Ele lê a configuração vigente, então gerado antes sai
+com os valores errados.
 
 ## Monitoramento (opcional)
 

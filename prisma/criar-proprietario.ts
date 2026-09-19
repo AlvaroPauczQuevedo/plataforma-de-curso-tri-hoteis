@@ -71,6 +71,19 @@ async function main() {
       role: "ADMIN",
       active: true,
       protegido: true,
+      /*
+        Troca obrigatória no primeiro acesso.
+
+        Esta senha é impressa num terminal, e terminal deixa rastro: histórico
+        de shell, log da publicação, a tela de quem estava olhando por cima.
+        Sem isto ela valia para sempre — e é a senha da única conta que
+        ninguém mais consegue redefinir pelo painel.
+
+        O layout de /admin já redireciona para /trocar-senha quando a marca
+        está ligada, então o proprietário troca antes de alcançar qualquer
+        tela.
+      */
+      mustChangePassword: true,
     },
   });
 
@@ -85,7 +98,7 @@ async function main() {
   console.log(`  Senha:  ${senha}`);
   console.log("");
   console.log("  Esta senha aparece UMA única vez. Anote agora.");
-  console.log("  Entre no painel e troque em Perfil antes de qualquer outra coisa.");
+  console.log("  No primeiro acesso a plataforma exige a troca — não dá para pular.");
   console.log("");
   console.log(linha);
   console.log("");
